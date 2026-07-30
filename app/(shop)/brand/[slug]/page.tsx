@@ -1,17 +1,68 @@
-import { PageShell } from "@/components/layout/page-shell";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+
+import { ProductGrid } from "@/components/product/product-grid";
+import { isProductSort, SortLinks } from "@/components/product/sort-links";
+import { getBrandWithProducts } from "@/server/queries/catalog";
 
 type BrandPageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ sort?: string }>;
 };
 
-export default async function BrandPage({ params }: BrandPageProps) {
+export async function generateMetadata({
+  params,
+}: BrandPageProps): Promise<Metadata> {
   const { slug } = await params;
+  const result = await getBrandWithProducts(slug);
+
+  if (!result) return { title: "Brand Not Found" };
+
+  return {
+    title: result.brand.metaTitle ?? result.brand.name,
+    description:
+      result.brand.metaDescription ?? result.brand.description ?? undefined,
+  };
+}
+
+export default async function BrandPage({
+  params,
+  searchParams,
+}: BrandPageProps) {
+  const [{ slug }, { sort }] = await Promise.all([params, searchParams]);
+  const activeSort = isProductSort(sort) ? sort : "newest";
+  const result = await getBrandWithProducts(slug, activeSort);
+
+  if (!result) notFound();
+
+  const { brand, products } = result;
 
   return (
-    <PageShell
-      title="Brand"
-      description={`Everything Korean Hive stocks from "${slug}".`}
-      step="Step 5 (Catalog UI)"
-    />
+    <div className="container-page py-10 md:py-14">
+      <header className="space-y-2">
+        {brand.countryOfOrigin && (
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            {brand.countryOfOrigin}
+          </p>
+        )}
+        <h1 className="font-display text-3xl font-semibold tracking-tight">
+          {brand.name}
+        </h1>
+        {brand.description && (
+          <p className="max-w-2xl text-muted-foreground">{brand.description}</p>
+        )}
+      </header>
+
+      <div className="mt-6">
+        <SortLinks basePath={`/brand/${brand.slug}`} active={activeSort} />
+      </div>
+
+      <div className="mt-8">
+        <ProductGrid
+          products={products}
+          emptyMessage={`No ${brand.name} products in stock right now.`}
+        />
+      </div>
+    </div>
   );
 }

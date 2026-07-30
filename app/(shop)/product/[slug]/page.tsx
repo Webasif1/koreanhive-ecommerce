@@ -1,17 +1,207 @@
-import { PageShell } from "@/components/layout/page-shell";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Banknote, ShieldCheck, Truck } from "lucide-react";
+
+import { ProductGallery } from "@/components/product/product-gallery";
+import { ProductGrid } from "@/components/product/product-grid";
+import { StarRating } from "@/components/product/star-rating";
+import { VariantPicker } from "@/components/product/variant-picker";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { discountPercent, formatBDT, formatDeliveryWindow } from "@/lib/format";
+import {
+  getDeliveryZones,
+  getProductBySlug,
+  getRelatedProducts,
+} from "@/server/queries/catalog";
 
 type ProductPageProps = {
   params: Promise<{ slug: string }>;
 };
 
+export const revalidate = 3600;
+
+export async function generateMetadata({
+  params,
+}: ProductPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const product = await getProductBySlug(slug);
+
+  if (!product) return { title: "Product Not Found" };
+
+  return {
+    title: product.metaTitle ?? product.name,
+    description: product.metaDescription ?? product.shortDescription ?? undefined,
+    openGraph: {
+      title: product.name,
+      description: product.shortDescription ?? undefined,
+      images: product.images[0] ? [{ url: product.images[0].url }] : undefined,
+    },
+  };
+}
+
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
+  const product = await getProductBySlug(slug);
+
+  if (!product) notFound();
+
+  const [related, zones] = await Promise.all([
+    getRelatedProducts({
+      productId: product.id,
+      categoryId: product.categoryId,
+    }),
+    getDeliveryZones(),
+  ]);
+
+  const off = discountPercent(product.price, product.comparePrice);
 
   return (
-    <PageShell
-      title="Product"
-      description={`Gallery, ingredients, how-to-use and related products for "${slug}".`}
-      step="Step 5 (Catalog UI)"
-    />
+    <div className="container-page py-8 md:py-12">
+      <nav aria-label="Breadcrumb" className="text-xs text-muted-foreground">
+        <ol className="flex flex-wrap items-center gap-1.5">
+          <li>
+            <Link href="/" className="hover:text-primary">
+              Home
+            </Link>
+          </li>
+          <li aria-hidden>/</li>
+          <li>
+            <Link href="/shop" className="hover:text-primary">
+              Shop
+            </Link>
+          </li>
+          {product.category && (
+            <>
+              <li aria-hidden>/</li>
+              <li>
+                <Link
+                  href={`/category/${product.category.slug}`}
+                  className="hover:text-primary"
+                >
+                  {product.category.name}
+                </Link>
+              </li>
+            </>
+          )}
+          <li aria-hidden>/</li>
+          <li className="text-foreground">{product.name}</li>
+        </ol>
+      </nav>
+
+      <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:gap-12">
+        <ProductGallery images={product.images} productName={product.name} />
+
+        <div className="space-y-5">
+          <div className="space-y-2">
+            {product.brand && (
+              <Link
+                href={`/brand/${product.brand.slug}`}
+                className="text-xs uppercase tracking-wide text-muted-foreground hover:text-primary"
+              >
+                {product.brand.name}
+              </Link>
+            )}
+            <h1 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">
+              {product.name}
+            </h1>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {product.ratingCount > 0 && (
+                <StarRating
+                  value={product.ratingAvg}
+                  count={product.ratingCount}
+                />
+              )}
+              {off !== null && (
+                <span className="flex items-center gap-2">
+                  <Badge>-{off}%</Badge>
+                  <span className="text-sm text-muted-foreground line-through">
+                    {formatBDT(product.comparePrice!)}
+                  </span>
+                </span>
+              )}
+            </div>
+
+            {product.shortDescription && (
+              <p className="text-sm text-muted-foreground">
+                {product.shortDescription}
+              </p>
+            )}
+          </div>
+
+          <VariantPicker
+            variants={product.variants.map((v) => ({
+              id: v.id,
+              name: v.name,
+              price: v.price,
+              stock: v.stock,
+            }))}
+            basePrice={product.price}
+            baseStock={product.stock}
+          />
+
+          <ul className="grid gap-3 rounded-xl border bg-card p-4 text-sm">
+            <li className="flex items-center gap-2.5">
+              <ShieldCheck className="size-4 shrink-0 text-primary" />
+              100% authentic, sourced direct from Korea
+            </li>
+            <li className="flex items-center gap-2.5">
+              <Banknote className="size-4 shrink-0 text-success" />
+              Cash on delivery — pay when it arrives
+            </li>
+            {zones.map((zone) => (
+              <li key={zone.id} className="flex items-center gap-2.5">
+                <Truck className="size-4 shrink-0 text-gold" />
+                {zone.name}: {formatBDT(zone.charge)} ·{" "}
+                {formatDeliveryWindow(zone.minDays, zone.maxDays)}
+                {zone.freeShippingThreshold
+                  ? ` · free over ${formatBDT(zone.freeShippingThreshold)}`
+                  : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      <div className="mt-12">
+        <Tabs defaultValue="description">
+          <TabsList>
+            <TabsTrigger value="description">Description</TabsTrigger>
+            <TabsTrigger value="ingredients">Ingredients</TabsTrigger>
+            <TabsTrigger value="how-to-use">How to Use</TabsTrigger>
+          </TabsList>
+          <TabsContent value="description">
+            <div className="max-w-3xl whitespace-pre-line">
+              {product.description ??
+                product.shortDescription ??
+                "Description coming soon."}
+            </div>
+          </TabsContent>
+          <TabsContent value="ingredients">
+            <div className="max-w-3xl whitespace-pre-line">
+              {product.ingredients ?? "Full ingredient list coming soon."}
+            </div>
+          </TabsContent>
+          <TabsContent value="how-to-use">
+            <div className="max-w-3xl whitespace-pre-line">
+              {product.howToUse ?? "Usage guidance coming soon."}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {related.length > 0 && (
+        <section className="mt-14">
+          <h2 className="font-display text-xl font-semibold tracking-tight">
+            You may also like
+          </h2>
+          <div className="mt-5">
+            <ProductGrid products={related} />
+          </div>
+        </section>
+      )}
+    </div>
   );
 }
