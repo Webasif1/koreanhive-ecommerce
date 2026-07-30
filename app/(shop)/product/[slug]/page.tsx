@@ -8,8 +8,11 @@ import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductGrid } from "@/components/product/product-grid";
 import { StarRating } from "@/components/product/star-rating";
 import { Badge } from "@/components/ui/badge";
+import { JsonLd } from "@/components/seo/json-ld";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { discountPercent, formatBDT, formatDeliveryWindow } from "@/lib/format";
+import { breadcrumbJsonLd, productJsonLd } from "@/lib/json-ld";
+import { absoluteUrl } from "@/lib/site";
 import {
   getDeliveryZones,
   getProductBySlug,
@@ -32,11 +35,24 @@ export async function generateMetadata({
 
   return {
     title: product.metaTitle ?? product.name,
-    description: product.metaDescription ?? product.shortDescription ?? undefined,
+    description:
+      product.metaDescription ?? product.shortDescription ?? undefined,
+    alternates: { canonical: `/product/${product.slug}` },
     openGraph: {
+      type: "website",
+      url: absoluteUrl(`/product/${product.slug}`),
       title: product.name,
       description: product.shortDescription ?? undefined,
-      images: product.images[0] ? [{ url: product.images[0].url }] : undefined,
+      images: product.images.slice(0, 3).map((image) => ({
+        url: image.url,
+        alt: image.alt ?? product.name,
+      })),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: product.name,
+      description: product.shortDescription ?? undefined,
+      images: product.images[0] ? [product.images[0].url] : undefined,
     },
   };
 }
@@ -57,8 +73,54 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   const off = discountPercent(product.price, product.comparePrice);
 
+  // variants may override the base price, so the structured-data range has
+  // to be built from whatever each variant actually charges
+  const variantPrices = product.variants.map((v) => v.price ?? product.price);
+  const priceRange =
+    variantPrices.length > 0
+      ? {
+          low: Math.min(...variantPrices),
+          high: Math.max(...variantPrices),
+          count: variantPrices.length,
+        }
+      : null;
+
+  const inStock = product.variants.length
+    ? product.variants.some((v) => v.stock > 0)
+    : product.stock > 0;
+
+  const crumbs = [
+    { name: "Home", path: "/" },
+    { name: "Shop", path: "/shop" },
+    ...(product.category
+      ? [
+          {
+            name: product.category.name,
+            path: `/category/${product.category.slug}`,
+          },
+        ]
+      : []),
+    { name: product.name, path: `/product/${product.slug}` },
+  ];
+
   return (
     <div className="container-page py-8 md:py-12">
+      <JsonLd
+        data={productJsonLd({
+          name: product.name,
+          slug: product.slug,
+          description: product.description ?? product.shortDescription,
+          sku: product.sku,
+          images: product.images.map((image) => image.url),
+          price: product.price,
+          inStock,
+          brandName: product.brand?.name ?? null,
+          ratingAvg: product.ratingAvg,
+          ratingCount: product.ratingCount,
+          priceRange,
+        })}
+      />
+      <JsonLd data={breadcrumbJsonLd(crumbs)} />
       <nav aria-label="Breadcrumb" className="text-xs text-muted-foreground">
         <ol className="flex flex-wrap items-center gap-1.5">
           <li>

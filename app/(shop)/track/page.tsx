@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Track Your Order",
   description:
     "Track your Korean Hive order with your order number and phone number. No account or login needed.",
+  alternates: { canonical: "/track" },
 };
 
 export default async function TrackPage({

@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   title: "Shop All Korean Skincare & Beauty",
   description:
     "Browse every Korean beauty and skincare product available at Korean Hive, with cash on delivery across Bangladesh.",
+  // ?sort= variants are the same listing; point them all at /shop
+  alternates: { canonical: "/shop" },
 };
 
 export default async function ShopPage({

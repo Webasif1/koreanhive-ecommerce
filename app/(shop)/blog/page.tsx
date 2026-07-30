@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Beauty Journal",
   description:
     "Korean skincare routines, ingredient guides and product reviews from Korean Hive.",
+  alternates: { canonical: "/blog" },
 };
 
 export default function BlogPage() {

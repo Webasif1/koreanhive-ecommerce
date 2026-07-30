@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Brands",
   description:
     "Authentic Korean beauty brands stocked by Korean Hive, delivered across Bangladesh.",
+  alternates: { canonical: "/brands" },
 };
 
 export const revalidate = 3600;

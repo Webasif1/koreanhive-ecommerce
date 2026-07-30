@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 
 import { ProductGrid } from "@/components/product/product-grid";
 import { isProductSort, SortLinks } from "@/components/product/sort-links";
+import { JsonLd } from "@/components/seo/json-ld";
+import { breadcrumbJsonLd } from "@/lib/json-ld";
 import { getCategoryWithProducts } from "@/server/queries/catalog";
 
 type CategoryPageProps = {
@@ -25,6 +27,8 @@ export async function generateMetadata({
       result.category.metaDescription ??
       result.category.description ??
       undefined,
+    // ?sort= variants are the same listing; point them all at the base URL
+    alternates: { canonical: `/category/${result.category.slug}` },
   };
 }
 
@@ -42,6 +46,22 @@ export default async function CategoryPage({
 
   return (
     <div className="container-page py-10 md:py-14">
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Categories", path: "/categories" },
+          ...(category.parent
+            ? [
+                {
+                  name: category.parent.name,
+                  path: `/category/${category.parent.slug}`,
+                },
+              ]
+            : []),
+          { name: category.name, path: `/category/${category.slug}` },
+        ])}
+      />
+
       <header className="space-y-2">
         {category.parent && (
           <Link

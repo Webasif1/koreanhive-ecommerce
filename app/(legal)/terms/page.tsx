@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Terms & Conditions",
   description: "The terms that apply when you order from Korean Hive.",
+  alternates: { canonical: "/terms" },
 };
 
 export default function TermsPage() {
