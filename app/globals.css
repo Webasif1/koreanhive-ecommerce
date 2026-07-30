@@ -1,16 +1,142 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------
+   Korean Hive brand palette
+   primary #E8618C · blush #FBE8EF · gold #C99A6B
+   ink #1F2430 · green #2E9E6B
+   --------------------------------------------------------------- */
 
 :root {
+  --brand-primary: #e8618c;
+  --brand-primary-dark: #d24a76;
+  --brand-blush: #fbe8ef;
+  --brand-gold: #c99a6b;
+  --brand-ink: #1f2430;
+  --brand-green: #2e9e6b;
+
+  --radius: 0.75rem;
+
   --background: #ffffff;
-  --foreground: #1f2430;
+  --foreground: var(--brand-ink);
+
+  --card: #ffffff;
+  --card-foreground: var(--brand-ink);
+
+  --popover: #ffffff;
+  --popover-foreground: var(--brand-ink);
+
+  --primary: var(--brand-primary);
+  --primary-foreground: #ffffff;
+
+  --secondary: var(--brand-blush);
+  --secondary-foreground: var(--brand-ink);
+
+  --muted: #f5f5f7;
+  --muted-foreground: #6b7280;
+
+  --accent: var(--brand-blush);
+  --accent-foreground: var(--brand-ink);
+
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+
+  --success: var(--brand-green);
+  --success-foreground: #ffffff;
+
+  --border: #e9e7ec;
+  --input: #e9e7ec;
+  --ring: var(--brand-primary);
+}
+
+.dark {
+  --background: #14171f;
+  --foreground: #f6f5f7;
+
+  --card: #1b1f29;
+  --card-foreground: #f6f5f7;
+
+  --popover: #1b1f29;
+  --popover-foreground: #f6f5f7;
+
+  --primary: #f07ba3;
+  --primary-foreground: #1f2430;
+
+  --secondary: #2a2331;
+  --secondary-foreground: #f6f5f7;
+
+  --muted: #232733;
+  --muted-foreground: #a1a1ab;
+
+  --accent: #2a2331;
+  --accent-foreground: #f6f5f7;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  --success: #45b783;
+  --success-foreground: #0d1a13;
+
+  --border: #2b2f3a;
+  --input: #2b2f3a;
+  --ring: #f07ba3;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* raw brand tokens, for accents that must not shift with theme */
+  --color-blush: var(--brand-blush);
+  --color-gold: var(--brand-gold);
+  --color-ink: var(--brand-ink);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-poppins), var(--font-inter), sans-serif;
+  --font-bengali: var(--font-noto-bengali), var(--font-inter), sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :lang(bn) {
+    font-family: var(--font-bengali);
+  }
+}
+
+@utility container-page {
+  @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
 }
