@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useFormStatus } from "react-dom";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatBDT } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { addToCartAction, buyNowAction } from "@/server/actions/cart";
 
 type Variant = {
   id: string;
@@ -14,16 +16,47 @@ type Variant = {
   stock: number;
 };
 
-export function VariantPicker({
+function SubmitButton({
+  children,
+  variant = "default",
+  formAction,
+  disabled,
+}: {
+  children: React.ReactNode;
+  variant?: "default" | "outline";
+  formAction: (formData: FormData) => void | Promise<void>;
+  disabled?: boolean;
+}) {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button
+      type="submit"
+      size="lg"
+      variant={variant}
+      formAction={formAction}
+      disabled={disabled || pending}
+      className="w-full"
+    >
+      {children}
+    </Button>
+  );
+}
+
+/** Variant + quantity selection, Add to Cart and Buy Now in one form. Buy Now
+ *  posts the same data and redirects to checkout. */
+export function ProductActions({
+  productId,
   variants,
   basePrice,
   baseStock,
 }: {
+  productId: string;
   variants: Variant[];
   basePrice: number;
   baseStock: number;
 }) {
-  const [selectedId, setSelectedId] = useState(variants[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useState(variants[0]?.id ?? "");
   const [quantity, setQuantity] = useState(1);
 
   const selected = variants.find((v) => v.id === selectedId) ?? null;
@@ -32,7 +65,11 @@ export function VariantPicker({
   const outOfStock = stock <= 0;
 
   return (
-    <div className="space-y-5">
+    <form className="space-y-5">
+      <input type="hidden" name="productId" value={productId} />
+      <input type="hidden" name="variantId" value={selectedId} />
+      <input type="hidden" name="quantity" value={quantity} />
+
       <p className="font-display text-2xl font-semibold">{formatBDT(price)}</p>
 
       {variants.length > 0 && (
@@ -43,7 +80,10 @@ export function VariantPicker({
               <button
                 key={variant.id}
                 type="button"
-                onClick={() => setSelectedId(variant.id)}
+                onClick={() => {
+                  setSelectedId(variant.id);
+                  setQuantity(1);
+                }}
                 disabled={variant.stock <= 0}
                 className={cn(
                   "rounded-lg border px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40",
@@ -92,14 +132,22 @@ export function VariantPicker({
         )}
       </div>
 
-      <div className="space-y-2">
-        <Button size="lg" className="w-full" disabled>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <SubmitButton
+          formAction={addToCartAction}
+          variant="outline"
+          disabled={outOfStock}
+        >
           Add to Cart
-        </Button>
-        <p className="text-center text-xs text-muted-foreground">
-          Cart and cash-on-delivery checkout arrive in Step 6.
-        </p>
+        </SubmitButton>
+        <SubmitButton formAction={buyNowAction} disabled={outOfStock}>
+          Buy Now
+        </SubmitButton>
       </div>
-    </div>
+
+      <p className="text-center text-xs text-muted-foreground">
+        Buy Now takes you straight to checkout. Pay cash when it arrives.
+      </p>
+    </form>
   );
 }

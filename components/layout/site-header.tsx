@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Heart, Search, ShoppingBag } from "lucide-react";
 
+import { CartBadge } from "@/components/cart/cart-badge";
+
 import { Button } from "@/components/ui/button";
 import { mainNav } from "@/lib/navigation";
 
@@ -55,9 +57,7 @@ export function SiteHeader() {
           <Button variant="ghost" size="icon" aria-label="Cart" asChild>
             <Link href="/cart" className="relative">
               <ShoppingBag />
-              <span className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
-                0
-              </span>
+              <CartBadge />
             </Link>
           </Button>
         </div>

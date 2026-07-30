@@ -3,10 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Banknote, ShieldCheck, Truck } from "lucide-react";
 
+import { ProductActions } from "@/components/cart/product-actions";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductGrid } from "@/components/product/product-grid";
 import { StarRating } from "@/components/product/star-rating";
-import { VariantPicker } from "@/components/product/variant-picker";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { discountPercent, formatBDT, formatDeliveryWindow } from "@/lib/format";
@@ -131,7 +131,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
             )}
           </div>
 
-          <VariantPicker
+          <ProductActions
+            productId={product.id}
             variants={product.variants.map((v) => ({
               id: v.id,
               name: v.name,

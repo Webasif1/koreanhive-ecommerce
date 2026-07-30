@@ -19,6 +19,12 @@ const productCardSelect = {
     take: 1,
     select: { url: true, alt: true },
   },
+  // the card's Buy Now needs something concrete to put in the cart
+  variants: {
+    where: { isDefault: true },
+    take: 1,
+    select: { id: true, name: true, price: true, stock: true },
+  },
 } as const;
 
 export type ProductCardData = Awaited<
