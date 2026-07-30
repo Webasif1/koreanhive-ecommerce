@@ -4,6 +4,7 @@ export const metadata: Metadata = {
   title: "Returns & Refunds",
   description:
     "How to return or exchange a Korean Hive order, and when refunds apply.",
+  alternates: { canonical: "/returns" },
 };
 
 export default function ReturnsPage() {

@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Contact Us",
   description:
     "Reach the Korean Hive team about an order, a product question or a partnership.",
+  alternates: { canonical: "/contact" },
 };
 
 export default function ContactPage() {

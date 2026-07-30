@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Banknote, ShieldCheck, Truck } from "lucide-react";
 
@@ -5,6 +6,10 @@ import { ProductGrid } from "@/components/product/product-grid";
 import { Button } from "@/components/ui/button";
 import { formatBDT, formatDeliveryWindow } from "@/lib/format";
 import { getDeliveryZones, getFeaturedProducts } from "@/server/queries/catalog";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 export const revalidate = 3600;
 

@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Categories",
   description:
     "Cleansers, toners, essences, serums, sunscreen and more — shop Korean beauty by routine step.",
+  alternates: { canonical: "/categories" },
 };
 
 export const revalidate = 3600;

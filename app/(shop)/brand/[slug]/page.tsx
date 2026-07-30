@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 
 import { ProductGrid } from "@/components/product/product-grid";
 import { isProductSort, SortLinks } from "@/components/product/sort-links";
+import { JsonLd } from "@/components/seo/json-ld";
+import { breadcrumbJsonLd } from "@/lib/json-ld";
 import { getBrandWithProducts } from "@/server/queries/catalog";
 
 type BrandPageProps = {
@@ -22,6 +24,8 @@ export async function generateMetadata({
     title: result.brand.metaTitle ?? result.brand.name,
     description:
       result.brand.metaDescription ?? result.brand.description ?? undefined,
+    // ?sort= variants are the same listing; point them all at the base URL
+    alternates: { canonical: `/brand/${result.brand.slug}` },
   };
 }
 
@@ -39,6 +43,14 @@ export default async function BrandPage({
 
   return (
     <div className="container-page py-10 md:py-14">
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Brands", path: "/brands" },
+          { name: brand.name, path: `/brand/${brand.slug}` },
+        ])}
+      />
+
       <header className="space-y-2">
         {brand.countryOfOrigin && (
           <p className="text-xs uppercase tracking-wide text-muted-foreground">

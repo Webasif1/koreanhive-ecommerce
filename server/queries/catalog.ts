@@ -46,6 +46,28 @@ function orderByFor(sort: ProductSort) {
   }
 }
 
+/** Slugs + timestamps for sitemap.ts. Deliberately minimal: this runs on a
+ *  route that search engines hit, not a customer. */
+export async function getSitemapEntries() {
+  const [products, categories, brands] = await Promise.all([
+    db.product.findMany({
+      where: { isActive: true },
+      select: { slug: true, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+    }),
+    db.category.findMany({
+      where: { isActive: true },
+      select: { slug: true, updatedAt: true },
+    }),
+    db.brand.findMany({
+      where: { isActive: true },
+      select: { slug: true, updatedAt: true },
+    }),
+  ]);
+
+  return { products, categories, brands };
+}
+
 export function getFeaturedProducts(take = 4) {
   return db.product.findMany({
     where: { isActive: true, isFeatured: true },

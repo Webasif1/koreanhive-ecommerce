@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "About Korean Hive",
   description:
     "Korean Hive brings 100% authentic Korean beauty and skincare to Bangladesh, with cash on delivery nationwide.",
+  alternates: { canonical: "/about" },
 };
 
 export default function AboutPage() {
