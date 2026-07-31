@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
 
-import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
-import { SiteFooter } from "@/components/layout/site-footer";
-import { SiteHeader } from "@/components/layout/site-header";
-import { JsonLd } from "@/components/seo/json-ld";
 import { inter, notoSansBengali, poppins } from "@/lib/fonts";
-import { organizationJsonLd, websiteJsonLd } from "@/lib/json-ld";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
@@ -54,17 +49,10 @@ export default function RootLayout({
           inter.variable,
           poppins.variable,
           notoSansBengali.variable,
-          "flex min-h-screen flex-col pb-14 md:pb-0",
+          "antialiased",
         )}
       >
-        {/* site-wide entities; page-level graphs reference these by @id */}
-        <JsonLd data={organizationJsonLd()} />
-        <JsonLd data={websiteJsonLd()} />
-
-        <SiteHeader />
-        <main className="flex-1">{children}</main>
-        <SiteFooter />
-        <MobileBottomNav />
+        {children}
       </body>
     </html>
   );
