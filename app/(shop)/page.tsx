@@ -2,10 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Banknote, ShieldCheck, Truck } from "lucide-react";
 
+import { HeroBanners } from "@/components/layout/hero-banners";
 import { ProductGrid } from "@/components/product/product-grid";
 import { Button } from "@/components/ui/button";
 import { formatBDT, formatDeliveryWindow } from "@/lib/format";
-import { getDeliveryZones, getFeaturedProducts } from "@/server/queries/catalog";
+import {
+  getActiveBanners,
+  getDeliveryZones,
+  getFeaturedProducts,
+} from "@/server/queries/catalog";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -14,13 +19,16 @@ export const metadata: Metadata = {
 export const revalidate = 3600;
 
 export default async function Home() {
-  const [featured, zones] = await Promise.all([
+  const [featured, zones, banners] = await Promise.all([
     getFeaturedProducts(4),
     getDeliveryZones(),
+    getActiveBanners(),
   ]);
 
   return (
     <>
+      <HeroBanners banners={banners} />
+
       <section className="bg-secondary/50">
         <div className="container-page flex flex-col items-start gap-6 py-16 md:py-24">
           <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">

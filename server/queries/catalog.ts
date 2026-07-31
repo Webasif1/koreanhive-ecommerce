@@ -68,6 +68,22 @@ export async function getSitemapEntries() {
   return { products, categories, brands };
 }
 
+/** Active banners whose schedule window is open right now. */
+export function getActiveBanners() {
+  const now = new Date();
+
+  return db.banner.findMany({
+    where: {
+      isActive: true,
+      AND: [
+        { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
+        { OR: [{ endsAt: null }, { endsAt: { gte: now } }] },
+      ],
+    },
+    orderBy: { position: "asc" },
+  });
+}
+
 export function getFeaturedProducts(take = 4) {
   return db.product.findMany({
     where: { isActive: true, isFeatured: true },

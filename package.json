@@ -11,6 +11,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
+    "admin:create": "tsx prisma/create-admin.ts",
     "db:studio": "prisma studio"
   },
   "dependencies": {
@@ -23,6 +24,7 @@
     "lucide-react": "^1.27.0",
     "motion": "^12.43.0",
     "next": "^16.0.0",
+    "next-auth": "^5.0.0-beta.32",
     "pg": "^8.22.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

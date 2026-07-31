@@ -59,6 +59,9 @@ model User {
   image         String?
   phone         String?   @unique
   role          Role      @default(CUSTOMER)
+  /// scrypt hash, "salt:key" hex. Only staff accounts have one — customers
+  /// stay guest-first and will sign in by phone OTP later.
+  passwordHash  String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -340,6 +343,25 @@ model OrderStatusHistory {
   createdAt DateTime  @default(now())
 
   @@index([orderId])
+}
+
+model Banner {
+  id       String  @id @default(cuid())
+  title    String
+  subtitle String?
+  imageUrl String
+  linkUrl  String?
+  /// optional call-to-action text; falls back to a default in the UI
+  ctaLabel String?
+  position Int     @default(0)
+  isActive Boolean @default(true)
+  startsAt DateTime?
+  endsAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, position])
 }
 
 // ------------------------------------------------------ social & saved
