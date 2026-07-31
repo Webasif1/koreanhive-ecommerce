@@ -10,6 +10,10 @@ export const authConfig = {
     signIn: "/admin/login",
   },
   session: { strategy: "jwt" },
+  // Auth.js only auto-trusts the Host header on Vercel. Without this, every
+  // /api/auth/* request on any other production host — including a local
+  // `npm start` — fails with UntrustedHost and login is impossible.
+  trustHost: true,
   providers: [],
   callbacks: {
     // carry the database id and role into the token so the admin guard can
