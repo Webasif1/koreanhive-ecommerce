@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isValidObjectId } from "mongoose";
 
 import type { AdminFormState } from "@/lib/admin-state";
 import { requireAdmin } from "@/server/admin-guard";
-import { db } from "@/server/db";
+import { connectDb } from "@/server/db";
+import { Banner } from "@/server/models";
 
 function dateOrNull(value: FormDataEntryValue | null) {
   const raw = String(value ?? "").trim();
@@ -18,6 +20,7 @@ export async function saveBannerAction(
   formData: FormData,
 ): Promise<AdminFormState> {
   await requireAdmin();
+  await connectDb();
 
   const id = String(formData.get("id") ?? "") || null;
   const title = String(formData.get("title") ?? "").trim();
@@ -52,9 +55,9 @@ export async function saveBannerAction(
   };
 
   if (id) {
-    await db.banner.update({ where: { id }, data });
+    await Banner.updateOne({ _id: id }, { $set: data });
   } else {
-    await db.banner.create({ data });
+    await Banner.create(data);
   }
 
   revalidatePath("/admin/banners");
@@ -65,18 +68,15 @@ export async function saveBannerAction(
 
 export async function toggleBannerAction(formData: FormData) {
   await requireAdmin();
+  await connectDb();
 
   const id = String(formData.get("id") ?? "");
-  const banner = await db.banner.findUnique({
-    where: { id },
-    select: { isActive: true },
-  });
+  if (!isValidObjectId(id)) return;
+
+  const banner = await Banner.findById(id).select("isActive").lean();
   if (!banner) return;
 
-  await db.banner.update({
-    where: { id },
-    data: { isActive: !banner.isActive },
-  });
+  await Banner.updateOne({ _id: id }, { $set: { isActive: !banner.isActive } });
 
   revalidatePath("/admin/banners");
   revalidatePath("/");
@@ -84,8 +84,12 @@ export async function toggleBannerAction(formData: FormData) {
 
 export async function deleteBannerAction(formData: FormData) {
   await requireAdmin();
+  await connectDb();
 
-  await db.banner.delete({ where: { id: String(formData.get("id") ?? "") } });
+  const id = String(formData.get("id") ?? "");
+  if (!isValidObjectId(id)) return;
+
+  await Banner.deleteOne({ _id: id });
 
   revalidatePath("/admin/banners");
   revalidatePath("/");

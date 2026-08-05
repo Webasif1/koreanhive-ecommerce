@@ -1,108 +1,127 @@
 import "dotenv/config";
 
-import { PrismaPg } from "@prisma/adapter-pg";
+import mongoose from "mongoose";
 
-import { PrismaClient } from "../lib/generated/prisma/client";
-
-// Seed runs outside Next.js, so it builds its own client rather than
-// importing server/db.ts (which is marked server-only).
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-const db = new PrismaClient({ adapter });
+import {
+  Banner,
+  Brand,
+  Category,
+  Coupon,
+  DeliveryZone,
+  Product,
+} from "../server/models";
 
 const img = (seed: string) => `https://picsum.photos/seed/${seed}/900/900`;
 
 async function main() {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) throw new Error("Set MONGODB_URI in .env first.");
+
+  await mongoose.connect(uri);
+
   // ---------------------------------------------------------- zones
   const [insideDhaka, outsideDhaka] = await Promise.all([
-    db.deliveryZone.upsert({
-      where: { slug: "inside-dhaka" },
-      update: {},
-      create: {
-        name: "Inside Dhaka",
-        slug: "inside-dhaka",
-        charge: 60,
-        freeShippingThreshold: 2000,
-        minDays: 1,
-        maxDays: 2,
-        position: 0,
+    DeliveryZone.findOneAndUpdate(
+      { slug: "inside-dhaka" },
+      {
+        $setOnInsert: {
+          name: "Inside Dhaka",
+          slug: "inside-dhaka",
+          charge: 60,
+          freeShippingThreshold: 2000,
+          minDays: 1,
+          maxDays: 2,
+          position: 0,
+        },
       },
-    }),
-    db.deliveryZone.upsert({
-      where: { slug: "outside-dhaka" },
-      update: {},
-      create: {
-        name: "Outside Dhaka",
-        slug: "outside-dhaka",
-        charge: 120,
-        freeShippingThreshold: 3000,
-        minDays: 2,
-        maxDays: 4,
-        position: 1,
+      { upsert: true, new: true },
+    ),
+    DeliveryZone.findOneAndUpdate(
+      { slug: "outside-dhaka" },
+      {
+        $setOnInsert: {
+          name: "Outside Dhaka",
+          slug: "outside-dhaka",
+          charge: 120,
+          freeShippingThreshold: 3000,
+          minDays: 2,
+          maxDays: 4,
+          position: 1,
+        },
       },
-    }),
+      { upsert: true, new: true },
+    ),
   ]);
 
   // --------------------------------------------------------- brands
+  const brandSeeds = [
+    {
+      name: "Beauty of Joseon",
+      slug: "beauty-of-joseon",
+      description:
+        "Hanbang skincare that blends traditional Korean herbal medicine with modern formulation.",
+    },
+    {
+      name: "COSRX",
+      slug: "cosrx",
+      description:
+        "Minimal ingredient lists built around one hero active per product.",
+    },
+    {
+      name: "Anua",
+      slug: "anua",
+      description:
+        "Gentle, barrier-first skincare centred on heartleaf and peach ingredients.",
+    },
+  ];
+
   const brands = await Promise.all(
-    [
-      {
-        name: "Beauty of Joseon",
-        slug: "beauty-of-joseon",
-        description:
-          "Hanbang skincare that blends traditional Korean herbal medicine with modern formulation.",
-      },
-      {
-        name: "COSRX",
-        slug: "cosrx",
-        description:
-          "Minimal ingredient lists built around one hero active per product.",
-      },
-      {
-        name: "Anua",
-        slug: "anua",
-        description:
-          "Gentle, barrier-first skincare centred on heartleaf and peach ingredients.",
-      },
-    ].map((brand) =>
-      db.brand.upsert({
-        where: { slug: brand.slug },
-        update: {},
-        create: { ...brand, logoUrl: img(`brand-${brand.slug}`) },
-      }),
+    brandSeeds.map((brand) =>
+      Brand.findOneAndUpdate(
+        { slug: brand.slug },
+        { $setOnInsert: { ...brand, logoUrl: img(`brand-${brand.slug}`) } },
+        { upsert: true, new: true },
+      ),
     ),
   );
 
   const brandBySlug = Object.fromEntries(brands.map((b) => [b.slug, b]));
 
   // ----------------------------------------------------- categories
-  const skincare = await db.category.upsert({
-    where: { slug: "skincare" },
-    update: {},
-    create: {
-      name: "Skincare",
-      slug: "skincare",
-      description: "Every step of the Korean skincare routine.",
-      imageUrl: img("cat-skincare"),
-      position: 0,
+  const skincare = await Category.findOneAndUpdate(
+    { slug: "skincare" },
+    {
+      $setOnInsert: {
+        name: "Skincare",
+        slug: "skincare",
+        description: "Every step of the Korean skincare routine.",
+        imageUrl: img("cat-skincare"),
+        position: 0,
+      },
     },
-  });
+    { upsert: true, new: true },
+  );
+
+  const childSeeds = [
+    { name: "Cleansers", slug: "cleansers", position: 0 },
+    { name: "Toners", slug: "toners", position: 1 },
+    { name: "Serums & Essences", slug: "serums-essences", position: 2 },
+    { name: "Sunscreen", slug: "sunscreen", position: 3 },
+  ];
 
   const children = await Promise.all(
-    [
-      { name: "Cleansers", slug: "cleansers", position: 0 },
-      { name: "Toners", slug: "toners", position: 1 },
-      { name: "Serums & Essences", slug: "serums-essences", position: 2 },
-      { name: "Sunscreen", slug: "sunscreen", position: 3 },
-    ].map((child) =>
-      db.category.upsert({
-        where: { slug: child.slug },
-        update: {},
-        create: {
-          ...child,
-          parentId: skincare.id,
-          imageUrl: img(`cat-${child.slug}`),
+    childSeeds.map((child) =>
+      Category.findOneAndUpdate(
+        { slug: child.slug },
+        {
+          $setOnInsert: {
+            ...child,
+            parentId: skincare._id,
+            imageUrl: img(`cat-${child.slug}`),
+          },
         },
-      }),
+        { upsert: true, new: true },
+      ),
     ),
   );
 
@@ -137,7 +156,8 @@ async function main() {
       isFeatured: true,
       shortDescription:
         "A hydrating first essence with ginseng root water for tired, dull skin.",
-      ingredients: "Ginseng Root Water, Glycerin, Panthenol, Sodium Hyaluronate.",
+      ingredients:
+        "Ginseng Root Water, Glycerin, Panthenol, Sodium Hyaluronate.",
       howToUse:
         "After cleansing, pat a small amount over the face until absorbed.",
       variants: [{ name: "150ml", stock: 25, isDefault: true }],
@@ -171,8 +191,7 @@ async function main() {
       shortDescription:
         "A mildly acidic gel cleanser that respects the skin barrier.",
       ingredients: "Water, Cocamidopropyl Betaine, Tea Tree Leaf Oil, BHA.",
-      howToUse:
-        "Lather with water, massage over damp skin, rinse thoroughly.",
+      howToUse: "Lather with water, massage over damp skin, rinse thoroughly.",
       variants: [{ name: "150ml", stock: 35, isDefault: true }],
     },
     {
@@ -210,66 +229,58 @@ async function main() {
   for (const p of products) {
     const { variants, brand, category, ...rest } = p;
 
-    const product = await db.product.upsert({
-      where: { slug: p.slug },
-      update: {},
-      create: {
-        ...rest,
-        brandId: brandBySlug[brand].id,
-        categoryId: categoryBySlug[category].id,
-        metaTitle: `${p.name} | Korean Hive`,
-        metaDescription: p.shortDescription,
+    // images and variants are embedded, so they are only written on insert —
+    // re-running the seed must not clobber stock edited in admin
+    await Product.findOneAndUpdate(
+      { slug: p.slug },
+      {
+        $setOnInsert: {
+          ...rest,
+          brandId: brandBySlug[brand]._id,
+          categoryId: categoryBySlug[category]._id,
+          metaTitle: `${p.name} | Korean Hive`,
+          metaDescription: p.shortDescription,
+          images: [0, 1].map((i) => ({
+            url: img(`${p.slug}-${i}`),
+            alt: `${p.name} — image ${i + 1}`,
+            position: i,
+          })),
+          variants: variants.map((v, i) => ({
+            name: v.name,
+            price: "price" in v ? v.price : null,
+            stock: v.stock,
+            position: i,
+            isDefault: "isDefault" in v ? Boolean(v.isDefault) : false,
+          })),
+        },
       },
-    });
-
-    // images and variants are children, so only create them on first seed
-    const existingImages = await db.productImage.count({
-      where: { productId: product.id },
-    });
-
-    if (existingImages === 0) {
-      await db.productImage.createMany({
-        data: [0, 1].map((i) => ({
-          productId: product.id,
-          url: img(`${p.slug}-${i}`),
-          alt: `${p.name} — image ${i + 1}`,
-          position: i,
-        })),
-      });
-
-      await db.productVariant.createMany({
-        data: variants.map((v, i) => ({
-          productId: product.id,
-          name: v.name,
-          price: "price" in v ? v.price : null,
-          stock: v.stock,
-          position: i,
-          isDefault: "isDefault" in v ? Boolean(v.isDefault) : false,
-        })),
-      });
-    }
+      { upsert: true, new: true },
+    );
   }
 
   // --------------------------------------------------------- coupon
-  await db.coupon.upsert({
-    where: { code: "WELCOME10" },
-    update: {},
-    create: {
-      code: "WELCOME10",
-      description: "10% off your first order, up to ৳200.",
-      type: "PERCENTAGE",
-      value: 10,
-      minSubtotal: 1000,
-      maxDiscount: 200,
+  await Coupon.findOneAndUpdate(
+    { code: "WELCOME10" },
+    {
+      $setOnInsert: {
+        code: "WELCOME10",
+        description: "10% off your first order, up to ৳200.",
+        type: "PERCENTAGE",
+        value: 10,
+        minSubtotal: 1000,
+        maxDiscount: 200,
+      },
     },
-  });
+    { upsert: true, new: true },
+  );
 
   console.log("Seeded:");
-  console.log(`  zones     ${insideDhaka.name}, ${outsideDhaka.name}`);
-  console.log(`  brands    ${brands.length}`);
+  console.log(`  zones      ${insideDhaka.name}, ${outsideDhaka.name}`);
+  console.log(`  brands     ${brands.length}`);
   console.log(`  categories ${children.length + 1}`);
-  console.log(`  products  ${products.length}`);
-  console.log("  coupon    WELCOME10");
+  console.log(`  products   ${products.length}`);
+  console.log(`  banners    ${await Banner.countDocuments({})}`);
+  console.log("  coupon     WELCOME10");
 }
 
 main()
@@ -278,5 +289,5 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await db.$disconnect();
+    await mongoose.disconnect();
   });

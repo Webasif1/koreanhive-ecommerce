@@ -1,120 +1,255 @@
 import "server-only";
 
-import { db } from "@/server/db";
+import type { QueryFilter } from "mongoose";
 
-/** Shape every product grid renders. Keep the select list tight — grids
- *  should never pull description/ingredients blobs. */
-const productCardSelect = {
-  id: true,
-  name: true,
-  slug: true,
-  price: true,
-  comparePrice: true,
-  stock: true,
-  ratingAvg: true,
-  ratingCount: true,
-  brand: { select: { name: true, slug: true } },
-  images: {
-    orderBy: { position: "asc" },
-    take: 1,
-    select: { url: true, alt: true },
-  },
+import { connectDb } from "@/server/db";
+import {
+  Banner,
+  Brand,
+  Category,
+  DeliveryZone,
+  Product,
+  type ProductDoc,
+} from "@/server/models";
+
+/** Shape every product grid renders. Kept tight on purpose — grids should
+ *  never pull description/ingredients blobs. */
+export type ProductCardData = {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  comparePrice: number | null;
+  stock: number;
+  ratingAvg: number;
+  ratingCount: number;
+  brand: { name: string; slug: string } | null;
+  images: { url: string; alt: string | null }[];
   // the card's Buy Now needs something concrete to put in the cart
-  variants: {
-    where: { isDefault: true },
-    take: 1,
-    select: { id: true, name: true, price: true, stock: true },
-  },
-} as const;
+  variants: { id: string; name: string; price: number | null; stock: number }[];
+};
 
-export type ProductCardData = Awaited<
-  ReturnType<typeof getFeaturedProducts>
->[number];
+const CARD_FIELDS =
+  "name slug price comparePrice stock ratingAvg ratingCount brandId images variants";
 
 export type ProductSort = "newest" | "price-asc" | "price-desc" | "popular";
 
-function orderByFor(sort: ProductSort) {
+function sortFor(sort: ProductSort): Record<string, 1 | -1> {
   switch (sort) {
     case "price-asc":
-      return { price: "asc" } as const;
+      return { price: 1 };
     case "price-desc":
-      return { price: "desc" } as const;
+      return { price: -1 };
     case "popular":
-      return { ratingCount: "desc" } as const;
+      return { ratingCount: -1 };
     default:
-      return { createdAt: "desc" } as const;
+      return { createdAt: -1 };
   }
 }
 
+type LeanProduct = Pick<
+  ProductDoc,
+  | "_id"
+  | "name"
+  | "slug"
+  | "price"
+  | "comparePrice"
+  | "stock"
+  | "ratingAvg"
+  | "ratingCount"
+  | "brandId"
+  | "images"
+  | "variants"
+>;
+
+/** One brand lookup for a whole page of cards rather than a join per row. */
+async function brandMapFor(products: LeanProduct[]) {
+  const ids = [
+    ...new Set(
+      products.flatMap((p) => (p.brandId ? [p.brandId.toString()] : [])),
+    ),
+  ];
+
+  if (ids.length === 0) return new Map<string, { name: string; slug: string }>();
+
+  const brands = await Brand.find({ _id: { $in: ids } })
+    .select("name slug")
+    .lean();
+
+  return new Map(
+    brands.map((b) => [b._id.toString(), { name: b.name, slug: b.slug }]),
+  );
+}
+
+function toCard(
+  product: LeanProduct,
+  brands: Map<string, { name: string; slug: string }>,
+): ProductCardData {
+  const images = [...(product.images ?? [])].sort(
+    (a, b) => a.position - b.position,
+  );
+  const defaultVariant = (product.variants ?? []).find((v) => v.isDefault);
+
+  return {
+    id: product._id.toString(),
+    name: product.name,
+    slug: product.slug,
+    price: product.price,
+    comparePrice: product.comparePrice ?? null,
+    stock: product.stock,
+    ratingAvg: product.ratingAvg,
+    ratingCount: product.ratingCount,
+    brand: product.brandId
+      ? (brands.get(product.brandId.toString()) ?? null)
+      : null,
+    images: images.slice(0, 1).map((i) => ({ url: i.url, alt: i.alt ?? null })),
+    variants: defaultVariant
+      ? [
+          {
+            id: defaultVariant._id.toString(),
+            name: defaultVariant.name,
+            price: defaultVariant.price ?? null,
+            stock: defaultVariant.stock,
+          },
+        ]
+      : [],
+  };
+}
+
+/** Mongoose 9 renamed FilterQuery to QueryFilter. */
+type ProductFilter = QueryFilter<ProductDoc>;
+
+async function findCards(
+  filter: ProductFilter,
+  sort: ProductSort,
+  take?: number,
+) {
+  await connectDb();
+
+  const query = Product.find(filter).select(CARD_FIELDS).sort(sortFor(sort));
+  if (take) query.limit(take);
+
+  const products = (await query.lean()) as unknown as LeanProduct[];
+  const brands = await brandMapFor(products);
+
+  return products.map((p) => toCard(p, brands));
+}
+
 /** Slugs + timestamps for sitemap.ts. Deliberately minimal: this runs on a
- *  route that search engines hit, not a customer. */
+ *  route search engines hit, not a customer. */
 export async function getSitemapEntries() {
+  await connectDb();
+
   const [products, categories, brands] = await Promise.all([
-    db.product.findMany({
-      where: { isActive: true },
-      select: { slug: true, updatedAt: true },
-      orderBy: { updatedAt: "desc" },
-    }),
-    db.category.findMany({
-      where: { isActive: true },
-      select: { slug: true, updatedAt: true },
-    }),
-    db.brand.findMany({
-      where: { isActive: true },
-      select: { slug: true, updatedAt: true },
-    }),
+    Product.find({ isActive: true })
+      .select("slug updatedAt")
+      .sort({ updatedAt: -1 })
+      .lean(),
+    Category.find({ isActive: true }).select("slug updatedAt").lean(),
+    Brand.find({ isActive: true }).select("slug updatedAt").lean(),
   ]);
 
-  return { products, categories, brands };
+  return {
+    products: products.map((p) => ({ slug: p.slug, updatedAt: p.updatedAt })),
+    categories: categories.map((c) => ({
+      slug: c.slug,
+      updatedAt: c.updatedAt,
+    })),
+    brands: brands.map((b) => ({ slug: b.slug, updatedAt: b.updatedAt })),
+  };
 }
 
 /** Active banners whose schedule window is open right now. */
-export function getActiveBanners() {
+export async function getActiveBanners() {
+  await connectDb();
+
   const now = new Date();
 
-  return db.banner.findMany({
-    where: {
-      isActive: true,
-      AND: [
-        { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
-        { OR: [{ endsAt: null }, { endsAt: { gte: now } }] },
-      ],
-    },
-    orderBy: { position: "asc" },
-  });
+  const banners = await Banner.find({
+    isActive: true,
+    $and: [
+      { $or: [{ startsAt: null }, { startsAt: { $lte: now } }] },
+      { $or: [{ endsAt: null }, { endsAt: { $gte: now } }] },
+    ],
+  })
+    .sort({ position: 1 })
+    .lean();
+
+  return banners.map((banner) => ({
+    id: banner._id.toString(),
+    title: banner.title,
+    subtitle: banner.subtitle ?? null,
+    imageUrl: banner.imageUrl,
+    linkUrl: banner.linkUrl ?? null,
+    ctaLabel: banner.ctaLabel ?? null,
+  }));
 }
 
 export function getFeaturedProducts(take = 4) {
-  return db.product.findMany({
-    where: { isActive: true, isFeatured: true },
-    orderBy: { createdAt: "desc" },
-    take,
-    select: productCardSelect,
-  });
+  return findCards({ isActive: true, isFeatured: true }, "newest", take);
 }
 
 export function getProducts({
   sort = "newest",
   take = 48,
 }: { sort?: ProductSort; take?: number } = {}) {
-  return db.product.findMany({
-    where: { isActive: true },
-    orderBy: orderByFor(sort),
-    take,
-    select: productCardSelect,
-  });
+  return findCards({ isActive: true }, sort, take);
 }
 
-export function getProductBySlug(slug: string) {
-  return db.product.findFirst({
-    where: { slug, isActive: true },
-    include: {
-      brand: { select: { name: true, slug: true } },
-      category: { select: { name: true, slug: true, parentId: true } },
-      images: { orderBy: { position: "asc" } },
-      variants: { orderBy: { position: "asc" } },
-    },
-  });
+export async function getProductBySlug(slug: string) {
+  await connectDb();
+
+  const product = await Product.findOne({ slug, isActive: true }).lean();
+  if (!product) return null;
+
+  const [brand, category] = await Promise.all([
+    product.brandId
+      ? Brand.findById(product.brandId).select("name slug").lean()
+      : null,
+    product.categoryId
+      ? Category.findById(product.categoryId)
+          .select("name slug parentId")
+          .lean()
+      : null,
+  ]);
+
+  return {
+    id: product._id.toString(),
+    name: product.name,
+    slug: product.slug,
+    shortDescription: product.shortDescription ?? null,
+    description: product.description ?? null,
+    ingredients: product.ingredients ?? null,
+    howToUse: product.howToUse ?? null,
+    price: product.price,
+    comparePrice: product.comparePrice ?? null,
+    sku: product.sku ?? null,
+    stock: product.stock,
+    ratingAvg: product.ratingAvg,
+    ratingCount: product.ratingCount,
+    metaTitle: product.metaTitle ?? null,
+    metaDescription: product.metaDescription ?? null,
+    categoryId: product.categoryId?.toString() ?? null,
+    brand: brand ? { name: brand.name, slug: brand.slug } : null,
+    category: category
+      ? {
+          name: category.name,
+          slug: category.slug,
+          parentId: category.parentId?.toString() ?? null,
+        }
+      : null,
+    images: [...product.images]
+      .sort((a, b) => a.position - b.position)
+      .map((i) => ({ id: i._id.toString(), url: i.url, alt: i.alt ?? null })),
+    variants: [...product.variants]
+      .sort((a, b) => a.position - b.position)
+      .map((v) => ({
+        id: v._id.toString(),
+        name: v.name,
+        price: v.price ?? null,
+        stock: v.stock,
+      })),
+  };
 }
 
 /** Same category first. A category holding a single product would otherwise
@@ -129,26 +264,31 @@ export async function getRelatedProducts({
   take?: number;
 }) {
   const sameCategory = categoryId
-    ? await db.product.findMany({
-        where: { isActive: true, id: { not: productId }, categoryId },
-        orderBy: { ratingCount: "desc" },
+    ? await findCards(
+        { isActive: true, _id: { $ne: productId }, categoryId },
+        "popular",
         take,
-        select: productCardSelect,
-      })
+      )
     : [];
 
   if (sameCategory.length >= take) return sameCategory;
 
   const excludeIds = [productId, ...sameCategory.map((p) => p.id)];
 
-  const fallback = await db.product.findMany({
-    where: { isActive: true, id: { notIn: excludeIds } },
-    orderBy: [{ isFeatured: "desc" }, { ratingCount: "desc" }],
-    take: take - sameCategory.length,
-    select: productCardSelect,
-  });
+  await connectDb();
 
-  return [...sameCategory, ...fallback];
+  const fallbackDocs = (await Product.find({
+    isActive: true,
+    _id: { $nin: excludeIds },
+  })
+    .select(CARD_FIELDS)
+    .sort({ isFeatured: -1, ratingCount: -1 })
+    .limit(take - sameCategory.length)
+    .lean()) as unknown as LeanProduct[];
+
+  const brands = await brandMapFor(fallbackDocs);
+
+  return [...sameCategory, ...fallbackDocs.map((p) => toCard(p, brands))];
 }
 
 /** Products in a category *and* its direct children, so "Skincare" is not
@@ -157,75 +297,155 @@ export async function getCategoryWithProducts(
   slug: string,
   sort: ProductSort = "newest",
 ) {
-  const category = await db.category.findFirst({
-    where: { slug, isActive: true },
-    include: {
-      children: {
-        where: { isActive: true },
-        orderBy: { position: "asc" },
-        select: { id: true, name: true, slug: true },
-      },
-      parent: { select: { name: true, slug: true } },
-    },
-  });
+  await connectDb();
 
+  const category = await Category.findOne({ slug, isActive: true }).lean();
   if (!category) return null;
 
-  const categoryIds = [category.id, ...category.children.map((c) => c.id)];
+  const [children, parent] = await Promise.all([
+    Category.find({ parentId: category._id, isActive: true })
+      .select("name slug")
+      .sort({ position: 1 })
+      .lean(),
+    category.parentId
+      ? Category.findById(category.parentId).select("name slug").lean()
+      : null,
+  ]);
 
-  const products = await db.product.findMany({
-    where: { isActive: true, categoryId: { in: categoryIds } },
-    orderBy: orderByFor(sort),
-    select: productCardSelect,
-  });
+  const categoryIds = [category._id, ...children.map((c) => c._id)];
 
-  return { category, products };
+  const products = await findCards(
+    { isActive: true, categoryId: { $in: categoryIds } },
+    sort,
+  );
+
+  return {
+    category: {
+      id: category._id.toString(),
+      name: category.name,
+      slug: category.slug,
+      description: category.description ?? null,
+      metaTitle: category.metaTitle ?? null,
+      metaDescription: category.metaDescription ?? null,
+      parent: parent ? { name: parent.name, slug: parent.slug } : null,
+      children: children.map((c) => ({
+        id: c._id.toString(),
+        name: c.name,
+        slug: c.slug,
+      })),
+    },
+    products,
+  };
 }
 
 export async function getBrandWithProducts(
   slug: string,
   sort: ProductSort = "newest",
 ) {
-  const brand = await db.brand.findFirst({
-    where: { slug, isActive: true },
-  });
+  await connectDb();
 
+  const brand = await Brand.findOne({ slug, isActive: true }).lean();
   if (!brand) return null;
 
-  const products = await db.product.findMany({
-    where: { isActive: true, brandId: brand.id },
-    orderBy: orderByFor(sort),
-    select: productCardSelect,
-  });
+  const products = await findCards({ isActive: true, brandId: brand._id }, sort);
 
-  return { brand, products };
-}
-
-export function getCategoryTree() {
-  return db.category.findMany({
-    where: { isActive: true, parentId: null },
-    orderBy: { position: "asc" },
-    include: {
-      children: {
-        where: { isActive: true },
-        orderBy: { position: "asc" },
-        include: { _count: { select: { products: true } } },
-      },
+  return {
+    brand: {
+      id: brand._id.toString(),
+      name: brand.name,
+      slug: brand.slug,
+      description: brand.description ?? null,
+      countryOfOrigin: brand.countryOfOrigin ?? null,
+      metaTitle: brand.metaTitle ?? null,
+      metaDescription: brand.metaDescription ?? null,
     },
-  });
+    products,
+  };
 }
 
-export function getBrands() {
-  return db.brand.findMany({
-    where: { isActive: true },
-    orderBy: { name: "asc" },
-    include: { _count: { select: { products: true } } },
-  });
+/** Product counts per category, in one aggregation rather than N queries. */
+async function productCountsByCategory() {
+  const rows = await Product.aggregate<{ _id: unknown; count: number }>([
+    { $match: { isActive: true } },
+    { $group: { _id: "$categoryId", count: { $sum: 1 } } },
+  ]);
+
+  return new Map(
+    rows.filter((r) => r._id).map((r) => [String(r._id), r.count]),
+  );
 }
 
-export function getDeliveryZones() {
-  return db.deliveryZone.findMany({
-    where: { isActive: true },
-    orderBy: { position: "asc" },
-  });
+export async function getCategoryTree() {
+  await connectDb();
+
+  const [parents, counts] = await Promise.all([
+    Category.find({ isActive: true, parentId: null })
+      .sort({ position: 1 })
+      .lean(),
+    productCountsByCategory(),
+  ]);
+
+  const children = await Category.find({
+    isActive: true,
+    parentId: { $in: parents.map((p) => p._id) },
+  })
+    .sort({ position: 1 })
+    .lean();
+
+  return parents.map((parent) => ({
+    id: parent._id.toString(),
+    name: parent.name,
+    slug: parent.slug,
+    children: children
+      .filter((c) => c.parentId?.toString() === parent._id.toString())
+      .map((c) => ({
+        id: c._id.toString(),
+        name: c.name,
+        slug: c.slug,
+        imageUrl: c.imageUrl ?? null,
+        _count: { products: counts.get(c._id.toString()) ?? 0 },
+      })),
+  }));
+}
+
+export async function getBrands() {
+  await connectDb();
+
+  const [brands, rows] = await Promise.all([
+    Brand.find({ isActive: true }).sort({ name: 1 }).lean(),
+    Product.aggregate<{ _id: unknown; count: number }>([
+      { $match: { isActive: true } },
+      { $group: { _id: "$brandId", count: { $sum: 1 } } },
+    ]),
+  ]);
+
+  const counts = new Map(
+    rows.filter((r) => r._id).map((r) => [String(r._id), r.count]),
+  );
+
+  return brands.map((brand) => ({
+    id: brand._id.toString(),
+    name: brand.name,
+    slug: brand.slug,
+    description: brand.description ?? null,
+    _count: { products: counts.get(brand._id.toString()) ?? 0 },
+  }));
+}
+
+export async function getDeliveryZones() {
+  await connectDb();
+
+  const zones = await DeliveryZone.find({ isActive: true })
+    .sort({ position: 1 })
+    .lean();
+
+  return zones.map((zone) => ({
+    id: zone._id.toString(),
+    name: zone.name,
+    slug: zone.slug,
+    charge: zone.charge,
+    freeShippingThreshold: zone.freeShippingThreshold ?? null,
+    minDays: zone.minDays,
+    maxDays: zone.maxDays,
+  }));
 }

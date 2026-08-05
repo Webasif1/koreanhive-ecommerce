@@ -6,7 +6,7 @@ import { Banknote, CheckCircle2, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatBDT, formatDeliveryWindow } from "@/lib/format";
 import { hasOrderAccess } from "@/server/cart-cookie";
-import { db } from "@/server/db";
+import { getOrderByNumber } from "@/server/queries/order";
 
 export const metadata: Metadata = {
   title: "Order Confirmed",
@@ -40,10 +40,7 @@ export default async function OrderSuccessPage({ params }: OrderPageProps) {
     );
   }
 
-  const order = await db.order.findUnique({
-    where: { orderNumber },
-    include: { items: true, deliveryZone: true },
-  });
+  const order = await getOrderByNumber(orderNumber);
 
   if (!order) notFound();
 

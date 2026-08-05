@@ -1,4 +1,4 @@
-/** Prices are stored as Int in whole BDT — see prisma/schema.prisma. */
+/** Prices are stored as integers in whole BDT — see server/models/index.ts. */
 export function formatBDT(amount: number) {
   return `৳${amount.toLocaleString("en-US")}`;
 }

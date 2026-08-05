@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { isValidObjectId } from "mongoose";
 
 import {
   MAX_QUANTITY_PER_LINE,
@@ -10,7 +11,8 @@ import {
   writeCouponCookie,
   type CartCookieItem,
 } from "@/server/cart-cookie";
-import { db } from "@/server/db";
+import { connectDb } from "@/server/db";
+import { Product } from "@/server/models";
 
 type AddInput = {
   productId: string;
@@ -27,13 +29,21 @@ function sanitizeQuantity(value: FormDataEntryValue | null) {
 /** Confirms the product/variant exists and is sellable before it can enter
  *  the cookie — otherwise a crafted form post could park junk in the cart. */
 async function assertSellable({ productId, variantId }: AddInput) {
-  const product = await db.product.findFirst({
-    where: { id: productId, isActive: true },
-    select: { id: true, variants: { select: { id: true } } },
-  });
+  // guard first: a malformed id would make Mongoose throw a CastError
+  if (!isValidObjectId(productId)) return false;
+  if (variantId && !isValidObjectId(variantId)) return false;
+
+  await connectDb();
+
+  const product = await Product.findOne({ _id: productId, isActive: true })
+    .select("variants")
+    .lean();
 
   if (!product) return false;
-  if (variantId && !product.variants.some((v) => v.id === variantId)) {
+  if (
+    variantId &&
+    !product.variants.some((v) => v._id.toString() === variantId)
+  ) {
     return false;
   }
   return true;

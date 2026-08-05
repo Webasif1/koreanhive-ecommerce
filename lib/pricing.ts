@@ -1,4 +1,4 @@
-/** All amounts are Int, whole BDT. See prisma/schema.prisma. */
+/** All amounts are integers, whole BDT. See server/models/index.ts. */
 
 export type PricedLine = {
   unitPrice: number;
