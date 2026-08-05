@@ -20,13 +20,13 @@ Premium Korean beauty & skincare e-commerce platform for Bangladesh. A fast, SEO
 | Framework | Next.js 16 (App Router, Server Components, Server Actions) |
 | Language | TypeScript |
 | Styling | Tailwind CSS + shadcn/ui + Framer Motion |
-| Database | PostgreSQL + Prisma |
+| Database | MongoDB + Mongoose |
 | Auth | Auth.js (guest-first, phone OTP) |
 | Search | Meilisearch |
 | Media / CDN | ImageKit |
 | CMS / Admin | Payload CMS + custom commerce admin |
 | Payments | Cash on Delivery → SSLCommerz (planned) |
-| Hosting | Vercel · Neon/Supabase (DB) · Railway/DigitalOcean (search, workers) |
+| Hosting | Vercel · MongoDB Atlas (DB) · Railway/DigitalOcean (search, workers) |
 
 ## 🚀 Getting Started
 
@@ -34,11 +34,14 @@ Premium Korean beauty & skincare e-commerce platform for Bangladesh. A fast, SEO
 # install dependencies
 npm install
 
-# set environment variables
+# set environment variables (MONGODB_URI, AUTH_SECRET, ADMIN_*)
 cp .env.example .env
 
-# run database migrations
-npx prisma migrate dev
+# load demo products, categories, brands and the two delivery zones
+npm run db:seed
+
+# create the staff login from ADMIN_EMAIL / ADMIN_PASSWORD
+npm run admin:create
 
 # start the dev server
 npm run dev
@@ -51,9 +54,9 @@ App runs at `http://localhost:3000`.
 ```
 app/         # routes (storefront, account, admin, api)
 components/   # UI, product, cart, checkout, layout
-server/       # Server Actions, services, zod validators
-lib/          # db, auth, seo, meili, imagekit helpers
-prisma/       # schema, migrations, seed
+server/       # Mongoose models, queries, Server Actions
+lib/          # auth, seo, pricing, formatting helpers
+scripts/      # seed + admin bootstrap (tsx)
 cms/          # Payload config & collections
 workers/      # background jobs (order notify, reindex)
 docs/         # architecture roadmap & planning docs

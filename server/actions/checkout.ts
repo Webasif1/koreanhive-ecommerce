@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { isValidObjectId, Types } from "mongoose";
 
 import { isValidBdPhone, normalizeBdPhone } from "@/lib/bd-districts";
 import type { CheckoutState } from "@/lib/checkout-state";
@@ -12,7 +13,8 @@ import {
   writeCartCookie,
   writeCouponCookie,
 } from "@/server/cart-cookie";
-import { db } from "@/server/db";
+import { connectDb, mongoose } from "@/server/db";
+import { Coupon, DeliveryZone, Order, Product } from "@/server/models";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no I/O/0/1
 
@@ -80,9 +82,12 @@ export async function placeOrderAction(
     return { ok: false, message: "Your cart is empty.", errors: {} };
   }
 
-  const zone = await db.deliveryZone.findFirst({
-    where: { slug: zoneSlug, isActive: true },
-  });
+  await connectDb();
+
+  const zone = await DeliveryZone.findOne({
+    slug: zoneSlug,
+    isActive: true,
+  }).lean();
 
   if (!zone) {
     return {
@@ -94,54 +99,43 @@ export async function placeOrderAction(
 
   const couponCode = await readCouponCookie();
 
-  // Read the catalogue *before* opening the transaction. Neon is a remote
-  // database, and holding a transaction open across these reads blew the
-  // interactive-transaction timeout. Stock is still safe: the decrements
-  // below are conditional, so a stale read cannot oversell.
-  const products = await db.product.findMany({
-    where: {
-      id: { in: cartItems.map((i) => i.productId) },
-      isActive: true,
+  const products = await Product.find({
+    _id: {
+      $in: cartItems
+        .map((i) => i.productId)
+        .filter((id) => isValidObjectId(id)),
     },
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      price: true,
-      stock: true,
-      images: {
-        orderBy: { position: "asc" },
-        take: 1,
-        select: { url: true },
-      },
-      variants: {
-        select: { id: true, name: true, price: true, stock: true },
-      },
-    },
-  });
+    isActive: true,
+  })
+    .select("name slug price stock images variants")
+    .lean();
 
-  const byId = new Map(products.map((p) => [p.id, p]));
+  const byId = new Map(products.map((p) => [p._id.toString(), p]));
 
   const lines = cartItems.flatMap((item) => {
     const product = byId.get(item.productId);
     if (!product) return [];
 
     const variant = item.variantId
-      ? (product.variants.find((v) => v.id === item.variantId) ?? null)
+      ? (product.variants.find((v) => v._id.toString() === item.variantId) ??
+        null)
       : null;
     if (item.variantId && !variant) return [];
 
     // prices come from the database, never from the client
     const unitPrice = variant?.price ?? product.price;
+    const firstImage = [...(product.images ?? [])].sort(
+      (a, b) => a.position - b.position,
+    )[0];
 
     return [
       {
-        productId: product.id,
-        variantId: variant?.id ?? null,
+        productId: product._id,
+        variantId: variant?._id ?? null,
         productName: product.name,
         productSlug: product.slug,
         variantName: variant?.name ?? null,
-        imageUrl: product.images[0]?.url ?? null,
+        imageUrl: firstImage?.url ?? null,
         unitPrice,
         quantity: item.quantity,
         lineTotal: unitPrice * item.quantity,
@@ -155,120 +149,125 @@ export async function placeOrderAction(
 
   const subtotal = lines.reduce((sum, l) => sum + l.lineTotal, 0);
 
-  // Validate the coupon outside the transaction too; only the usage claim
-  // has to be atomic.
-  const couponRow = couponCode
-    ? await db.coupon.findUnique({ where: { code: couponCode } })
-    : null;
+  const couponRow = couponCode ? await Coupon.findOne({ code: couponCode }) : null;
 
+  const session = await mongoose.startSession();
   let createdNumber: string;
 
   try {
-    createdNumber = await db.$transaction(async (tx) => {
-      // conditional decrements: a row only updates while stock still covers
-      // the quantity, so concurrent checkouts cannot oversell
+    createdNumber = await session.withTransaction(async () => {
+      // Conditional decrements: a document only updates while stock still
+      // covers the quantity, so concurrent checkouts cannot oversell. The
+      // filter and the update are evaluated atomically per document.
       for (const line of lines) {
         const result = line.variantId
-          ? await tx.productVariant.updateMany({
-              where: { id: line.variantId, stock: { gte: line.quantity } },
-              data: { stock: { decrement: line.quantity } },
-            })
-          : await tx.product.updateMany({
-              where: { id: line.productId, stock: { gte: line.quantity } },
-              data: { stock: { decrement: line.quantity } },
-            });
+          ? await Product.updateOne(
+              {
+                _id: line.productId,
+                variants: {
+                  $elemMatch: {
+                    _id: line.variantId,
+                    stock: { $gte: line.quantity },
+                  },
+                },
+              },
+              { $inc: { "variants.$.stock": -line.quantity } },
+              { session },
+            )
+          : await Product.updateOne(
+              { _id: line.productId, stock: { $gte: line.quantity } },
+              { $inc: { stock: -line.quantity } },
+              { session },
+            );
 
-        if (result.count !== 1) {
+        if (result.modifiedCount !== 1) {
           throw new Error(`OUT_OF_STOCK:${line.productName}`);
         }
       }
 
       let coupon: CouponRule | null = null;
-      let couponId: string | null = null;
+      let couponId: Types.ObjectId | null = null;
 
-      {
-        const found = couponRow;
+      if (couponRow) {
         const now = new Date();
+        const limit = couponRow.usageLimit ?? null;
 
         const usable =
-          found &&
-          found.isActive &&
-          (!found.startsAt || found.startsAt <= now) &&
-          (!found.endsAt || found.endsAt >= now) &&
-          (found.usageLimit === null || found.usedCount < found.usageLimit) &&
-          (!found.minSubtotal || subtotal >= found.minSubtotal);
+          couponRow.isActive &&
+          (!couponRow.startsAt || couponRow.startsAt <= now) &&
+          (!couponRow.endsAt || couponRow.endsAt >= now) &&
+          (limit === null || couponRow.usedCount < limit) &&
+          (!couponRow.minSubtotal || subtotal >= couponRow.minSubtotal);
 
-        if (usable && found) {
+        if (usable) {
           // guard the limit again at write time
-          const claimed = await tx.coupon.updateMany({
-            where: {
-              id: found.id,
-              OR: [
-                { usageLimit: null },
-                { usedCount: { lt: found.usageLimit ?? 0 } },
-              ],
+          const claimed = await Coupon.updateOne(
+            {
+              _id: couponRow._id,
+              ...(limit === null ? {} : { usedCount: { $lt: limit } }),
             },
-            data: { usedCount: { increment: 1 } },
-          });
+            { $inc: { usedCount: 1 } },
+            { session },
+          );
 
-          if (claimed.count === 1) {
+          if (claimed.modifiedCount === 1) {
             coupon = {
-              code: found.code,
-              type: found.type,
-              value: found.value,
-              minSubtotal: found.minSubtotal,
-              maxDiscount: found.maxDiscount,
+              code: couponRow.code,
+              type: couponRow.type,
+              value: couponRow.value,
+              minSubtotal: couponRow.minSubtotal ?? null,
+              maxDiscount: couponRow.maxDiscount ?? null,
             };
-            couponId = found.id;
+            couponId = couponRow._id;
           }
         }
       }
 
       const discount = calcDiscount(subtotal, coupon);
-      const shippingCharge = calcShipping(subtotal, zone);
+      const shippingCharge = calcShipping(subtotal, {
+        charge: zone.charge,
+        freeShippingThreshold: zone.freeShippingThreshold ?? null,
+      });
       const total = subtotal - discount + shippingCharge;
 
       const number = orderNumber();
 
-      await tx.order.create({
-        data: {
-          orderNumber: number,
-          customerName,
-          customerPhone: normalizeBdPhone(customerPhone),
-          customerEmail: customerEmail || null,
-          addressLine,
-          area,
-          district,
-          postalCode: postalCode || null,
-          note: note || null,
-          deliveryZoneId: zone.id,
-          couponId,
-          couponCode: coupon?.code ?? null,
-          subtotal,
-          discount,
-          shippingCharge,
-          total,
-          status: "PENDING",
-          paymentMethod: "COD",
-          paymentStatus: "UNPAID",
-          items: { createMany: { data: lines } },
-          statusHistory: {
-            create: {
-              status: "PENDING",
-              note: "Order placed — cash on delivery.",
-              createdBy: "system",
-            },
+      await Order.create(
+        [
+          {
+            orderNumber: number,
+            customerName,
+            customerPhone: normalizeBdPhone(customerPhone),
+            customerEmail: customerEmail || null,
+            addressLine,
+            area,
+            district,
+            postalCode: postalCode || null,
+            note: note || null,
+            deliveryZoneId: zone._id,
+            couponId,
+            couponCode: coupon?.code ?? null,
+            subtotal,
+            discount,
+            shippingCharge,
+            total,
+            status: "PENDING",
+            paymentMethod: "COD",
+            paymentStatus: "UNPAID",
+            items: lines,
+            statusHistory: [
+              {
+                status: "PENDING",
+                note: "Order placed — cash on delivery.",
+                createdBy: "system",
+              },
+            ],
           },
-        },
-      });
+        ],
+        { session },
+      );
 
       return number;
-    },
-    {
-      // Neon round-trips are slow from here; the default 5s is not enough
-      // for the stock decrements plus the order write.
-      maxWait: 10_000,
-      timeout: 20_000,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
@@ -280,9 +279,6 @@ export async function placeOrderAction(
         errors: {},
       };
     }
-    if (message === "EMPTY_CART") {
-      return { ok: false, message: "Your cart is empty.", errors: {} };
-    }
 
     console.error("placeOrderAction failed", error);
     return {
@@ -290,6 +286,8 @@ export async function placeOrderAction(
       message: "Something went wrong placing your order. Please try again.",
       errors: {},
     };
+  } finally {
+    await session.endSession();
   }
 
   await writeCartCookie([]);

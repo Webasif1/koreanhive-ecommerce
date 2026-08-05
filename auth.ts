@@ -3,7 +3,8 @@ import Credentials from "next-auth/providers/credentials";
 
 import { authConfig } from "@/auth.config";
 import { verifyPassword } from "@/lib/password";
-import { db } from "@/server/db";
+import { connectDb } from "@/server/db";
+import { User } from "@/server/models";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -21,7 +22,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!email || !password) return null;
 
-        const user = await db.user.findUnique({ where: { email } });
+        await connectDb();
+
+        const user = await User.findOne({ email }).lean();
 
         // Staff only. Customers never get a password, so this route cannot
         // be used to enumerate or hijack a shopper's record.
@@ -30,7 +33,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!(await verifyPassword(password, user.passwordHash))) return null;
 
         return {
-          id: user.id,
+          id: user._id.toString(),
           email: user.email,
           name: user.name,
           role: user.role,

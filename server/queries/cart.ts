@@ -2,7 +2,8 @@ import "server-only";
 
 import { calcTotals, type CouponRule } from "@/lib/pricing";
 import { readCartCookie, readCouponCookie } from "@/server/cart-cookie";
-import { db } from "@/server/db";
+import { connectDb } from "@/server/db";
+import { Coupon, DeliveryZone, Product } from "@/server/models";
 
 export type CartLine = {
   key: string;
@@ -30,7 +31,7 @@ async function resolveCoupon(
 ): Promise<{ coupon: CouponRule | null; error: string | null }> {
   if (!code) return { coupon: null, error: null };
 
-  const found = await db.coupon.findUnique({ where: { code } });
+  const found = await Coupon.findOne({ code }).lean();
   const now = new Date();
 
   if (!found || !found.isActive) {
@@ -42,8 +43,10 @@ async function resolveCoupon(
   if (found.endsAt && found.endsAt < now) {
     return { coupon: null, error: "That coupon has expired." };
   }
-  if (found.usageLimit !== null && found.usedCount >= found.usageLimit) {
-    return { coupon: null, error: "That coupon has been fully redeemed." };
+  if (found.usageLimit !== null && found.usageLimit !== undefined) {
+    if (found.usedCount >= found.usageLimit) {
+      return { coupon: null, error: "That coupon has been fully redeemed." };
+    }
   }
   if (found.minSubtotal && subtotal < found.minSubtotal) {
     return {
@@ -57,8 +60,8 @@ async function resolveCoupon(
       code: found.code,
       type: found.type,
       value: found.value,
-      minSubtotal: found.minSubtotal,
-      maxDiscount: found.maxDiscount,
+      minSubtotal: found.minSubtotal ?? null,
+      maxDiscount: found.maxDiscount ?? null,
     },
     error: null,
   };
@@ -87,31 +90,21 @@ export async function getCart(zoneSlug?: string) {
     };
   }
 
+  await connectDb();
+
   const [products, zone] = await Promise.all([
-    db.product.findMany({
-      where: { id: { in: items.map((i) => i.productId) }, isActive: true },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        price: true,
-        stock: true,
-        images: {
-          orderBy: { position: "asc" },
-          take: 1,
-          select: { url: true },
-        },
-        variants: {
-          select: { id: true, name: true, price: true, stock: true },
-        },
-      },
-    }),
+    Product.find({
+      _id: { $in: items.map((i) => i.productId) },
+      isActive: true,
+    })
+      .select("name slug price stock images variants")
+      .lean(),
     zoneSlug
-      ? db.deliveryZone.findFirst({ where: { slug: zoneSlug, isActive: true } })
+      ? DeliveryZone.findOne({ slug: zoneSlug, isActive: true }).lean()
       : Promise.resolve(null),
   ]);
 
-  const byId = new Map(products.map((p) => [p.id, p]));
+  const byId = new Map(products.map((p) => [p._id.toString(), p]));
 
   const lines: CartLine[] = [];
 
@@ -120,7 +113,8 @@ export async function getCart(zoneSlug?: string) {
     if (!product) continue;
 
     const variant = item.variantId
-      ? (product.variants.find((v) => v.id === item.variantId) ?? null)
+      ? (product.variants.find((v) => v._id.toString() === item.variantId) ??
+        null)
       : null;
 
     // a variant that vanished invalidates the line rather than silently
@@ -133,14 +127,18 @@ export async function getCart(zoneSlug?: string) {
 
     if (quantity <= 0) continue;
 
+    const firstImage = [...(product.images ?? [])].sort(
+      (a, b) => a.position - b.position,
+    )[0];
+
     lines.push({
-      key: lineKey(product.id, variant?.id ?? null),
-      productId: product.id,
-      variantId: variant?.id ?? null,
+      key: lineKey(product._id.toString(), variant?._id.toString() ?? null),
+      productId: product._id.toString(),
+      variantId: variant?._id.toString() ?? null,
       name: product.name,
       slug: product.slug,
       variantName: variant?.name ?? null,
-      imageUrl: product.images[0]?.url ?? null,
+      imageUrl: firstImage?.url ?? null,
       unitPrice,
       quantity,
       lineTotal: unitPrice * quantity,
@@ -150,7 +148,16 @@ export async function getCart(zoneSlug?: string) {
 
   const subtotal = lines.reduce((sum, l) => sum + l.lineTotal, 0);
   const { coupon, error } = await resolveCoupon(couponCode, subtotal);
-  const totals = calcTotals({ lines, zone, coupon });
+  const totals = calcTotals({
+    lines,
+    zone: zone
+      ? {
+          charge: zone.charge,
+          freeShippingThreshold: zone.freeShippingThreshold ?? null,
+        }
+      : null,
+    coupon,
+  });
 
   return {
     lines,
@@ -158,7 +165,17 @@ export async function getCart(zoneSlug?: string) {
     ...totals,
     couponCode: coupon?.code ?? null,
     couponError: error,
-    zone,
+    zone: zone
+      ? {
+          id: zone._id.toString(),
+          name: zone.name,
+          slug: zone.slug,
+          charge: zone.charge,
+          freeShippingThreshold: zone.freeShippingThreshold ?? null,
+          minDays: zone.minDays,
+          maxDays: zone.maxDays,
+        }
+      : null,
     removedCount: items.length - lines.length,
   };
 }

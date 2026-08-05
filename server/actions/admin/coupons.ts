@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isValidObjectId } from "mongoose";
 
 import type { AdminFormState } from "@/lib/admin-state";
 import { requireAdmin } from "@/server/admin-guard";
-import { db } from "@/server/db";
+import { connectDb } from "@/server/db";
+import { Coupon } from "@/server/models";
 
 function intOrNull(value: FormDataEntryValue | null) {
   const raw = String(value ?? "").trim();
@@ -25,6 +27,7 @@ export async function saveCouponAction(
   formData: FormData,
 ): Promise<AdminFormState> {
   await requireAdmin();
+  await connectDb();
 
   const id = String(formData.get("id") ?? "") || null;
   const code = String(formData.get("code") ?? "")
@@ -42,10 +45,12 @@ export async function saveCouponAction(
     errors.value = "A percentage cannot exceed 100.";
   }
 
-  const clash = await db.coupon.findFirst({
-    where: { code, ...(id ? { id: { not: id } } : {}) },
-    select: { id: true },
-  });
+  const clash = await Coupon.findOne({
+    code,
+    ...(id ? { _id: { $ne: id } } : {}),
+  })
+    .select("_id")
+    .lean();
   if (clash) errors.code = "That code already exists.";
 
   if (Object.keys(errors).length > 0) {
@@ -66,9 +71,9 @@ export async function saveCouponAction(
   };
 
   if (id) {
-    await db.coupon.update({ where: { id }, data });
+    await Coupon.updateOne({ _id: id }, { $set: data });
   } else {
-    await db.coupon.create({ data });
+    await Coupon.create(data);
   }
 
   revalidatePath("/admin/coupons");
@@ -77,18 +82,15 @@ export async function saveCouponAction(
 
 export async function toggleCouponAction(formData: FormData) {
   await requireAdmin();
+  await connectDb();
 
   const id = String(formData.get("id") ?? "");
-  const coupon = await db.coupon.findUnique({
-    where: { id },
-    select: { isActive: true },
-  });
+  if (!isValidObjectId(id)) return;
+
+  const coupon = await Coupon.findById(id).select("isActive").lean();
   if (!coupon) return;
 
-  await db.coupon.update({
-    where: { id },
-    data: { isActive: !coupon.isActive },
-  });
+  await Coupon.updateOne({ _id: id }, { $set: { isActive: !coupon.isActive } });
 
   revalidatePath("/admin/coupons");
 }
@@ -97,8 +99,12 @@ export async function toggleCouponAction(formData: FormData) {
  *  rewrites what a customer was actually charged. */
 export async function deleteCouponAction(formData: FormData) {
   await requireAdmin();
+  await connectDb();
 
-  await db.coupon.delete({ where: { id: String(formData.get("id") ?? "") } });
+  const id = String(formData.get("id") ?? "");
+  if (!isValidObjectId(id)) return;
+
+  await Coupon.deleteOne({ _id: id });
 
   revalidatePath("/admin/coupons");
 }

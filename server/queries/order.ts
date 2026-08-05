@@ -2,7 +2,8 @@ import "server-only";
 
 import { normalizeBdPhone } from "@/lib/bd-districts";
 import type { OrderStatusValue } from "@/lib/order-status";
-import { db } from "@/server/db";
+import { connectDb } from "@/server/db";
+import { DeliveryZone, Order } from "@/server/models";
 
 export type TrackedOrder = {
   orderNumber: string;
@@ -54,16 +55,20 @@ export async function findOrderForTracking(
 
   if (!orderNumber || !phone) return null;
 
-  const order = await db.order.findFirst({
-    where: { orderNumber, customerPhone: phone },
-    include: {
-      items: true,
-      deliveryZone: true,
-      statusHistory: { orderBy: { createdAt: "asc" } },
-    },
-  });
+  await connectDb();
+
+  const order = await Order.findOne({
+    orderNumber,
+    customerPhone: phone,
+  }).lean();
 
   if (!order) return null;
+
+  const zone = await DeliveryZone.findById(order.deliveryZoneId).lean();
+
+  const history = [...order.statusHistory].sort(
+    (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+  );
 
   return {
     orderNumber: order.orderNumber,
@@ -72,31 +77,67 @@ export async function findOrderForTracking(
     customerName: order.customerName,
     area: order.area,
     district: order.district,
-    zoneName: order.deliveryZone.name,
-    minDays: order.deliveryZone.minDays,
-    maxDays: order.deliveryZone.maxDays,
+    zoneName: zone?.name ?? "Delivery",
+    minDays: zone?.minDays ?? 1,
+    maxDays: zone?.maxDays ?? 4,
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
     subtotal: order.subtotal,
     discount: order.discount,
-    couponCode: order.couponCode,
+    couponCode: order.couponCode ?? null,
     shippingCharge: order.shippingCharge,
     total: order.total,
     items: order.items.map((item) => ({
-      id: item.id,
+      id: item._id.toString(),
       productName: item.productName,
       productSlug: item.productSlug,
-      variantName: item.variantName,
-      imageUrl: item.imageUrl,
+      variantName: item.variantName ?? null,
+      imageUrl: item.imageUrl ?? null,
       unitPrice: item.unitPrice,
       quantity: item.quantity,
       lineTotal: item.lineTotal,
     })),
-    history: order.statusHistory.map((entry) => ({
-      id: entry.id,
+    history: history.map((entry) => ({
+      id: entry._id.toString(),
       status: entry.status,
-      note: entry.note,
+      note: entry.note ?? null,
       createdAt: entry.createdAt.toISOString(),
     })),
+  };
+}
+
+/** Confirmation page: the caller has already proven access via cookie. */
+export async function getOrderByNumber(orderNumber: string) {
+  await connectDb();
+
+  const order = await Order.findOne({ orderNumber }).lean();
+  if (!order) return null;
+
+  const zone = await DeliveryZone.findById(order.deliveryZoneId).lean();
+
+  return {
+    orderNumber: order.orderNumber,
+    customerName: order.customerName,
+    customerPhone: order.customerPhone,
+    area: order.area,
+    district: order.district,
+    subtotal: order.subtotal,
+    discount: order.discount,
+    couponCode: order.couponCode ?? null,
+    shippingCharge: order.shippingCharge,
+    total: order.total,
+    items: order.items.map((item) => ({
+      id: item._id.toString(),
+      productName: item.productName,
+      variantName: item.variantName ?? null,
+      unitPrice: item.unitPrice,
+      quantity: item.quantity,
+      lineTotal: item.lineTotal,
+    })),
+    deliveryZone: {
+      name: zone?.name ?? "Delivery",
+      minDays: zone?.minDays ?? 1,
+      maxDays: zone?.maxDays ?? 4,
+    },
   };
 }

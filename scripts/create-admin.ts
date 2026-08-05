@@ -1,14 +1,14 @@
 import "dotenv/config";
 
-import { PrismaPg } from "@prisma/adapter-pg";
+import mongoose from "mongoose";
 
 import { hashPassword } from "../lib/password";
-import { PrismaClient } from "../lib/generated/prisma/client";
-
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-const db = new PrismaClient({ adapter });
+import { User } from "../server/models";
 
 async function main() {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) throw new Error("Set MONGODB_URI in .env first.");
+
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD;
 
@@ -19,18 +19,18 @@ async function main() {
     throw new Error("ADMIN_PASSWORD must be at least 12 characters.");
   }
 
+  await mongoose.connect(uri);
+
   const passwordHash = await hashPassword(password);
 
-  const user = await db.user.upsert({
-    where: { email },
-    update: { passwordHash, role: "ADMIN" },
-    create: {
-      email,
-      name: "Korean Hive Admin",
-      role: "ADMIN",
-      passwordHash,
+  const user = await User.findOneAndUpdate(
+    { email },
+    {
+      $set: { passwordHash, role: "ADMIN" },
+      $setOnInsert: { email, name: "Korean Hive Admin" },
     },
-  });
+    { upsert: true, new: true },
+  );
 
   console.log(`Admin ready: ${user.email}`);
   console.log("Sign in at /admin/login");
@@ -42,5 +42,5 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await db.$disconnect();
+    await mongoose.disconnect();
   });

@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { isValidObjectId } from "mongoose";
 
 import type { AdminFormState } from "@/lib/admin-state";
 import { requireAdmin } from "@/server/admin-guard";
-import { db } from "@/server/db";
+import { connectDb } from "@/server/db";
+import { Product } from "@/server/models";
 
 function slugify(value: string) {
   return value
@@ -23,11 +25,17 @@ function intOrNull(value: FormDataEntryValue | null) {
   return Number.isFinite(parsed) ? Math.round(parsed) : null;
 }
 
+function objectIdOrNull(value: FormDataEntryValue | null) {
+  const raw = String(value ?? "").trim();
+  return raw && isValidObjectId(raw) ? raw : null;
+}
+
 export async function saveProductAction(
   _prev: AdminFormState,
   formData: FormData,
 ): Promise<AdminFormState> {
   await requireAdmin();
+  await connectDb();
 
   const id = String(formData.get("id") ?? "") || null;
   const name = String(formData.get("name") ?? "").trim();
@@ -41,10 +49,12 @@ export async function saveProductAction(
   if (price === null || price < 0) errors.price = "Enter a valid price.";
 
   // slugs are the product URL, so a collision would silently break a page
-  const clash = await db.product.findFirst({
-    where: { slug, ...(id ? { id: { not: id } } : {}) },
-    select: { id: true },
-  });
+  const clash = await Product.findOne({
+    slug,
+    ...(id ? { _id: { $ne: id } } : {}),
+  })
+    .select("_id")
+    .lean();
   if (clash) errors.slug = "Another product already uses that slug.";
 
   if (Object.keys(errors).length > 0) {
@@ -68,30 +78,25 @@ export async function saveProductAction(
     description: String(formData.get("description") ?? "").trim() || null,
     ingredients: String(formData.get("ingredients") ?? "").trim() || null,
     howToUse: String(formData.get("howToUse") ?? "").trim() || null,
-    brandId: String(formData.get("brandId") ?? "") || null,
-    categoryId: String(formData.get("categoryId") ?? "") || null,
+    brandId: objectIdOrNull(formData.get("brandId")),
+    categoryId: objectIdOrNull(formData.get("categoryId")),
     isActive: formData.get("isActive") === "on",
     isFeatured: formData.get("isFeatured") === "on",
     metaTitle: String(formData.get("metaTitle") ?? "").trim() || null,
     metaDescription:
       String(formData.get("metaDescription") ?? "").trim() || null,
+    // images are replaced wholesale — the textarea is the source of truth
+    images: imageUrls.map((url, index) => ({
+      url,
+      alt: name,
+      position: index,
+    })),
   };
 
-  const product = id
-    ? await db.product.update({ where: { id }, data })
-    : await db.product.create({ data });
-
-  // images are replaced wholesale — the textarea is the source of truth
-  await db.productImage.deleteMany({ where: { productId: product.id } });
-  if (imageUrls.length > 0) {
-    await db.productImage.createMany({
-      data: imageUrls.map((url, index) => ({
-        productId: product.id,
-        url,
-        alt: name,
-        position: index,
-      })),
-    });
+  if (id) {
+    await Product.updateOne({ _id: id }, { $set: data });
+  } else {
+    await Product.create(data);
   }
 
   revalidatePath("/admin/products");
@@ -103,35 +108,34 @@ export async function saveProductAction(
 
 export async function toggleProductActiveAction(formData: FormData) {
   await requireAdmin();
+  await connectDb();
 
   const id = String(formData.get("id") ?? "");
-  const product = await db.product.findUnique({
-    where: { id },
-    select: { isActive: true, slug: true },
-  });
+  if (!isValidObjectId(id)) return;
+
+  const product = await Product.findById(id).select("isActive slug").lean();
   if (!product) return;
 
-  await db.product.update({
-    where: { id },
-    data: { isActive: !product.isActive },
-  });
+  await Product.updateOne({ _id: id }, { $set: { isActive: !product.isActive } });
 
   revalidatePath("/admin/products");
   revalidatePath("/shop");
   revalidatePath(`/product/${product.slug}`);
 }
 
-/** Deactivates rather than deletes: OrderItem keeps a nullable reference to
- *  the product, and wiping the row would strip it from order history. */
+/** Deactivates rather than deletes: order items keep a reference to the
+ *  product, and removing the document would strip it from order history. */
 export async function archiveProductAction(formData: FormData) {
   await requireAdmin();
+  await connectDb();
 
   const id = String(formData.get("id") ?? "");
+  if (!isValidObjectId(id)) return;
 
-  await db.product.update({
-    where: { id },
-    data: { isActive: false, isFeatured: false },
-  });
+  await Product.updateOne(
+    { _id: id },
+    { $set: { isActive: false, isFeatured: false } },
+  );
 
   revalidatePath("/admin/products");
   revalidatePath("/shop");

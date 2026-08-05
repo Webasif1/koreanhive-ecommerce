@@ -2,7 +2,7 @@ import type { NextAuthConfig } from "next-auth";
 
 /**
  * Edge-safe half of the Auth.js setup. Middleware imports only this file, so
- * nothing here may touch Prisma, node:crypto or any Node-only API — the
+ * nothing here may touch Mongoose, node:crypto or any Node-only API — the
  * Credentials provider that does lives in auth.ts.
  */
 export const authConfig = {
