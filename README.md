@@ -49,6 +49,34 @@ npm run dev
 
 App runs at `http://localhost:3000`.
 
+## 🐳 Docker
+
+```bash
+# app only, against MongoDB Atlas (reads MONGODB_URI from .env)
+docker compose up --build
+
+# app + a local single-node replica set, if you want to work offline
+docker compose --profile local-db up --build
+```
+
+Or build the image directly:
+
+```bash
+docker build \
+  --secret id=mongodb_uri,env=MONGODB_URI \
+  --build-arg NEXT_PUBLIC_SITE_URL=https://your-domain.com \
+  -t koreanhive .
+```
+
+Two things worth knowing:
+
+- **The build needs a reachable database.** Six routes are prerendered by
+  `next build` and query MongoDB. The URI is passed as a BuildKit *secret*
+  rather than a build arg, so it never lands in `docker history`.
+- **MongoDB must be a replica set.** Checkout writes the order in a
+  transaction, which standalone `mongod` does not support. Atlas is a replica
+  set by default; the bundled `local-db` service runs one deliberately.
+
 ## 📁 Project Structure
 
 ```
