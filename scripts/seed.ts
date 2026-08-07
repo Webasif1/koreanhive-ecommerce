@@ -34,7 +34,7 @@ async function main() {
           position: 0,
         },
       },
-      { upsert: true, new: true },
+      { upsert: true, returnDocument: "after" },
     ),
     DeliveryZone.findOneAndUpdate(
       { slug: "outside-dhaka" },
@@ -49,7 +49,7 @@ async function main() {
           position: 1,
         },
       },
-      { upsert: true, new: true },
+      { upsert: true, returnDocument: "after" },
     ),
   ]);
 
@@ -80,7 +80,7 @@ async function main() {
       Brand.findOneAndUpdate(
         { slug: brand.slug },
         { $setOnInsert: { ...brand, logoUrl: img(`brand-${brand.slug}`) } },
-        { upsert: true, new: true },
+        { upsert: true, returnDocument: "after" },
       ),
     ),
   );
@@ -106,7 +106,9 @@ async function main() {
     { name: "Cleansers", slug: "cleansers", position: 0 },
     { name: "Toners", slug: "toners", position: 1 },
     { name: "Serums & Essences", slug: "serums-essences", position: 2 },
-    { name: "Sunscreen", slug: "sunscreen", position: 3 },
+    { name: "Moisturisers", slug: "moisturisers", position: 3 },
+    { name: "Sunscreen", slug: "sunscreen", position: 4 },
+    { name: "Masks & Patches", slug: "masks-patches", position: 5 },
   ];
 
   const children = await Promise.all(
@@ -120,7 +122,7 @@ async function main() {
             imageUrl: img(`cat-${child.slug}`),
           },
         },
-        { upsert: true, new: true },
+        { upsert: true, returnDocument: "after" },
       ),
     ),
   );
@@ -224,6 +226,162 @@ async function main() {
         "Massage onto dry skin, emulsify with water, then follow with a water-based cleanser.",
       variants: [{ name: "200ml", stock: 20, isDefault: true }],
     },
+
+    // ---- Beauty of Joseon ----
+    {
+      name: "Glow Serum: Propolis + Niacinamide",
+      slug: "glow-serum-propolis-niacinamide",
+      brand: "beauty-of-joseon",
+      category: "serums-essences",
+      price: 1350,
+      comparePrice: 1600,
+      stock: 32,
+      isFeatured: true,
+      shortDescription:
+        "Propolis extract and 2% niacinamide for a calmer, brighter, glassier finish.",
+      ingredients:
+        "Propolis Extract 60%, Niacinamide 2%, Butylene Glycol, Panthenol, Allantoin.",
+      howToUse:
+        "After toner, press 2–3 drops into damp skin. Follow with moisturiser.",
+      variants: [{ name: "30ml", stock: 32, isDefault: true }],
+    },
+    {
+      name: "Revive Eye Serum: Ginseng + Retinal",
+      slug: "revive-eye-serum-ginseng-retinal",
+      brand: "beauty-of-joseon",
+      category: "serums-essences",
+      price: 1550,
+      stock: 18,
+      shortDescription:
+        "A gentle retinal eye serum with ginseng for fine lines and tired eyes.",
+      ingredients:
+        "Ginseng Root Extract, Retinal, Squalane, Sodium Hyaluronate.",
+      howToUse:
+        "Pat a rice-grain amount around the eye at night. Start twice a week.",
+      variants: [{ name: "30ml", stock: 18, isDefault: true }],
+    },
+    {
+      name: "Green Plum Refreshing Cleanser",
+      slug: "green-plum-refreshing-cleanser",
+      brand: "beauty-of-joseon",
+      category: "cleansers",
+      price: 1150,
+      stock: 28,
+      shortDescription:
+        "A low-pH gel cleanser with green plum water for humid Dhaka days.",
+      ingredients: "Green Plum Water, Coco-Betaine, Glycerin, Citric Acid.",
+      howToUse: "Massage over damp skin morning and night, then rinse.",
+      variants: [{ name: "100ml", stock: 28, isDefault: true }],
+    },
+    {
+      name: "Dynasty Cream",
+      slug: "dynasty-cream",
+      brand: "beauty-of-joseon",
+      category: "moisturisers",
+      price: 1950,
+      stock: 22,
+      shortDescription:
+        "A rich hanbang cream with rice bran and ginseng for overnight repair.",
+      ingredients:
+        "Rice Bran Water, Ginseng Root Extract, Niacinamide, Shea Butter.",
+      howToUse: "Warm a pea-sized amount and press over face as the last step.",
+      variants: [{ name: "50ml", stock: 22, isDefault: true }],
+    },
+
+    // ---- COSRX ----
+    {
+      name: "Advanced Snail 92 All In One Cream",
+      slug: "advanced-snail-92-all-in-one-cream",
+      brand: "cosrx",
+      category: "moisturisers",
+      price: 1650,
+      comparePrice: 1900,
+      stock: 26,
+      isFeatured: true,
+      shortDescription:
+        "92% snail mucin in a bouncy gel-cream that seals hydration without grease.",
+      ingredients:
+        "Snail Secretion Filtrate 92%, Betaine, Sodium Hyaluronate, Panthenol.",
+      howToUse:
+        "Apply as the final step of your routine, morning and night.",
+      variants: [{ name: "100ml", stock: 26, isDefault: true }],
+    },
+    {
+      name: "AHA/BHA Clarifying Treatment Toner",
+      slug: "aha-bha-clarifying-treatment-toner",
+      brand: "cosrx",
+      category: "toners",
+      price: 1250,
+      stock: 30,
+      shortDescription:
+        "A daily exfoliating toner for congested, bump-prone skin.",
+      ingredients:
+        "Willow Bark Water, Apple Water, Salicylic Acid, Glycolic Acid.",
+      howToUse:
+        "Sweep over clean skin with a cotton pad. Use sunscreen the next morning.",
+      variants: [{ name: "150ml", stock: 30, isDefault: true }],
+    },
+    {
+      name: "Acne Pimple Master Patch",
+      slug: "acne-pimple-master-patch",
+      brand: "cosrx",
+      category: "masks-patches",
+      price: 450,
+      stock: 80,
+      shortDescription:
+        "24 hydrocolloid patches in three sizes that flatten a spot overnight.",
+      ingredients: "Hydrocolloid, Cellulose Gum, Styrene Isoprene Copolymer.",
+      howToUse:
+        "Apply to a clean, dry spot before bed. Remove when the patch turns white.",
+      variants: [
+        { name: "24 patches", stock: 80, isDefault: true },
+        { name: "3-pack (72 patches)", price: 1200, stock: 25 },
+      ],
+    },
+
+    // ---- Anua ----
+    {
+      name: "Peach 77 Niacin Conditioning Essence",
+      slug: "peach-77-niacin-conditioning-essence",
+      brand: "anua",
+      category: "serums-essences",
+      price: 1750,
+      stock: 24,
+      isFeatured: true,
+      shortDescription:
+        "Peach extract and niacinamide to even out tone and soften texture.",
+      ingredients: "Peach Extract 77%, Niacinamide, Panthenol, Allantoin.",
+      howToUse: "Apply after toner, morning and night, before heavier creams.",
+      variants: [{ name: "150ml", stock: 24, isDefault: true }],
+    },
+    {
+      name: "Rice 70 Glow Milky Toner",
+      slug: "rice-70-glow-milky-toner",
+      brand: "anua",
+      category: "toners",
+      price: 1650,
+      stock: 27,
+      shortDescription:
+        "A milky rice toner that brightens dull skin without any sticky finish.",
+      ingredients: "Rice Extract 70%, Niacinamide, Glycerin, Ceramide NP.",
+      howToUse: "Shake well, then pat into skin straight after cleansing.",
+      variants: [{ name: "250ml", stock: 27, isDefault: true }],
+    },
+    {
+      name: "Azelaic Acid 10 Redness Soothing Serum",
+      slug: "azelaic-acid-10-redness-soothing-serum",
+      brand: "anua",
+      category: "serums-essences",
+      price: 1950,
+      stock: 16,
+      shortDescription:
+        "10% azelaic acid for persistent redness, bumps and post-acne marks.",
+      ingredients:
+        "Azelaic Acid 10%, Hyaluronic Acid, Centella Asiatica Extract.",
+      howToUse:
+        "Apply a thin layer at night. Introduce slowly if your skin is reactive.",
+      variants: [{ name: "30ml", stock: 16, isDefault: true }],
+    },
   ];
 
   for (const p of products) {
@@ -254,7 +412,7 @@ async function main() {
           })),
         },
       },
-      { upsert: true, new: true },
+      { upsert: true, returnDocument: "after" },
     );
   }
 
