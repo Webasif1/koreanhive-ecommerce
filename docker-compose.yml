@@ -1,0 +1,66 @@
+# Korean Hive — local container stack.
+#
+#   docker compose up --build                 # app only, using Atlas
+#   docker compose --profile local-db up      # app + a local MongoDB
+#
+# MONGODB_URI is read from .env (gitignored) and passed to the build as a
+# secret, because `next build` prerenders routes that query the database.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+      secrets:
+        - mongodb_uri
+    image: koreanhive:local
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+      MONGODB_URI: ${MONGODB_URI:?set MONGODB_URI in .env}
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in .env}
+      AUTH_TRUST_HOST: "true"
+    restart: unless-stopped
+
+  # Optional. Only starts with `--profile local-db`.
+  #
+  # Runs as a single-node replica set on purpose: checkout writes the order
+  # inside a transaction, and MongoDB only supports transactions on a replica
+  # set. A plain standalone mongod would fail at checkout and nowhere else,
+  # which is a miserable thing to debug.
+  mongo:
+    profiles: ["local-db"]
+    image: mongo:8
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      # initiates the replica set on first boot, then just reports status
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "--eval",
+          "try { rs.status().ok } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mongo:27017' }] }).ok }",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+secrets:
+  mongodb_uri:
+    # Requires Compose v2.23+. On older versions, replace with:
+    #   file: ./.secrets/mongodb_uri
+    environment: MONGODB_URI
+
+volumes:
+  mongo-data:
