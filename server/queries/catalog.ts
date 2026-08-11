@@ -1,5 +1,6 @@
 import "server-only";
 
+import { unstable_cache } from "next/cache";
 import type { QueryFilter } from "mongoose";
 
 import { connectDb } from "@/server/db";
@@ -202,11 +203,24 @@ export function getFeaturedProducts(take = 4) {
   return findCards({ isActive: true, isFeatured: true }, "newest", take);
 }
 
+/**
+ * /shop reads ?sort=, which makes the route dynamic — it cannot be
+ * prerendered. Caching the query itself means those requests still avoid a
+ * round trip to Atlas in Singapore, which is the part that actually hurts.
+ * Keyed by sort so each ordering caches separately.
+ */
+const getProductsCached = unstable_cache(
+  async (sort: ProductSort, take: number) =>
+    findCards({ isActive: true }, sort, take),
+  ["shop-products"],
+  { revalidate: 3600, tags: ["products"] },
+);
+
 export function getProducts({
   sort = "newest",
   take = 48,
 }: { sort?: ProductSort; take?: number } = {}) {
-  return findCards({ isActive: true }, sort, take);
+  return getProductsCached(sort, take);
 }
 
 export async function getProductBySlug(slug: string) {
@@ -306,7 +320,13 @@ export async function getRelatedProducts({
 
 /** Products in a category *and* its direct children, so "Skincare" is not
  *  empty just because every product sits on a leaf category. */
-export async function getCategoryWithProducts(
+export const getCategoryWithProducts = unstable_cache(
+  categoryWithProducts,
+  ["category-products"],
+  { revalidate: 3600, tags: ["products"] },
+);
+
+async function categoryWithProducts(
   slug: string,
   sort: ProductSort = "newest",
 ) {
@@ -351,7 +371,13 @@ export async function getCategoryWithProducts(
   };
 }
 
-export async function getBrandWithProducts(
+export const getBrandWithProducts = unstable_cache(
+  brandWithProducts,
+  ["brand-products"],
+  { revalidate: 3600, tags: ["products"] },
+);
+
+async function brandWithProducts(
   slug: string,
   sort: ProductSort = "newest",
 ) {

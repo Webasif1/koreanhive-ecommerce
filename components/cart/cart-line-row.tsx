@@ -1,6 +1,10 @@
+"use client";
+
+import { useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Minus, Plus, X } from "lucide-react";
+import { toast } from "sonner";
 
 import { formatBDT } from "@/lib/format";
 import {
@@ -9,13 +13,37 @@ import {
 } from "@/server/actions/cart";
 import type { CartLine } from "@/server/queries/cart";
 
-/** Quantity controls are individual forms, so the cart works without JS. */
 export function CartLineRow({ line }: { line: CartLine }) {
+  const [isPending, startTransition] = useTransition();
+
+  const run = (
+    action: (data: FormData) => Promise<{ ok: boolean; message: string }>,
+    extra: Record<string, string> = {},
+    successMessage?: string,
+  ) => {
+    const data = new FormData();
+    data.set("productId", line.productId);
+    data.set("variantId", line.variantId ?? "");
+    for (const [key, value] of Object.entries(extra)) data.set(key, value);
+
+    startTransition(async () => {
+      const result = await action(data);
+
+      if (result.ok) {
+        if (successMessage) {
+          toast.success(successMessage, { description: line.name });
+        }
+      } else {
+        toast.error(result.message);
+      }
+    });
+  };
+
   return (
-    <li className="flex gap-4 py-4">
+    <li className="flex gap-4 py-4" data-pending={isPending || undefined}>
       <Link
         href={`/product/${line.slug}`}
-        className="relative size-20 shrink-0 overflow-hidden rounded-lg border bg-muted"
+        className="relative size-20 shrink-0 overflow-hidden border border-border bg-blush"
       >
         {line.imageUrl && (
           <Image
@@ -31,7 +59,7 @@ export function CartLineRow({ line }: { line: CartLine }) {
       <div className="flex flex-1 flex-col gap-1">
         <Link
           href={`/product/${line.slug}`}
-          className="text-sm font-medium leading-snug hover:text-primary"
+          className="text-sm font-bold leading-snug hover:text-primary"
         >
           {line.name}
         </Link>
@@ -42,73 +70,55 @@ export function CartLineRow({ line }: { line: CartLine }) {
           {formatBDT(line.unitPrice)} each
         </p>
 
-        <div className="mt-1 flex items-center gap-2">
-          <div className="flex items-center rounded-lg border">
-            <form action={updateCartQuantityAction}>
-              <input type="hidden" name="productId" value={line.productId} />
-              <input
-                type="hidden"
-                name="variantId"
-                value={line.variantId ?? ""}
-              />
-              <input
-                type="hidden"
-                name="quantity"
-                value={line.quantity - 1}
-              />
-              <button
-                type="submit"
-                className="grid size-8 place-items-center disabled:opacity-40"
-                disabled={line.quantity <= 1}
-                aria-label={`Decrease quantity of ${line.name}`}
-              >
-                <Minus className="size-3.5" />
-              </button>
-            </form>
+        <div className="mt-1 flex items-center gap-3">
+          <div className="flex items-center border border-border bg-cream">
+            <button
+              type="button"
+              onClick={() =>
+                run(updateCartQuantityAction, {
+                  quantity: String(line.quantity - 1),
+                })
+              }
+              className="grid size-9 place-items-center disabled:opacity-40"
+              disabled={line.quantity <= 1 || isPending}
+              aria-label={`Decrease quantity of ${line.name}`}
+            >
+              <Minus className="size-3.5" />
+            </button>
 
-            <span className="w-8 text-center text-sm tabular-nums">
+            <span className="w-8 text-center text-sm font-bold tabular-nums">
               {line.quantity}
             </span>
 
-            <form action={updateCartQuantityAction}>
-              <input type="hidden" name="productId" value={line.productId} />
-              <input
-                type="hidden"
-                name="variantId"
-                value={line.variantId ?? ""}
-              />
-              <input
-                type="hidden"
-                name="quantity"
-                value={line.quantity + 1}
-              />
-              <button
-                type="submit"
-                className="grid size-8 place-items-center disabled:opacity-40"
-                disabled={line.quantity >= line.stock}
-                aria-label={`Increase quantity of ${line.name}`}
-              >
-                <Plus className="size-3.5" />
-              </button>
-            </form>
+            <button
+              type="button"
+              onClick={() =>
+                run(updateCartQuantityAction, {
+                  quantity: String(line.quantity + 1),
+                })
+              }
+              className="grid size-9 place-items-center disabled:opacity-40"
+              disabled={line.quantity >= line.stock || isPending}
+              aria-label={`Increase quantity of ${line.name}`}
+            >
+              <Plus className="size-3.5" />
+            </button>
           </div>
 
-          <form action={removeCartLineAction}>
-            <input type="hidden" name="productId" value={line.productId} />
-            <input type="hidden" name="variantId" value={line.variantId ?? ""} />
-            <button
-              type="submit"
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive"
-              aria-label={`Remove ${line.name} from cart`}
-            >
-              <X className="size-3.5" />
-              Remove
-            </button>
-          </form>
+          <button
+            type="button"
+            onClick={() => run(removeCartLineAction, {}, "Removed from cart")}
+            disabled={isPending}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive disabled:opacity-40"
+            aria-label={`Remove ${line.name} from cart`}
+          >
+            <X className="size-3.5" />
+            Remove
+          </button>
         </div>
       </div>
 
-      <p className="font-display text-sm font-semibold tabular-nums">
+      <p className="font-display text-sm tabular-nums">
         {formatBDT(line.lineTotal)}
       </p>
     </li>

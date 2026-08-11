@@ -6,7 +6,6 @@ import { isProductSort, SortLinks } from "@/components/product/sort-links";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd } from "@/lib/json-ld";
 import { getBrandWithProducts } from "@/server/queries/catalog";
-import { getWishlistProductIds } from "@/server/queries/wishlist";
 
 type BrandPageProps = {
   params: Promise<{ slug: string }>;
@@ -36,10 +35,7 @@ export default async function BrandPage({
 }: BrandPageProps) {
   const [{ slug }, { sort }] = await Promise.all([params, searchParams]);
   const activeSort = isProductSort(sort) ? sort : "newest";
-  const [result, savedIds] = await Promise.all([
-    getBrandWithProducts(slug, activeSort),
-    getWishlistProductIds(),
-  ]);
+  const result = await getBrandWithProducts(slug, activeSort);
 
   if (!result) notFound();
 
@@ -76,7 +72,7 @@ export default async function BrandPage({
       <div className="mt-8">
         <ProductGrid
           products={products}
-          savedIds={savedIds}
+         
           emptyMessage={`No ${brand.name} products in stock right now.`}
         />
       </div>

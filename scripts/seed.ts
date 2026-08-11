@@ -30,10 +30,10 @@ const CATEGORY_IMAGES = 6;
 
 /** Product shots cycle through the eight supplied renders. */
 const productImg = (index: number, offset = 0) =>
-  `/products/p${((index + offset) % PRODUCT_IMAGES) + 1}.png`;
+  `/products/p${((index + offset) % PRODUCT_IMAGES) + 1}.webp`;
 
 const categoryImg = (index: number) =>
-  `/categories/cat${(index % CATEGORY_IMAGES) + 1}.png`;
+  `/categories/cat${(index % CATEGORY_IMAGES) + 1}.webp`;
 
 type VariantSeed = {
   name: string;

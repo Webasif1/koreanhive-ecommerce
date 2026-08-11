@@ -14,7 +14,6 @@ export const dynamic = "force-dynamic";
 
 export default async function WishlistPage() {
   const items = await getWishlist();
-  const savedIds = new Set(items.map((item) => item.id));
 
   return (
     <div className="container-page py-12">
@@ -35,7 +34,7 @@ export default async function WishlistPage() {
         </div>
       ) : (
         <div className="mt-8">
-          <ProductGrid products={items} savedIds={savedIds} />
+          <ProductGrid products={items} />
         </div>
       )}
     </div>

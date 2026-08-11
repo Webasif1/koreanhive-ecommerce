@@ -12,7 +12,7 @@ import {
   type CartCookieItem,
 } from "@/server/cart-cookie";
 import { connectDb } from "@/server/db";
-import { Product } from "@/server/models";
+import { Coupon, Product } from "@/server/models";
 
 type AddInput = {
   productId: string;
@@ -72,19 +72,27 @@ async function mergeIntoCart(input: AddInput) {
   await writeCartCookie(next);
 }
 
-export async function addToCartAction(formData: FormData) {
+export type CartResult = { ok: boolean; message: string };
+
+export async function addToCartAction(
+  formData: FormData,
+): Promise<CartResult> {
   const input: AddInput = {
     productId: String(formData.get("productId") ?? ""),
     variantId: (formData.get("variantId") as string | null) || null,
     quantity: sanitizeQuantity(formData.get("quantity")),
   };
 
-  if (!(await assertSellable(input))) return;
+  if (!(await assertSellable(input))) {
+    return { ok: false, message: "That product is no longer available." };
+  }
 
   await mergeIntoCart(input);
 
   revalidatePath("/cart");
   revalidatePath("/checkout");
+
+  return { ok: true, message: "Added to cart" };
 }
 
 /** Buy Now: same merge, then straight to checkout. Existing cart lines are
@@ -106,7 +114,9 @@ export async function buyNowAction(formData: FormData) {
   redirect("/checkout");
 }
 
-export async function updateCartQuantityAction(formData: FormData) {
+export async function updateCartQuantityAction(
+  formData: FormData,
+): Promise<CartResult> {
   const productId = String(formData.get("productId") ?? "");
   const variantId = (formData.get("variantId") as string | null) || null;
   const quantity = sanitizeQuantity(formData.get("quantity"));
@@ -121,9 +131,13 @@ export async function updateCartQuantityAction(formData: FormData) {
   await writeCartCookie(next);
   revalidatePath("/cart");
   revalidatePath("/checkout");
+
+  return { ok: true, message: "Cart updated" };
 }
 
-export async function removeCartLineAction(formData: FormData) {
+export async function removeCartLineAction(
+  formData: FormData,
+): Promise<CartResult> {
   const productId = String(formData.get("productId") ?? "");
   const variantId = (formData.get("variantId") as string | null) || null;
 
@@ -136,21 +150,45 @@ export async function removeCartLineAction(formData: FormData) {
 
   revalidatePath("/cart");
   revalidatePath("/checkout");
+
+  return { ok: true, message: "Removed from cart" };
 }
 
-export async function applyCouponAction(formData: FormData) {
+/** Validates the code here rather than only at render, so the toast can say
+ *  what is actually wrong instead of the cart silently ignoring it. */
+export async function applyCouponAction(
+  formData: FormData,
+): Promise<CartResult> {
   const code = String(formData.get("code") ?? "")
     .trim()
     .toUpperCase();
 
-  await writeCouponCookie(code.length > 0 ? code : null);
+  if (!code) {
+    await writeCouponCookie(null);
+    revalidatePath("/cart");
+    revalidatePath("/checkout");
+    return { ok: true, message: "Coupon removed" };
+  }
+
+  await connectDb();
+  const coupon = await Coupon.findOne({ code }).lean();
+
+  if (!coupon || !coupon.isActive) {
+    return { ok: false, message: `${code} is not a valid coupon code.` };
+  }
+
+  await writeCouponCookie(code);
 
   revalidatePath("/cart");
   revalidatePath("/checkout");
+
+  return { ok: true, message: `Coupon ${code} applied` };
 }
 
-export async function clearCouponAction() {
+export async function clearCouponAction(): Promise<CartResult> {
   await writeCouponCookie(null);
   revalidatePath("/cart");
   revalidatePath("/checkout");
+
+  return { ok: true, message: "Coupon removed" };
 }

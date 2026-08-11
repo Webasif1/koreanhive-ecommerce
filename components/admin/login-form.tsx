@@ -6,6 +6,7 @@ import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { emptyAdminFormState } from "@/lib/admin-state";
+import { useActionToast } from "@/lib/use-action-toast";
 import { loginAction } from "@/server/actions/admin/session";
 
 function SubmitButton() {
@@ -20,6 +21,8 @@ function SubmitButton() {
 
 export function LoginForm() {
   const [state, formAction] = useActionState(loginAction, emptyAdminFormState);
+
+  useActionToast(state);
 
   return (
     <form action={formAction} className="space-y-4">

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 
 import { ProductGrid } from "@/components/product/product-grid";
 import { getDiscountedProducts } from "@/server/queries/catalog";
-import { getWishlistProductIds } from "@/server/queries/wishlist";
 
 export const metadata: Metadata = {
   title: "Hot Deals",
@@ -12,10 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function DealsPage() {
-  const [products, savedIds] = await Promise.all([
-    getDiscountedProducts(),
-    getWishlistProductIds(),
-  ]);
+  const products = await getDiscountedProducts();
 
   return (
     <div className="container-page py-12">
@@ -31,7 +27,7 @@ export default async function DealsPage() {
       <div className="mt-8">
         <ProductGrid
           products={products}
-          savedIds={savedIds}
+         
           emptyMessage="No active discounts today — check back soon."
         />
       </div>

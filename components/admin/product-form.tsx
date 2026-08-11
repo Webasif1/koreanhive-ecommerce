@@ -13,6 +13,7 @@ import {
   Textarea,
 } from "@/components/ui/input";
 import { emptyAdminFormState } from "@/lib/admin-state";
+import { useActionToast } from "@/lib/use-action-toast";
 import { saveProductAction } from "@/server/actions/admin/products";
 
 type Product = {
@@ -59,6 +60,8 @@ export function ProductForm({
     saveProductAction,
     emptyAdminFormState,
   );
+
+  useActionToast(state);
 
   return (
     <form action={formAction} className="space-y-8">

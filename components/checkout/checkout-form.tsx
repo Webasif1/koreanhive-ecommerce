@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -51,6 +52,17 @@ export function CheckoutForm({
     emptyCheckoutState,
   );
   const [district, setDistrict] = useState("");
+
+  // surface the server's message as a toast, not just inline text — on a
+  // long form the inline error can be off-screen when it appears
+  const lastMessage = useRef<string | null>(null);
+  useEffect(() => {
+    if (state.message && state.message !== lastMessage.current) {
+      lastMessage.current = state.message;
+      toast.error(state.message);
+    }
+    if (!state.message) lastMessage.current = null;
+  }, [state.message]);
 
   // shipping follows the district automatically: Dhaka is Inside, the rest
   // Outside. The server recomputes this before the order is written.

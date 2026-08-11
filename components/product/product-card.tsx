@@ -17,12 +17,10 @@ import type { ProductCardData } from "@/server/queries/catalog";
 export function ProductCard({
   product,
   priority = false,
-  saved = false,
   badge,
 }: {
   product: ProductCardData;
   priority?: boolean;
-  saved?: boolean;
   badge?: string;
 }) {
   const image = product.images[0];
@@ -65,11 +63,7 @@ export function ProductCard({
           {outOfStock && <Badge variant="muted">Out of stock</Badge>}
         </div>
 
-        <WishlistButton
-          productId={product.id}
-          productName={product.name}
-          saved={saved}
-        />
+        <WishlistButton productId={product.id} productName={product.name} />
       </div>
 
       <div className="flex flex-1 flex-col p-4">

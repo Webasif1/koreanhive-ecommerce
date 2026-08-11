@@ -32,7 +32,7 @@ export function SiteHeader() {
         <div className="container-page grid grid-cols-[auto_1fr] items-center gap-4 py-4 lg:grid-cols-[220px_1fr_auto] lg:gap-8">
           <Link href="/" className="block">
             <Image
-              src="/brand/logo.png"
+              src="/brand/logo.webp"
               alt="Korean Hive — authentic Korean skincare in Bangladesh"
               width={220}
               height={42}

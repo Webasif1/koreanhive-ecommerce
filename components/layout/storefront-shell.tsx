@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { WishlistProvider } from "@/components/product/wishlist-provider";
 import { JsonLd } from "@/components/seo/json-ld";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/json-ld";
 
@@ -14,10 +15,12 @@ export function StorefrontShell({ children }: { children: ReactNode }) {
       <JsonLd data={organizationJsonLd()} />
       <JsonLd data={websiteJsonLd()} />
 
-      <SiteHeader />
-      <main className="flex-1">{children}</main>
-      <SiteFooter />
-      <MobileBottomNav />
+      <WishlistProvider>
+        <SiteHeader />
+        <main className="flex-1">{children}</main>
+        <SiteFooter />
+        <MobileBottomNav />
+      </WishlistProvider>
     </div>
   );
 }
