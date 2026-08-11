@@ -3,13 +3,14 @@ export type NavItem = {
   label: string;
 };
 
-/** Primary desktop header navigation. */
+/** Primary desktop header navigation, per the design's second nav row. */
 export const mainNav: NavItem[] = [
-  { href: "/shop", label: "Shop" },
-  { href: "/categories", label: "Categories" },
-  { href: "/brands", label: "Brands" },
-  { href: "/blog", label: "Blog" },
-  { href: "/track", label: "Track Order" },
+  { href: "/category/skincare", label: "Skincare" },
+  { href: "/category/cosmetics", label: "Makeup" },
+  { href: "/concerns", label: "Skin Concerns" },
+  { href: "/brands", label: "Korean Brands" },
+  { href: "/shop?sort=newest", label: "New Arrivals" },
+  { href: "/blog", label: "Journal" },
 ];
 
 /** Footer link groups. */
@@ -20,7 +21,8 @@ export const footerNav: { title: string; items: NavItem[] }[] = [
       { href: "/shop", label: "All Products" },
       { href: "/categories", label: "Categories" },
       { href: "/brands", label: "Brands" },
-      { href: "/shop?sort=newest", label: "New Arrivals" },
+      { href: "/combos", label: "Combo Offers" },
+      { href: "/deals", label: "Hot Deals" },
     ],
   },
   {
@@ -36,7 +38,7 @@ export const footerNav: { title: string; items: NavItem[] }[] = [
     title: "Company",
     items: [
       { href: "/about", label: "About Korean Hive" },
-      { href: "/blog", label: "Beauty Journal" },
+      { href: "/blog", label: "The Hive Journal" },
       { href: "/privacy", label: "Privacy Policy" },
       { href: "/terms", label: "Terms & Conditions" },
     ],

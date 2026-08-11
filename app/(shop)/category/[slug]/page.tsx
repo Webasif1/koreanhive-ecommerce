@@ -7,6 +7,7 @@ import { isProductSort, SortLinks } from "@/components/product/sort-links";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd } from "@/lib/json-ld";
 import { getCategoryWithProducts } from "@/server/queries/catalog";
+import { getWishlistProductIds } from "@/server/queries/wishlist";
 
 type CategoryPageProps = {
   params: Promise<{ slug: string }>;
@@ -38,7 +39,10 @@ export default async function CategoryPage({
 }: CategoryPageProps) {
   const [{ slug }, { sort }] = await Promise.all([params, searchParams]);
   const activeSort = isProductSort(sort) ? sort : "newest";
-  const result = await getCategoryWithProducts(slug, activeSort);
+  const [result, savedIds] = await Promise.all([
+    getCategoryWithProducts(slug, activeSort),
+    getWishlistProductIds(),
+  ]);
 
   if (!result) notFound();
 
@@ -102,6 +106,7 @@ export default async function CategoryPage({
       <div className="mt-8">
         <ProductGrid
           products={products}
+          savedIds={savedIds}
           emptyMessage={`Nothing in ${category.name} yet — check back soon.`}
         />
       </div>

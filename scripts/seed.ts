@@ -22,9 +22,18 @@ import {
   Product,
 } from "../server/models";
 
-// Placeholder imagery, stable per product. Swap this one line for an
-// ImageKit endpoint — ik.imagekit.io is already allowed in next.config.ts.
-const img = (seed: string) => `https://picsum.photos/seed/${seed}/900/900`;
+// Local artwork shipped with the design, served from public/. Swap these for
+// an ImageKit endpoint when the account is ready — ik.imagekit.io is already
+// allowed in next.config.ts.
+const PRODUCT_IMAGES = 8;
+const CATEGORY_IMAGES = 6;
+
+/** Product shots cycle through the eight supplied renders. */
+const productImg = (index: number, offset = 0) =>
+  `/products/p${((index + offset) % PRODUCT_IMAGES) + 1}.png`;
+
+const categoryImg = (index: number) =>
+  `/categories/cat${(index % CATEGORY_IMAGES) + 1}.png`;
 
 type VariantSeed = {
   name: string;
@@ -913,7 +922,7 @@ async function main() {
 
   // --------------------------------------------------------- brands
   const brands = await Brand.insertMany(
-    BRANDS.map((brand) => ({ ...brand, logoUrl: img(`brand-${brand.slug}`) })),
+    BRANDS.map((brand) => ({ ...brand, logoUrl: null })),
   );
   const brandBySlug = new Map(brands.map((b) => [b.slug, b]));
 
@@ -922,7 +931,7 @@ async function main() {
     name: "Skincare",
     slug: "skincare",
     description: "Every step of the Korean skincare routine.",
-    imageUrl: img("cat-skincare"),
+    imageUrl: categoryImg(0),
     position: 0,
   });
 
@@ -931,14 +940,14 @@ async function main() {
       ...category,
       parentId: skincare._id,
       position: index,
-      imageUrl: img(`cat-${category.slug}`),
+      imageUrl: categoryImg(index),
     })),
   );
   const categoryBySlug = new Map(children.map((c) => [c.slug, c]));
 
   // ------------------------------------------------------- products
   await Product.insertMany(
-    PRODUCTS.map((p) => {
+    PRODUCTS.map((p, index) => {
       const { variants, brand, category, ...rest } = p;
 
       const brandDoc = brandBySlug.get(brand);
@@ -955,7 +964,8 @@ async function main() {
         metaTitle: `${p.name} | Korean Hive`,
         metaDescription: p.shortDescription,
         images: [0, 1].map((i) => ({
-          url: img(`${p.slug}-${i}`),
+          // two angles per product, offset so the pair differs
+          url: productImg(index, i * 3),
           alt: `${p.name} — image ${i + 1}`,
           position: i,
         })),

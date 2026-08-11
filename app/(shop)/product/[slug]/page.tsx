@@ -1,29 +1,31 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Banknote, ShieldCheck, Truck } from "lucide-react";
 
 import { ProductActions } from "@/components/cart/product-actions";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductGrid } from "@/components/product/product-grid";
 import { StarRating } from "@/components/product/star-rating";
-import { Badge } from "@/components/ui/badge";
+import { WishlistButton } from "@/components/product/wishlist-button";
 import { JsonLd } from "@/components/seo/json-ld";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { discountPercent, formatBDT, formatDeliveryWindow } from "@/lib/format";
 import { breadcrumbJsonLd, productJsonLd } from "@/lib/json-ld";
 import { absoluteUrl } from "@/lib/site";
+import { getCart } from "@/server/queries/cart";
 import {
   getDeliveryZones,
   getProductBySlug,
   getRelatedProducts,
 } from "@/server/queries/catalog";
+import { getWishlistProductIds } from "@/server/queries/wishlist";
 
 type ProductPageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -63,18 +65,16 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   if (!product) notFound();
 
-  const [related, zones] = await Promise.all([
+  const [related, zones, cart, savedIds] = await Promise.all([
     getRelatedProducts({
       productId: product.id,
       categoryId: product.categoryId,
     }),
     getDeliveryZones(),
+    getCart(),
+    getWishlistProductIds(),
   ]);
 
-  const off = discountPercent(product.price, product.comparePrice);
-
-  // variants may override the base price, so the structured-data range has
-  // to be built from whatever each variant actually charges
   const variantPrices = product.variants.map((v) => v.price ?? product.price);
   const priceRange =
     variantPrices.length > 0
@@ -88,6 +88,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const inStock = product.variants.length
     ? product.variants.some((v) => v.stock > 0)
     : product.stock > 0;
+
+  const off = discountPercent(product.price, product.comparePrice);
+  const insideDhaka = zones.find((z) => z.slug === "inside-dhaka") ?? zones[0];
 
   const crumbs = [
     { name: "Home", path: "/" },
@@ -104,7 +107,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   ];
 
   return (
-    <div className="container-page py-8 md:py-12">
+    <div className="container-page py-8">
       <JsonLd
         data={productJsonLd({
           name: product.name,
@@ -121,6 +124,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         })}
       />
       <JsonLd data={breadcrumbJsonLd(crumbs)} />
+
       <nav aria-label="Breadcrumb" className="text-xs text-muted-foreground">
         <ol className="flex flex-wrap items-center gap-1.5">
           <li>
@@ -152,116 +156,198 @@ export default async function ProductPage({ params }: ProductPageProps) {
         </ol>
       </nav>
 
-      <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:gap-12">
-        <ProductGallery images={product.images} productName={product.name} />
+      <section className="mt-6 grid gap-10 lg:grid-cols-2 lg:gap-14">
+        <div className="relative">
+          <ProductGallery images={product.images} productName={product.name} />
+          <div className="pointer-events-none absolute left-3.5 top-3.5 z-10 flex flex-col items-start gap-2">
+            {off !== null && <Badge variant="sale">−{off}%</Badge>}
+            {product.ratingCount > 50 && <Badge variant="ink">BEST SELLER</Badge>}
+          </div>
+        </div>
 
-        <div className="space-y-5">
-          <div className="space-y-2">
-            {product.brand && (
-              <Link
-                href={`/brand/${product.brand.slug}`}
-                className="text-xs uppercase tracking-wide text-muted-foreground hover:text-primary"
-              >
-                {product.brand.name}
-              </Link>
+        <div>
+          {product.brand && (
+            <Link
+              href={`/brand/${product.brand.slug}`}
+              className="text-[11px] font-semibold uppercase tracking-[0.14em] text-mulberry-hover"
+            >
+              {product.brand.name} · Korea →
+            </Link>
+          )}
+
+          <h1 className="mt-3 font-display text-[30px] leading-tight tracking-[-0.01em] md:text-[38px]">
+            {product.name}
+          </h1>
+
+          {product.shortDescription && (
+            <p className="mt-3.5 max-w-[520px] text-[15.5px] leading-relaxed text-muted-foreground">
+              {product.shortDescription}
+            </p>
+          )}
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {product.ratingCount > 0 && (
+              <StarRating value={product.ratingAvg} count={product.ratingCount} />
             )}
-            <h1 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">
-              {product.name}
-            </h1>
-
-            <div className="flex flex-wrap items-center gap-3">
-              {product.ratingCount > 0 && (
-                <StarRating
-                  value={product.ratingAvg}
-                  count={product.ratingCount}
-                />
-              )}
-              {off !== null && (
-                <span className="flex items-center gap-2">
-                  <Badge>-{off}%</Badge>
-                  <span className="text-sm text-muted-foreground line-through">
-                    {formatBDT(product.comparePrice!)}
-                  </span>
-                </span>
-              )}
-            </div>
-
-            {product.shortDescription && (
-              <p className="text-sm text-muted-foreground">
-                {product.shortDescription}
-              </p>
-            )}
+            <span className="text-border" aria-hidden>
+              |
+            </span>
+            <span
+              className={
+                inStock
+                  ? "text-[13px] font-bold text-success"
+                  : "text-[13px] font-bold text-muted-foreground"
+              }
+            >
+              {inStock ? "In stock · ships today" : "Back in stock soon"}
+            </span>
+            <span className="relative">
+              <WishlistButton
+                productId={product.id}
+                productName={product.name}
+                saved={savedIds.has(product.id)}
+                className="static"
+              />
+            </span>
           </div>
 
-          <ProductActions
-            productId={product.id}
-            variants={product.variants.map((v) => ({
-              id: v.id,
-              name: v.name,
-              price: v.price,
-              stock: v.stock,
-            }))}
-            basePrice={product.price}
-            baseStock={product.stock}
-          />
+          <div className="mt-5">
+            <ProductActions
+              productId={product.id}
+              variants={product.variants.map((v) => ({
+                id: v.id,
+                name: v.name,
+                price: v.price,
+                stock: v.stock,
+              }))}
+              basePrice={product.price}
+              comparePrice={product.comparePrice}
+              baseStock={product.stock}
+              cartSubtotal={cart.subtotal}
+              freeShippingThreshold={insideDhaka?.freeShippingThreshold ?? null}
+            />
+          </div>
 
-          <ul className="grid gap-3 rounded-xl border bg-card p-4 text-sm">
-            <li className="flex items-center gap-2.5">
-              <ShieldCheck className="size-4 shrink-0 text-primary" />
-              100% authentic, sourced direct from Korea
-            </li>
-            <li className="flex items-center gap-2.5">
-              <Banknote className="size-4 shrink-0 text-success" />
-              Cash on delivery — pay when it arrives
-            </li>
-            {zones.map((zone) => (
-              <li key={zone.id} className="flex items-center gap-2.5">
-                <Truck className="size-4 shrink-0 text-gold" />
-                {zone.name}: {formatBDT(zone.charge)} ·{" "}
-                {formatDeliveryWindow(zone.minDays, zone.maxDays)}
-                {zone.freeShippingThreshold
-                  ? ` · free over ${formatBDT(zone.freeShippingThreshold)}`
-                  : ""}
-              </li>
-            ))}
-          </ul>
+          {related.length > 0 && (
+            <div className="mt-4 border border-border bg-white p-6">
+              <p className="eyebrow">Complete the routine</p>
+              <div className="mt-3.5 flex flex-col gap-2.5">
+                {related.slice(0, 2).map((item) => (
+                  <Link
+                    key={item.id}
+                    href={`/product/${item.slug}`}
+                    className="grid grid-cols-[54px_1fr_auto] items-center gap-3 border border-border p-2.5 hover:border-primary"
+                  >
+                    <div className="relative size-[54px] bg-blush">
+                      {item.images[0] && (
+                        <Image
+                          src={item.images[0].url}
+                          alt={item.name}
+                          fill
+                          sizes="54px"
+                          className="object-cover"
+                        />
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-[12.5px] font-bold leading-snug">
+                        {item.name}
+                      </div>
+                      <div className="mt-1 text-[11.5px] text-muted-foreground">
+                        {item.brand?.name}
+                      </div>
+                    </div>
+                    <div className="text-[13px] font-bold">
+                      {formatBDT(item.variants[0]?.price ?? item.price)}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      </div>
+      </section>
 
-      <div className="mt-12">
-        <Tabs defaultValue="description">
-          <TabsList>
-            <TabsTrigger value="description">Description</TabsTrigger>
-            <TabsTrigger value="ingredients">Ingredients</TabsTrigger>
-            <TabsTrigger value="how-to-use">How to Use</TabsTrigger>
-          </TabsList>
-          <TabsContent value="description">
-            <div className="max-w-3xl whitespace-pre-line">
+      {/* ------------------------------------------------ detail sections */}
+      <section className="mt-16 border border-border bg-white">
+        <div className="grid lg:grid-cols-2">
+          <div className="p-8 lg:p-12">
+            <p className="eyebrow">Why you&apos;ll love it</p>
+            <h2 className="mt-3.5 font-display text-2xl leading-snug md:text-[32px]">
+              What it actually does
+            </h2>
+            <p className="mt-4 whitespace-pre-line text-[15px] leading-relaxed text-muted-foreground">
               {product.description ??
                 product.shortDescription ??
                 "Description coming soon."}
+            </p>
+          </div>
+          <div className="relative min-h-[320px] bg-blush lg:min-h-[520px]">
+            <Image
+              src="/editorial/lifestyle.png"
+              alt={`${product.name} as part of a Korean skincare routine`}
+              fill
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="object-cover"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "Skin type", value: "All skin types, including sensitive" },
+          { label: "Routine step", value: "After toner, before moisturiser" },
+          { label: "Use", value: "Morning and night" },
+          { label: "Origin", value: "Made in Korea" },
+        ].map((item) => (
+          <div key={item.label} className="border border-border bg-white p-6">
+            <div className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-mulberry-hover">
+              {item.label}
             </div>
-          </TabsContent>
-          <TabsContent value="ingredients">
-            <div className="max-w-3xl whitespace-pre-line">
-              {product.ingredients ?? "Full ingredient list coming soon."}
+            <div className="mt-3 text-[14.5px] font-semibold leading-relaxed">
+              {item.value}
             </div>
-          </TabsContent>
-          <TabsContent value="how-to-use">
-            <div className="max-w-3xl whitespace-pre-line">
-              {product.howToUse ?? "Usage guidance coming soon."}
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
+          </div>
+        ))}
+      </section>
+
+      <section className="mt-16 grid gap-12 lg:grid-cols-[1fr_1.15fr]">
+        <div>
+          <p className="eyebrow">How to use</p>
+          <h2 className="mt-3.5 font-display text-2xl md:text-[32px]">
+            Where it sits in your routine
+          </h2>
+          <p className="mt-3.5 whitespace-pre-line text-[14.5px] leading-relaxed text-muted-foreground">
+            {product.howToUse ?? "Usage guidance coming soon."}
+          </p>
+          {insideDhaka && (
+            <p className="mt-6 border-t border-hairline pt-4 text-[13px] text-muted-foreground">
+              Delivered {insideDhaka.name.toLowerCase()} in{" "}
+              {formatDeliveryWindow(insideDhaka.minDays, insideDhaka.maxDays)} ·
+              cash on delivery
+            </p>
+          )}
+        </div>
+        <div>
+          <p className="eyebrow">Key ingredients</p>
+          <h2 className="mt-3.5 font-display text-2xl md:text-[32px]">
+            What&apos;s inside
+          </h2>
+          <p className="mt-3.5 whitespace-pre-line text-[14.5px] leading-relaxed text-muted-foreground">
+            {product.ingredients ?? "Full ingredient list coming soon."}
+          </p>
+        </div>
+      </section>
 
       {related.length > 0 && (
-        <section className="mt-14">
-          <h2 className="font-display text-xl font-semibold tracking-tight">
-            You may also like
+        <section className="mt-16">
+          <p className="eyebrow">You may also like</p>
+          <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
+            Pairs well with this
           </h2>
-          <div className="mt-5">
-            <ProductGrid products={related} />
+          <div className="mt-6">
+            <ProductGrid products={related} savedIds={savedIds} />
           </div>
         </section>
       )}

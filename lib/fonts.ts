@@ -1,21 +1,28 @@
-import { Inter, Noto_Sans_Bengali, Poppins } from "next/font/google";
+import { Hind_Siliguri, Manrope, Prata } from "next/font/google";
 
-export const inter = Inter({
+/**
+ * Three typefaces, fixed roles — see the design system.
+ * Prata for display, Manrope for interface, Hind Siliguri for Bangla.
+ */
+
+export const manrope = Manrope({
   subsets: ["latin"],
-  variable: "--font-inter",
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-manrope",
   display: "swap",
 });
 
-export const poppins = Poppins({
+export const prata = Prata({
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  variable: "--font-poppins",
+  // Prata ships a single weight
+  weight: ["400"],
+  variable: "--font-prata",
   display: "swap",
 });
 
-export const notoSansBengali = Noto_Sans_Bengali({
+export const hindSiliguri = Hind_Siliguri({
   subsets: ["bengali"],
-  weight: ["400", "500", "600"],
-  variable: "--font-noto-bengali",
+  weight: ["400", "600"],
+  variable: "--font-hind-siliguri",
   display: "swap",
 });

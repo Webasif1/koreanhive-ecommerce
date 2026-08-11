@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { ProductGrid } from "@/components/product/product-grid";
 import { isProductSort, SortLinks } from "@/components/product/sort-links";
 import { getProducts } from "@/server/queries/catalog";
+import { getWishlistProductIds } from "@/server/queries/wishlist";
 
 export const metadata: Metadata = {
   title: "Shop All Korean Skincare & Beauty",
@@ -19,15 +20,19 @@ export default async function ShopPage({
 }) {
   const { sort } = await searchParams;
   const activeSort = isProductSort(sort) ? sort : "newest";
-  const products = await getProducts({ sort: activeSort });
+  const [products, savedIds] = await Promise.all([
+    getProducts({ sort: activeSort }),
+    getWishlistProductIds(),
+  ]);
 
   return (
-    <div className="container-page py-10 md:py-14">
-      <header className="space-y-2">
-        <h1 className="font-display text-3xl font-semibold tracking-tight">
+    <div className="container-page py-12">
+      <header>
+        <p className="eyebrow">All products</p>
+        <h1 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
           Shop
         </h1>
-        <p className="text-muted-foreground">
+        <p className="mt-3 text-sm text-muted-foreground">
           {products.length} authentic K-beauty{" "}
           {products.length === 1 ? "product" : "products"}, delivered
           nationwide.
@@ -39,7 +44,7 @@ export default async function ShopPage({
       </div>
 
       <div className="mt-8">
-        <ProductGrid products={products} />
+        <ProductGrid products={products} savedIds={savedIds} />
       </div>
     </div>
   );

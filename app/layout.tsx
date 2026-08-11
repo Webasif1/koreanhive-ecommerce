@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { inter, notoSansBengali, poppins } from "@/lib/fonts";
+import { hindSiliguri, manrope, prata } from "@/lib/fonts";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
@@ -46,9 +46,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={cn(
-          inter.variable,
-          poppins.variable,
-          notoSansBengali.variable,
+          manrope.variable,
+          prata.variable,
+          hindSiliguri.variable,
           "antialiased",
         )}
       >

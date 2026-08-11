@@ -23,6 +23,8 @@ export type ProductCardData = {
   stock: number;
   ratingAvg: number;
   ratingCount: number;
+  /** the one-line benefit the design puts under the product name */
+  benefit: string | null;
   brand: { name: string; slug: string } | null;
   images: { url: string; alt: string | null }[];
   // the card's Buy Now needs something concrete to put in the cart
@@ -30,7 +32,7 @@ export type ProductCardData = {
 };
 
 const CARD_FIELDS =
-  "name slug price comparePrice stock ratingAvg ratingCount brandId images variants";
+  "name slug price comparePrice stock ratingAvg ratingCount shortDescription brandId images variants";
 
 export type ProductSort = "newest" | "price-asc" | "price-desc" | "popular";
 
@@ -57,6 +59,7 @@ type LeanProduct = Pick<
   | "stock"
   | "ratingAvg"
   | "ratingCount"
+  | "shortDescription"
   | "brandId"
   | "images"
   | "variants"
@@ -99,6 +102,7 @@ function toCard(
     stock: product.stock,
     ratingAvg: product.ratingAvg,
     ratingCount: product.ratingCount,
+    benefit: product.shortDescription ?? null,
     brand: product.brandId
       ? (brands.get(product.brandId.toString()) ?? null)
       : null,
@@ -183,6 +187,15 @@ export async function getActiveBanners() {
     linkUrl: banner.linkUrl ?? null,
     ctaLabel: banner.ctaLabel ?? null,
   }));
+}
+
+/** Anything currently marked down — drives the Hot Deals page. */
+export function getDiscountedProducts(take = 48) {
+  return findCards(
+    { isActive: true, comparePrice: { $ne: null, $gt: 0 } },
+    "newest",
+    take,
+  );
 }
 
 export function getFeaturedProducts(take = 4) {
