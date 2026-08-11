@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
+import { toast } from "sonner";
 
 import { FreeDeliveryBar } from "@/components/cart/free-delivery-bar";
 import { Badge } from "@/components/ui/badge";
@@ -17,16 +18,11 @@ type Variant = {
   stock: number;
 };
 
-function SubmitButton({
-  children,
-  variant,
-  formAction,
+/** Buy Now redirects, so it stays a plain form action. */
+function BuyNowButton({
   disabled,
   className,
 }: {
-  children: React.ReactNode;
-  variant: "default" | "dark";
-  formAction: (formData: FormData) => void | Promise<void>;
   disabled?: boolean;
   className?: string;
 }) {
@@ -36,12 +32,12 @@ function SubmitButton({
     <Button
       type="submit"
       size="lg"
-      variant={variant}
-      formAction={formAction}
+      variant="dark"
+      formAction={buyNowAction}
       disabled={disabled || pending}
       className={className}
     >
-      {children}
+      {pending ? "Taking you to checkout…" : "Buy Now · Cash on Delivery"}
     </Button>
   );
 }
@@ -56,7 +52,6 @@ export function ProductActions({
   basePrice,
   comparePrice,
   baseStock,
-  cartSubtotal,
   freeShippingThreshold,
 }: {
   productId: string;
@@ -64,11 +59,28 @@ export function ProductActions({
   basePrice: number;
   comparePrice: number | null;
   baseStock: number;
-  cartSubtotal: number;
   freeShippingThreshold: number | null;
 }) {
   const [selectedId, setSelectedId] = useState(variants[0]?.id ?? "");
   const [quantity, setQuantity] = useState(1);
+  const [cartSubtotal, setCartSubtotal] = useState(0);
+  const [isAdding, startTransition] = useTransition();
+
+  // fetched rather than rendered server-side, so this page stays static
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/cart/count")
+      .then((res) => (res.ok ? res.json() : { subtotal: 0 }))
+      .then((data: { subtotal?: number }) => {
+        if (!cancelled) setCartSubtotal(data.subtotal ?? 0);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const selected = variants.find((v) => v.id === selectedId) ?? null;
   const price = selected?.price ?? basePrice;
@@ -153,24 +165,38 @@ export function ProductActions({
           </button>
         </div>
 
-        <SubmitButton
-          formAction={addToCartAction}
+        <Button
+          type="button"
+          size="lg"
           variant="default"
-          disabled={outOfStock}
+          disabled={outOfStock || isAdding}
           className="flex-1"
+          onClick={() => {
+            const data = new FormData();
+            data.set("productId", productId);
+            data.set("variantId", selectedId);
+            data.set("quantity", String(quantity));
+
+            startTransition(async () => {
+              const result = await addToCartAction(data);
+
+              if (result.ok) {
+                toast.success(result.message, {
+                  description: `Quantity ${quantity}`,
+                });
+                // keep the delivery bar honest after the cart changes
+                setCartSubtotal((current) => current + price * quantity);
+              } else {
+                toast.error(result.message);
+              }
+            });
+          }}
         >
-          {outOfStock ? "Out of stock" : "Add to Cart"}
-        </SubmitButton>
+          {outOfStock ? "Out of stock" : isAdding ? "Adding…" : "Add to Cart"}
+        </Button>
       </div>
 
-      <SubmitButton
-        formAction={buyNowAction}
-        variant="dark"
-        disabled={outOfStock}
-        className="mt-2.5 w-full"
-      >
-        Buy Now · Cash on Delivery
-      </SubmitButton>
+      <BuyNowButton disabled={outOfStock} className="mt-2.5 w-full" />
 
       <FreeDeliveryBar
         subtotal={cartSubtotal + price * quantity}

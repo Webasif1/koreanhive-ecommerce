@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { ProductGrid } from "@/components/product/product-grid";
 import { isProductSort, SortLinks } from "@/components/product/sort-links";
 import { getProducts } from "@/server/queries/catalog";
-import { getWishlistProductIds } from "@/server/queries/wishlist";
 
 export const metadata: Metadata = {
   title: "Shop All Korean Skincare & Beauty",
@@ -20,10 +19,7 @@ export default async function ShopPage({
 }) {
   const { sort } = await searchParams;
   const activeSort = isProductSort(sort) ? sort : "newest";
-  const [products, savedIds] = await Promise.all([
-    getProducts({ sort: activeSort }),
-    getWishlistProductIds(),
-  ]);
+  const products = await getProducts({ sort: activeSort });
 
   return (
     <div className="container-page py-12">
@@ -44,7 +40,7 @@ export default async function ShopPage({
       </div>
 
       <div className="mt-8">
-        <ProductGrid products={products} savedIds={savedIds} />
+        <ProductGrid products={products} />
       </div>
     </div>
   );

@@ -13,19 +13,29 @@ import { Badge } from "@/components/ui/badge";
 import { discountPercent, formatBDT, formatDeliveryWindow } from "@/lib/format";
 import { breadcrumbJsonLd, productJsonLd } from "@/lib/json-ld";
 import { absoluteUrl } from "@/lib/site";
-import { getCart } from "@/server/queries/cart";
 import {
   getDeliveryZones,
   getProductBySlug,
   getRelatedProducts,
+  getSitemapEntries,
 } from "@/server/queries/catalog";
-import { getWishlistProductIds } from "@/server/queries/wishlist";
 
 type ProductPageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export const dynamic = "force-dynamic";
+// Prerendered and revalidated hourly. Nothing on this page reads a cookie —
+// the wishlist heart and the delivery bar hydrate on the client — so it stays
+// static and repeat views never touch the database.
+export const revalidate = 3600;
+
+/** Prerender every product at build time. These are the most-visited pages
+ *  in the shop, and the catalogue is small enough that building all of them
+ *  costs seconds while saving a database round-trip on every first view. */
+export async function generateStaticParams() {
+  const { products } = await getSitemapEntries();
+  return products.map((product) => ({ slug: product.slug }));
+}
 
 export async function generateMetadata({
   params,
@@ -65,14 +75,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   if (!product) notFound();
 
-  const [related, zones, cart, savedIds] = await Promise.all([
+  const [related, zones] = await Promise.all([
     getRelatedProducts({
       productId: product.id,
       categoryId: product.categoryId,
     }),
     getDeliveryZones(),
-    getCart(),
-    getWishlistProductIds(),
   ]);
 
   const variantPrices = product.variants.map((v) => v.price ?? product.price);
@@ -205,7 +213,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
               <WishlistButton
                 productId={product.id}
                 productName={product.name}
-                saved={savedIds.has(product.id)}
                 className="static"
               />
             </span>
@@ -223,7 +230,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
               basePrice={product.price}
               comparePrice={product.comparePrice}
               baseStock={product.stock}
-              cartSubtotal={cart.subtotal}
               freeShippingThreshold={insideDhaka?.freeShippingThreshold ?? null}
             />
           </div>
@@ -284,7 +290,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           </div>
           <div className="relative min-h-[320px] bg-blush lg:min-h-[520px]">
             <Image
-              src="/editorial/lifestyle.png"
+              src="/editorial/lifestyle.webp"
               alt={`${product.name} as part of a Korean skincare routine`}
               fill
               sizes="(min-width: 1024px) 50vw, 100vw"
@@ -347,7 +353,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
             Pairs well with this
           </h2>
           <div className="mt-6">
-            <ProductGrid products={related} savedIds={savedIds} />
+            <ProductGrid products={related} />
           </div>
         </section>
       )}

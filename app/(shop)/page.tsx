@@ -13,7 +13,6 @@ import {
   getBrands,
   getFeaturedProducts,
 } from "@/server/queries/catalog";
-import { getWishlistProductIds } from "@/server/queries/wishlist";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -26,37 +25,37 @@ const CONCERNS = [
     label: "Acne & breakouts",
     copy: "Calm active spots without stripping",
     href: "/category/face-ampoules",
-    image: "/categories/cat1.png",
+    image: "/categories/cat1.webp",
   },
   {
     label: "Dark spots",
     copy: "Fade post-acne marks and uneven tone",
     href: "/category/brightening",
-    image: "/categories/cat2.png",
+    image: "/categories/cat2.webp",
   },
   {
     label: "Dryness",
     copy: "Layerable hydration that holds all day",
     href: "/category/moisturisers",
-    image: "/categories/cat3.png",
+    image: "/categories/cat3.webp",
   },
   {
     label: "Oily skin",
     copy: "Control shine in Dhaka humidity",
     href: "/category/cleansers",
-    image: "/categories/cat4.png",
+    image: "/categories/cat4.webp",
   },
   {
     label: "Sun protection",
     copy: "Daily SPF that never leaves a cast",
     href: "/category/sunscreen",
-    image: "/categories/cat5.png",
+    image: "/categories/cat5.webp",
   },
   {
     label: "Sensitive skin",
     copy: "Short ingredient lists, no fragrance",
     href: "/category/toners-essences",
-    image: "/categories/cat6.png",
+    image: "/categories/cat6.webp",
   },
 ];
 
@@ -114,26 +113,25 @@ const JOURNAL = [
   {
     title: "A Korean routine that survives Bangladesh humidity",
     tag: "ROUTINE",
-    image: "/editorial/lifestyle.png",
+    image: "/editorial/lifestyle.webp",
   },
   {
     title: "Niacinamide, explained without the jargon",
     tag: "INGREDIENTS",
-    image: "/editorial/unboxing.png",
+    image: "/editorial/unboxing.webp",
   },
   {
     title: "Double cleansing: what it is and who needs it",
     tag: "BASICS",
-    image: "/editorial/reel1.png",
+    image: "/editorial/reel1.webp",
   },
 ];
 
 export default async function Home() {
-  const [featured, brands, banners, savedIds] = await Promise.all([
+  const [featured, brands, banners] = await Promise.all([
     getFeaturedProducts(8),
     getBrands(),
     getActiveBanners(),
-    getWishlistProductIds(),
   ]);
 
   return (
@@ -183,7 +181,7 @@ export default async function Home() {
 
           <div className="relative min-h-[420px] self-stretch bg-blush lg:min-h-[600px]">
             <Image
-              src="/editorial/hero-model.png"
+              src="/editorial/hero-model.webp"
               alt="Korean skincare routine"
               fill
               priority
@@ -278,7 +276,7 @@ export default async function Home() {
           </Link>
         </div>
         <div className="mt-8">
-          <ProductGrid products={featured} savedIds={savedIds} badge="BEST SELLER" />
+          <ProductGrid products={featured} badge="BEST SELLER" />
         </div>
       </section>
 
@@ -370,7 +368,7 @@ export default async function Home() {
                 className="relative aspect-[9/16] overflow-hidden border border-border bg-blush"
               >
                 <Image
-                  src={`/editorial/reel${n}.png`}
+                  src={`/editorial/reel${n}.webp`}
                   alt={`Korean Hive routine reel ${n}`}
                   fill
                   sizes="(min-width: 1024px) 20vw, 50vw"

@@ -34,7 +34,7 @@ export function SiteFooter() {
         <div className="space-y-4">
           <Link href="/" className="block">
             <Image
-              src="/brand/logo.png"
+              src="/brand/logo.webp"
               alt="Korean Hive"
               width={200}
               height={40}

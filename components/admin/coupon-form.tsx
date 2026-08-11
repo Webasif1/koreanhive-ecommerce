@@ -6,6 +6,7 @@ import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label, Select } from "@/components/ui/input";
 import { emptyAdminFormState } from "@/lib/admin-state";
+import { useActionToast } from "@/lib/use-action-toast";
 import { saveCouponAction } from "@/server/actions/admin/coupons";
 
 function SubmitButton() {
@@ -23,6 +24,8 @@ export function CouponForm() {
     saveCouponAction,
     emptyAdminFormState,
   );
+
+  useActionToast(state);
 
   return (
     <form

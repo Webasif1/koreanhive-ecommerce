@@ -7,10 +7,20 @@ import { connectDb } from "@/server/db";
 import { WishlistItem } from "@/server/models";
 import { ensureGuestToken, readGuestToken } from "@/server/wishlist-cookie";
 
+export type WishlistResult = {
+  ok: boolean;
+  saved: boolean;
+  message: string;
+};
+
 /** Toggle, so the same heart button both saves and removes. */
-export async function toggleWishlistAction(formData: FormData) {
+export async function toggleWishlistAction(
+  formData: FormData,
+): Promise<WishlistResult> {
   const productId = String(formData.get("productId") ?? "");
-  if (!isValidObjectId(productId)) return;
+  if (!isValidObjectId(productId)) {
+    return { ok: false, saved: false, message: "That product no longer exists." };
+  }
 
   await connectDb();
 
@@ -27,8 +37,14 @@ export async function toggleWishlistAction(formData: FormData) {
     await WishlistItem.create({ guestToken: token, productId });
   }
 
+  // only the wishlist page renders this data server-side
   revalidatePath("/wishlist");
-  revalidatePath("/shop");
+
+  return {
+    ok: true,
+    saved: !existing,
+    message: existing ? "Removed from wishlist" : "Saved to wishlist",
+  };
 }
 
 export async function removeWishlistAction(formData: FormData) {
