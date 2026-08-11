@@ -10,7 +10,7 @@ import { organizationJsonLd, websiteJsonLd } from "@/lib/json-ld";
  *  admin area can render without a shop header, footer or bottom nav. */
 export function StorefrontShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col pb-14 md:pb-0">
+    <div className="flex min-h-screen flex-col pb-16 lg:pb-0">
       <JsonLd data={organizationJsonLd()} />
       <JsonLd data={websiteJsonLd()} />
 

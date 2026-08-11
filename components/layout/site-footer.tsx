@@ -1,5 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
-import { Banknote, Truck } from "lucide-react";
+import { Banknote, ShieldCheck, Truck } from "lucide-react";
 
 import { footerNav } from "@/lib/navigation";
 
@@ -20,38 +21,45 @@ function InstagramIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+const trust = [
+  { icon: ShieldCheck, label: "100% authentic, imported from Korea" },
+  { icon: Banknote, label: "Cash on delivery nationwide" },
+  { icon: Truck, label: "Delivered to all 64 districts" },
+];
+
 export function SiteFooter() {
   return (
-    <footer className="mt-16 border-t bg-secondary/40">
-      <div className="container-page grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="space-y-3">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="grid size-9 place-items-center rounded-full bg-primary font-display text-lg font-bold text-primary-foreground">
-              K
-            </span>
-            <span className="font-display text-lg font-semibold">
-              Korean Hive
-            </span>
+    <footer className="mt-20 bg-ink text-blush">
+      <div className="container-page grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="space-y-4">
+          <Link href="/" className="block">
+            <Image
+              src="/brand/logo.png"
+              alt="Korean Hive"
+              width={200}
+              height={40}
+              className="h-9 w-auto brightness-0 invert"
+            />
           </Link>
-          <p className="text-sm text-muted-foreground">
-            100% authentic Korean beauty & skincare, delivered across
-            Bangladesh.
+          <p className="text-sm leading-relaxed text-light">
+            Authentic Korean beauty and skincare, sourced in Seoul and
+            delivered across Bangladesh.
           </p>
-          <p lang="bn" className="text-sm text-muted-foreground">
-            বাংলাদেশে অথেনটিক কোরিয়ান স্কিনকেয়ার।
+          <p lang="bn" className="text-sm leading-relaxed text-light">
+            ৳২৫০০+ অর্ডারে সারা বাংলাদেশে ফ্রি ডেলিভারি।
           </p>
           <div className="flex gap-3 pt-1">
             <Link
               href="https://facebook.com"
               aria-label="Korean Hive on Facebook"
-              className="text-muted-foreground transition-colors hover:text-primary"
+              className="text-light transition-colors hover:text-white"
             >
               <FacebookIcon className="size-5" />
             </Link>
             <Link
               href="https://instagram.com"
               aria-label="Korean Hive on Instagram"
-              className="text-muted-foreground transition-colors hover:text-primary"
+              className="text-light transition-colors hover:text-white"
             >
               <InstagramIcon className="size-5" />
             </Link>
@@ -60,15 +68,13 @@ export function SiteFooter() {
 
         {footerNav.map((group) => (
           <div key={group.title}>
-            <h2 className="font-display text-sm font-semibold">
-              {group.title}
-            </h2>
-            <ul className="mt-3 space-y-2">
+            <h2 className="font-display text-base text-white">{group.title}</h2>
+            <ul className="mt-4 space-y-2.5">
               {group.items.map((item) => (
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                    className="text-sm text-light transition-colors hover:text-white"
                   >
                     {item.label}
                   </Link>
@@ -79,21 +85,22 @@ export function SiteFooter() {
         ))}
       </div>
 
-      <div className="border-t">
-        <div className="container-page flex flex-col gap-3 py-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            © {new Date().getFullYear()} Korean Hive. All rights reserved.
-          </p>
-          <div className="flex flex-wrap items-center gap-4">
-            <span className="inline-flex items-center gap-1.5">
-              <Banknote className="size-4 text-success" />
-              Cash on Delivery
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Truck className="size-4 text-gold" />
-              Inside & Outside Dhaka
-            </span>
+      <div className="border-t border-white/10">
+        <div className="container-page flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            {trust.map(({ icon: Icon, label }) => (
+              <span
+                key={label}
+                className="inline-flex items-center gap-2 text-[11.5px] text-light"
+              >
+                <Icon className="size-3.5" />
+                {label}
+              </span>
+            ))}
           </div>
+          <p className="text-[11.5px] text-light">
+            © {new Date().getFullYear()} Korean Hive
+          </p>
         </div>
       </div>
     </footer>

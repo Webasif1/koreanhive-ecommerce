@@ -4,22 +4,37 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ---------------------------------------------------------------
-   Korean Hive brand palette
-   primary #E8618C · blush #FBE8EF · gold #C99A6B
-   ink #1F2430 · green #2E9E6B
+   Korean Hive design system
+   Mulberry carries every action. Ink anchors headers, footers and
+   dark sections. Rose and blush are the only fills. Red appears
+   exclusively on savings, green only on stock and verification.
+   Nothing in this system has a corner radius above 2px.
    --------------------------------------------------------------- */
 
 :root {
-  --brand-primary: #e8618c;
-  --brand-primary-dark: #d24a76;
-  --brand-blush: #fbe8ef;
-  --brand-gold: #c99a6b;
-  --brand-ink: #1f2430;
-  --brand-green: #2e9e6b;
+  --brand-mulberry: #7b2a6b;
+  --brand-mulberry-hover: #b0378f;
+  --brand-ink: #241a24;
+  --brand-cream: #fbf7f9;
+  --brand-blush: #f6eaf1;
+  --brand-rose-border: #eadde5;
+  --brand-hairline: #f3e9ef;
+  --brand-muted: #6e5f6b;
+  --brand-faint: #a98ba0;
+  --brand-light: #b9a7b4;
+  --brand-sale: #b03a4a;
+  --brand-sale-bg: #fdf3f4;
+  --brand-sale-border: #f0cfd3;
+  --brand-success: #2f7a4f;
+  --brand-success-bg: #eaf4ee;
+  --brand-success-border: #c9e2d3;
+  --brand-star: #c9a227;
+  --brand-chip-border: #e3c5d8;
 
-  --radius: 0.75rem;
+  /* square corners are a rule of the system, not a preference */
+  --radius: 2px;
 
-  --background: #ffffff;
+  --background: var(--brand-cream);
   --foreground: var(--brand-ink);
 
   --card: #ffffff;
@@ -28,60 +43,60 @@
   --popover: #ffffff;
   --popover-foreground: var(--brand-ink);
 
-  --primary: var(--brand-primary);
+  --primary: var(--brand-mulberry);
   --primary-foreground: #ffffff;
 
   --secondary: var(--brand-blush);
   --secondary-foreground: var(--brand-ink);
 
-  --muted: #f5f5f7;
-  --muted-foreground: #6b7280;
+  --muted: var(--brand-hairline);
+  --muted-foreground: var(--brand-muted);
 
   --accent: var(--brand-blush);
-  --accent-foreground: var(--brand-ink);
+  --accent-foreground: var(--brand-mulberry);
 
-  --destructive: #dc2626;
+  --destructive: var(--brand-sale);
   --destructive-foreground: #ffffff;
 
-  --success: var(--brand-green);
+  --success: var(--brand-success);
   --success-foreground: #ffffff;
 
-  --border: #e9e7ec;
-  --input: #e9e7ec;
-  --ring: var(--brand-primary);
+  --border: var(--brand-rose-border);
+  --input: var(--brand-rose-border);
+  --ring: var(--brand-mulberry);
 }
 
 .dark {
-  --background: #14171f;
-  --foreground: #f6f5f7;
+  --background: #1b141b;
+  --foreground: #f6eaf1;
 
-  --card: #1b1f29;
-  --card-foreground: #f6f5f7;
+  --card: #241a24;
+  --card-foreground: #f6eaf1;
 
-  --popover: #1b1f29;
-  --popover-foreground: #f6f5f7;
+  --popover: #241a24;
+  --popover-foreground: #f6eaf1;
 
-  --primary: #f07ba3;
-  --primary-foreground: #1f2430;
+  --primary: #cf6bb2;
+  --primary-foreground: #1b141b;
 
-  --secondary: #2a2331;
-  --secondary-foreground: #f6f5f7;
+  --secondary: #332532;
+  --secondary-foreground: #f6eaf1;
 
-  --muted: #232733;
-  --muted-foreground: #a1a1ab;
+  --muted: #2c202c;
+  --muted-foreground: #b9a7b4;
 
-  --accent: #2a2331;
-  --accent-foreground: #f6f5f7;
+  --accent: #332532;
+  --accent-foreground: #f0d3e5;
 
-  --destructive: #ef4444;
+  --destructive: #d4596a;
   --destructive-foreground: #ffffff;
 
   --success: #45b783;
   --success-foreground: #0d1a13;
 
-  --border: #2b2f3a;
-  --input: #2b2f3a;
-  --ring: #f07ba3;
+  --border: #3a2b39;
+  --input: #3a2b39;
+  --ring: #cf6bb2;
 }
 
 @theme inline {
@@ -107,19 +122,31 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* raw brand tokens, for accents that must not shift with theme */
-  --color-blush: var(--brand-blush);
-  --color-gold: var(--brand-gold);
+  /* design-system tokens that must not shift with theme */
   --color-ink: var(--brand-ink);
+  --color-blush: var(--brand-blush);
+  --color-cream: var(--brand-cream);
+  --color-mulberry: var(--brand-mulberry);
+  --color-mulberry-hover: var(--brand-mulberry-hover);
+  --color-hairline: var(--brand-hairline);
+  --color-faint: var(--brand-faint);
+  --color-light: var(--brand-light);
+  --color-sale: var(--brand-sale);
+  --color-sale-bg: var(--brand-sale-bg);
+  --color-sale-border: var(--brand-sale-border);
+  --color-success-bg: var(--brand-success-bg);
+  --color-success-border: var(--brand-success-border);
+  --color-star: var(--brand-star);
+  --color-chip-border: var(--brand-chip-border);
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-poppins), var(--font-inter), sans-serif;
-  --font-bengali: var(--font-noto-bengali), var(--font-inter), sans-serif;
+  --font-sans: var(--font-manrope), system-ui, sans-serif;
+  --font-display: var(--font-prata), Georgia, serif;
+  --font-bengali: var(--font-hind-siliguri), var(--font-manrope), sans-serif;
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 2px;
 }
 
 @layer base {
@@ -132,6 +159,11 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  ::selection {
+    background: #f0d3e5;
+  }
+
+  /* Bangla carries offers, delivery and trust copy */
   :lang(bn) {
     font-family: var(--font-bengali);
   }
@@ -139,4 +171,9 @@
 
 @utility container-page {
   @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+}
+
+/* Eyebrow label above section headings — repeats on every page */
+@utility eyebrow {
+  @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-primary;
 }

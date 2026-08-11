@@ -13,7 +13,7 @@ function SubmitButton({
   label,
 }: {
   children: React.ReactNode;
-  variant: "default" | "outline";
+  variant: "default" | "dark";
   formAction: (formData: FormData) => void | Promise<void>;
   disabled?: boolean;
   label: string;
@@ -23,12 +23,11 @@ function SubmitButton({
   return (
     <Button
       type="submit"
-      size="sm"
       variant={variant}
       formAction={formAction}
       disabled={disabled || pending}
       aria-label={label}
-      className="w-full"
+      className="h-12 w-full text-[13px]"
     >
       {children}
     </Button>
@@ -48,22 +47,22 @@ export function CardBuyButtons({
   productName: string;
 }) {
   return (
-    <form className="grid grid-cols-2 gap-2 px-3 pb-3">
+    <form className="mt-3.5 flex flex-col gap-2">
       <input type="hidden" name="productId" value={productId} />
       <input type="hidden" name="variantId" value={variantId ?? ""} />
       <input type="hidden" name="quantity" value={1} />
 
       <SubmitButton
         formAction={addToCartAction}
-        variant="outline"
+        variant="default"
         disabled={disabled}
         label={`Add ${productName} to cart`}
       >
-        Add
+        {disabled ? "Out of stock" : "Add to Cart"}
       </SubmitButton>
       <SubmitButton
         formAction={buyNowAction}
-        variant="default"
+        variant="dark"
         disabled={disabled}
         label={`Buy ${productName} now`}
       >

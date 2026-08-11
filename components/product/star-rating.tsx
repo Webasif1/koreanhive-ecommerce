@@ -1,34 +1,37 @@
-import { Star } from "lucide-react";
-
 import { cn } from "@/lib/utils";
 
-type StarRatingProps = {
+/**
+ * Design system: gold stars, then "4.9 (216)". Reviews are shown as a count,
+ * never as a bare number.
+ */
+export function StarRating({
+  value,
+  count,
+  className,
+  showCount = true,
+}: {
   value: number;
   count?: number;
   className?: string;
-};
-
-export function StarRating({ value, count, className }: StarRatingProps) {
+  showCount?: boolean;
+}) {
   const rounded = Math.round(value);
 
   return (
-    <div className={cn("flex items-center gap-1", className)}>
-      <span className="flex" aria-hidden>
-        {[1, 2, 3, 4, 5].map((i) => (
-          <Star
-            key={i}
-            className={cn(
-              "size-3.5",
-              i <= rounded
-                ? "fill-gold text-gold"
-                : "fill-transparent text-muted-foreground/40",
-            )}
-          />
-        ))}
+    <div className={cn("flex items-center gap-2", className)}>
+      <span
+        className="text-[11px] tracking-[0.08em] text-star"
+        aria-hidden
+      >
+        {"★".repeat(rounded)}
+        <span className="text-hairline">{"★".repeat(5 - rounded)}</span>
       </span>
-      <span className="sr-only">{value.toFixed(1)} out of 5</span>
-      {typeof count === "number" && (
-        <span className="text-xs text-muted-foreground">({count})</span>
+      <span className="sr-only">{value} out of 5</span>
+      {showCount && (
+        <span className="text-[11.5px] text-muted-foreground">
+          {value.toFixed(1)}
+          {count !== undefined && ` (${count})`}
+        </span>
       )}
     </div>
   );

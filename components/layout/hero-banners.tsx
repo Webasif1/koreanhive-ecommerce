@@ -21,7 +21,7 @@ export function HeroBanners({ banners }: { banners: Banner[] }) {
         {banners.map((banner, index) => (
           <div
             key={banner.id}
-            className="relative overflow-hidden rounded-xl border"
+            className="relative overflow-hidden border border-border"
           >
             <div className="relative aspect-[16/7] sm:aspect-[3/1]">
               <Image
