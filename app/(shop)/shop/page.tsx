@@ -1,25 +1,27 @@
 import type { Metadata } from "next";
 
-import { ProductGrid } from "@/components/product/product-grid";
-import { isProductSort, SortLinks } from "@/components/product/sort-links";
-import { getProducts } from "@/server/queries/catalog";
+import { ProductListing } from "@/components/product/product-listing";
+import {
+  parseListingParams,
+  type ListingSearchParams,
+} from "@/lib/listing-params";
+import { getCatalogListing } from "@/server/queries/catalog";
 
 export const metadata: Metadata = {
   title: "Shop All Korean Skincare & Beauty",
   description:
     "Browse every Korean beauty and skincare product available at Korean Hive, with cash on delivery across Bangladesh.",
-  // ?sort= variants are the same listing; point them all at /shop
+  // filter and sort combinations are the same listing; point them all at /shop
   alternates: { canonical: "/shop" },
 };
 
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sort?: string }>;
+  searchParams: Promise<ListingSearchParams>;
 }) {
-  const { sort } = await searchParams;
-  const activeSort = isProductSort(sort) ? sort : "newest";
-  const products = await getProducts({ sort: activeSort });
+  const { sort, filters } = parseListingParams(await searchParams);
+  const listing = await getCatalogListing({ filters, sort });
 
   return (
     <div className="container-page py-12">
@@ -29,19 +31,12 @@ export default async function ShopPage({
           Shop
         </h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          {products.length} authentic K-beauty{" "}
-          {products.length === 1 ? "product" : "products"}, delivered
+          {listing.scopeTotal} authentic K-beauty products, delivered
           nationwide.
         </p>
       </header>
 
-      <div className="mt-6">
-        <SortLinks basePath="/shop" active={activeSort} />
-      </div>
-
-      <div className="mt-8">
-        <ProductGrid products={products} />
-      </div>
+      <ProductListing listing={listing} sort={sort} />
     </div>
   );
 }
