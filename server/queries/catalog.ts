@@ -35,7 +35,12 @@ export type ProductCardData = {
 const CARD_FIELDS =
   "name slug price comparePrice stock ratingAvg ratingCount shortDescription brandId images variants";
 
-export type ProductSort = "newest" | "price-asc" | "price-desc" | "popular";
+export type ProductSort =
+  | "newest"
+  | "price-asc"
+  | "price-desc"
+  | "popular"
+  | "discount";
 
 function sortFor(sort: ProductSort): Record<string, 1 | -1> {
   switch (sort) {
@@ -45,6 +50,7 @@ function sortFor(sort: ProductSort): Record<string, 1 | -1> {
       return { price: -1 };
     case "popular":
       return { ratingCount: -1 };
+    // "discount" is a computed ratio, sorted in memory after the fetch
     default:
       return { createdAt: -1 };
   }
@@ -138,6 +144,260 @@ async function findCards(
   const brands = await brandMapFor(products);
 
   return products.map((p) => toCard(p, brands));
+}
+
+// ------------------------------------------------------------- filters
+
+export type FacetOption = {
+  slug: string;
+  name: string;
+  count: number;
+};
+
+export type CatalogFilters = {
+  brands?: string[];
+  categories?: string[];
+  onSale?: boolean;
+  inStock?: boolean;
+};
+
+export type CatalogListing = {
+  products: ProductCardData[];
+  total: number;
+  scopeTotal: number;
+  facets: {
+    categories: FacetOption[];
+    brands: FacetOption[];
+    onSale: number;
+    inStock: number;
+  };
+};
+
+/** Higher discount first. Computed, so it is applied after the fetch rather
+ *  than in the Mongo sort — the result set is capped, so this is cheap. */
+function byDiscount(a: ProductCardData, b: ProductCardData) {
+  const ratio = (p: ProductCardData) =>
+    p.comparePrice && p.comparePrice > p.price
+      ? (p.comparePrice - p.price) / p.comparePrice
+      : 0;
+  return ratio(b) - ratio(a);
+}
+
+function saleClause() {
+  return { comparePrice: { $ne: null, $gt: 0 } };
+}
+
+/**
+ * One listing query for /shop, /category, /brand and /deals.
+ *
+ * `scope` is the part of the URL that is not user-toggleable — the category
+ * or brand whose page you are on. Facet counts are computed with every
+ * *other* active filter applied, so the numbers next to a checkbox tell you
+ * what you would actually get by ticking it.
+ */
+export async function getCatalogListing({
+  scope = {},
+  filters = {},
+  sort = "newest",
+  take = 60,
+}: {
+  scope?: ProductFilter;
+  filters?: CatalogFilters;
+  sort?: ProductSort;
+  take?: number;
+}): Promise<CatalogListing> {
+  await connectDb();
+
+  const [allBrands, allCategories] = await Promise.all([
+    Brand.find({ isActive: true }).select("name slug").sort({ name: 1 }).lean(),
+    Category.find({ isActive: true, parentId: { $ne: null } })
+      .select("name slug")
+      .sort({ position: 1 })
+      .lean(),
+  ]);
+
+  const brandIdBySlug = new Map(allBrands.map((b) => [b.slug, b._id]));
+  const categoryIdBySlug = new Map(allCategories.map((c) => [c.slug, c._id]));
+
+  // flatMap rather than filter(Boolean): the latter does not narrow away the
+  // undefined, and Mongoose's filter types reject it
+  const selectedBrandIds = (filters.brands ?? []).flatMap((slug) => {
+    const id = brandIdBySlug.get(slug);
+    return id ? [id] : [];
+  });
+  const selectedCategoryIds = (filters.categories ?? []).flatMap((slug) => {
+    const id = categoryIdBySlug.get(slug);
+    return id ? [id] : [];
+  });
+
+  const base: ProductFilter = { isActive: true, ...scope };
+
+  const clauses = {
+    brand: selectedBrandIds.length ? { brandId: { $in: selectedBrandIds } } : {},
+    category: selectedCategoryIds.length
+      ? { categoryId: { $in: selectedCategoryIds } }
+      : {},
+    onSale: filters.onSale ? saleClause() : {},
+    inStock: filters.inStock ? { stock: { $gt: 0 } } : {},
+  };
+
+  const fullFilter: ProductFilter = {
+    ...base,
+    ...clauses.brand,
+    ...clauses.category,
+    ...clauses.onSale,
+    ...clauses.inStock,
+  };
+
+  // each facet is counted with the other filters applied but not its own,
+  // otherwise ticking one brand would show every other brand as zero
+  const brandFacetFilter = {
+    ...base,
+    ...clauses.category,
+    ...clauses.onSale,
+    ...clauses.inStock,
+  };
+  const categoryFacetFilter = {
+    ...base,
+    ...clauses.brand,
+    ...clauses.onSale,
+    ...clauses.inStock,
+  };
+
+  const [
+    docs,
+    total,
+    scopeTotal,
+    brandCounts,
+    categoryCounts,
+    onSaleCount,
+    inStockCount,
+  ] = await Promise.all([
+    Product.find(fullFilter)
+      .select(CARD_FIELDS)
+      .sort(sortFor(sort))
+      .limit(take)
+      .lean() as unknown as Promise<LeanProduct[]>,
+    Product.countDocuments(fullFilter),
+    Product.countDocuments(base),
+    Product.aggregate<{ _id: unknown; count: number }>([
+      { $match: brandFacetFilter },
+      { $group: { _id: "$brandId", count: { $sum: 1 } } },
+    ]),
+    Product.aggregate<{ _id: unknown; count: number }>([
+      { $match: categoryFacetFilter },
+      { $group: { _id: "$categoryId", count: { $sum: 1 } } },
+    ]),
+    Product.countDocuments({
+      ...base,
+      ...clauses.brand,
+      ...clauses.category,
+      ...clauses.inStock,
+      ...saleClause(),
+    }),
+    Product.countDocuments({
+      ...base,
+      ...clauses.brand,
+      ...clauses.category,
+      ...clauses.onSale,
+      stock: { $gt: 0 },
+    }),
+  ]);
+
+  const brandMap = await brandMapFor(docs);
+  let products = docs.map((p) => toCard(p, brandMap));
+  if (sort === "discount") products = [...products].sort(byDiscount);
+
+  const brandCountBy = new Map(
+    brandCounts.filter((r) => r._id).map((r) => [String(r._id), r.count]),
+  );
+  const categoryCountBy = new Map(
+    categoryCounts.filter((r) => r._id).map((r) => [String(r._id), r.count]),
+  );
+
+  return {
+    products,
+    total,
+    scopeTotal,
+    facets: {
+      // a facet with nothing behind it is noise, so empty options are dropped
+      brands: allBrands
+        .map((b) => ({
+          slug: b.slug,
+          name: b.name,
+          count: brandCountBy.get(b._id.toString()) ?? 0,
+        }))
+        .filter((b) => b.count > 0),
+      categories: allCategories
+        .map((c) => ({
+          slug: c.slug,
+          name: c.name,
+          count: categoryCountBy.get(c._id.toString()) ?? 0,
+        }))
+        .filter((c) => c.count > 0),
+      onSale: onSaleCount,
+      inStock: inStockCount,
+    },
+  };
+}
+
+/** Category meta plus the ids a listing on that page should cover — the
+ *  category itself and its direct children, so "Skincare" is not empty just
+ *  because every product sits on a leaf. */
+export async function getCategoryScope(slug: string) {
+  await connectDb();
+
+  const category = await Category.findOne({ slug, isActive: true }).lean();
+  if (!category) return null;
+
+  const [children, parent] = await Promise.all([
+    Category.find({ parentId: category._id, isActive: true })
+      .select("name slug")
+      .sort({ position: 1 })
+      .lean(),
+    category.parentId
+      ? Category.findById(category.parentId).select("name slug").lean()
+      : null,
+  ]);
+
+  return {
+    category: {
+      id: category._id.toString(),
+      name: category.name,
+      slug: category.slug,
+      description: category.description ?? null,
+      metaTitle: category.metaTitle ?? null,
+      metaDescription: category.metaDescription ?? null,
+      parent: parent ? { name: parent.name, slug: parent.slug } : null,
+      children: children.map((c) => ({
+        id: c._id.toString(),
+        name: c.name,
+        slug: c.slug,
+      })),
+    },
+    categoryIds: [category._id, ...children.map((c) => c._id)],
+  };
+}
+
+/** Brand meta for a brand listing page. */
+export async function getBrandScope(slug: string) {
+  await connectDb();
+
+  const brand = await Brand.findOne({ slug, isActive: true }).lean();
+  if (!brand) return null;
+
+  return {
+    brand: {
+      id: brand._id.toString(),
+      name: brand.name,
+      slug: brand.slug,
+      description: brand.description ?? null,
+      countryOfOrigin: brand.countryOfOrigin ?? null,
+      metaTitle: brand.metaTitle ?? null,
+      metaDescription: brand.metaDescription ?? null,
+    },
+    brandId: brand._id,
+  };
 }
 
 /** Slugs + timestamps for sitemap.ts. Deliberately minimal: this runs on a
