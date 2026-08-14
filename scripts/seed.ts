@@ -17,6 +17,7 @@ import mongoose from "mongoose";
 import {
   Brand,
   Category,
+  Combo,
   Coupon,
   DeliveryZone,
   Product,
@@ -145,6 +146,12 @@ const BRANDS = [
     slug: "banila-co",
     description:
       "Cleansing balm specialists — the first step of a double cleanse.",
+  },
+  {
+    name: "iUNIK",
+    slug: "iunik",
+    description:
+      "Fermented, low-irritation formulas built around a single botanical each.",
   },
 ];
 
@@ -870,7 +877,135 @@ const PRODUCTS: ProductSeed[] = [
       { name: "Purity 100ml", stock: 18 },
     ],
   },
+
+  // ----------------------------------------------------------- iUNIK
+  // The three pieces that make up the Centella mini set sold as a combo.
+  {
+    name: "Centella Calming Gel Cream",
+    slug: "iunik-centella-calming-gel-cream",
+    brand: "iunik",
+    category: "moisturisers",
+    price: 1250,
+    stock: 24,
+    shortDescription:
+      "A light gel cream with centella for skin that runs hot and reactive.",
+    ingredients: "Centella Asiatica Extract, Tea Tree Leaf Water, Beta-Glucan.",
+    howToUse: "Smooth over the face as the final step, morning and night.",
+    variants: [{ name: "60ml", stock: 24, isDefault: true }],
+  },
+  {
+    name: "Centella Toner",
+    slug: "iunik-centella-toner",
+    brand: "iunik",
+    category: "toners-essences",
+    price: 1150,
+    stock: 26,
+    shortDescription:
+      "A no-fuss calming toner that preps skin without any sting.",
+    ingredients: "Centella Asiatica Extract, Tea Tree Leaf Water, Panthenol.",
+    howToUse: "Pat into clean skin before serum.",
+    variants: [{ name: "200ml", stock: 26, isDefault: true }],
+  },
+  {
+    name: "Centella Bubble Serum",
+    slug: "iunik-centella-bubble-serum",
+    brand: "iunik",
+    category: "face-ampoules",
+    price: 1350,
+    stock: 20,
+    shortDescription:
+      "A whipped centella serum for redness and post-breakout repair.",
+    ingredients: "Centella Asiatica Extract, Niacinamide, Sodium Hyaluronate.",
+    howToUse: "Apply after toner, then seal with moisturiser.",
+    variants: [{ name: "50ml", stock: 20, isDefault: true }],
+  },
 ];
+
+/**
+ * Bundles. The Centella mini set is the one currently sold on
+ * koreanhive.com; the three routine kits are house bundles.
+ *
+ * Members are listed by slug so the seed order does not matter and a
+ * re-run cannot orphan them.
+ */
+const COMBOS = [
+  {
+    name: "iUNIK Centella Mini 3 Item Set",
+    slug: "iunik-centella-mini-3-item-set",
+    concern: "Sensitive, easily irritated skin",
+    description:
+      "The travel trio — calming toner, bubble serum and gel cream, all built on centella.",
+    price: 1350,
+    comparePrice: 1480,
+    productSlugs: [
+      "iunik-centella-toner",
+      "iunik-centella-bubble-serum",
+      "iunik-centella-calming-gel-cream",
+    ],
+    position: 0,
+  },
+  {
+    name: "The Acne Reset",
+    slug: "the-acne-reset",
+    concern: "Active breakouts and post-acne marks",
+    description:
+      "A full three-step routine for congested skin, priced below buying each piece.",
+    price: 3450,
+    comparePrice: 4090,
+    productSlugs: [
+      "cosrx-low-ph-good-morning-gel-cleanser",
+      "cosrx-aha-bha-clarifying-treatment-toner",
+      "anua-azelaic-acid-10-redness-soothing-serum",
+    ],
+    position: 1,
+  },
+  {
+    name: "Glass Skin Starter",
+    slug: "glass-skin-starter",
+    concern: "Dullness and dehydration",
+    description:
+      "Double cleanse, snail essence and a sealing cream — the classic glass-skin order.",
+    price: 4470,
+    comparePrice: 5250,
+    productSlugs: [
+      "anua-heartleaf-pore-control-cleansing-oil",
+      "cosrx-advanced-snail-96-mucin-power-essence",
+      "cosrx-advanced-snail-92-all-in-one-cream",
+    ],
+    position: 2,
+  },
+  {
+    name: "Everyday Sun Kit",
+    slug: "everyday-sun-kit",
+    concern: "Daily protection in Dhaka heat",
+    description:
+      "Two sunscreens for different moments, plus soothing pads for after sun.",
+    price: 4230,
+    comparePrice: 4750,
+    productSlugs: [
+      "beauty-of-joseon-relief-sun-rice-probiotics",
+      "isntree-hyaluronic-acid-airy-sun-stick",
+      "mediheal-madecassoside-blemish-pad",
+    ],
+    position: 3,
+  },
+];
+
+/**
+ * Placeholder review aggregates so the rating filter and the star rows have
+ * something to work with. Derived from the product index so a re-seed is
+ * stable rather than reshuffling every product's rating.
+ *
+ * These are not real reviews — replace them once the Review model is wired
+ * to real submissions.
+ */
+function ratingFor(index: number) {
+  const avgSteps = [4.9, 4.7, 4.4, 4.8, 4.2, 4.6, 4.9, 4.3, 4.5, 4.7];
+  return {
+    ratingAvg: avgSteps[index % avgSteps.length],
+    ratingCount: 40 + ((index * 37) % 410),
+  };
+}
 
 async function main() {
   const uri = process.env.MONGODB_URI;
@@ -918,6 +1053,7 @@ async function main() {
     Product.deleteMany({}),
     Category.deleteMany({}),
     Brand.deleteMany({}),
+    Combo.deleteMany({}),
   ]);
 
   // --------------------------------------------------------- brands
@@ -959,6 +1095,7 @@ async function main() {
 
       return {
         ...rest,
+        ...ratingFor(index),
         brandId: brandDoc._id,
         categoryId: categoryDoc._id,
         metaTitle: `${p.name} | Korean Hive`,
@@ -978,6 +1115,14 @@ async function main() {
         })),
       };
     }),
+  );
+
+  // --------------------------------------------------------- combos
+  await Combo.insertMany(
+    COMBOS.map((combo, index) => ({
+      ...combo,
+      imageUrl: categoryImg(index + 2),
+    })),
   );
 
   // --------------------------------------------------------- coupon
@@ -1001,6 +1146,7 @@ async function main() {
   console.log(`  brands     ${brands.length}`);
   console.log(`  categories ${children.length + 1}`);
   console.log(`  products   ${PRODUCTS.length}`);
+  console.log(`  combos     ${COMBOS.length}`);
   console.log("  coupon     WELCOME10");
 }
 

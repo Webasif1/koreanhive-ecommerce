@@ -1,6 +1,7 @@
 import { FilterSidebar } from "@/components/product/filter-sidebar";
 import { ListingToolbar } from "@/components/product/listing-toolbar";
 import { ProductGrid } from "@/components/product/product-grid";
+import { SidebarPromos } from "@/components/product/sidebar-promos";
 import type { CatalogListing, ProductSort } from "@/server/queries/catalog";
 
 /**
@@ -31,11 +32,13 @@ export function ProductListing({
         </summary>
         <div className="mt-3">
           <FilterSidebar facets={listing.facets} hide={hideFacets} />
+          <SidebarPromos brandCount={listing.facets.brands.length} />
         </div>
       </details>
 
       <aside className="hidden lg:block">
         <FilterSidebar facets={listing.facets} hide={hideFacets} />
+        <SidebarPromos brandCount={listing.facets.brands.length} />
       </aside>
 
       <div className="space-y-6">

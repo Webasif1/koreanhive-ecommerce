@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatBDT } from "@/lib/format";
+import { getCombos } from "@/server/queries/catalog";
 
 export const metadata: Metadata = {
   title: "Combo Offers",
@@ -12,47 +14,11 @@ export const metadata: Metadata = {
   alternates: { canonical: "/combos" },
 };
 
-/**
- * Static for now. There is no Combo model yet — when bundles become real
- * products these move to the database without the layout changing.
- */
-const COMBOS = [
-  {
-    name: "The Acne Reset",
-    concern: "Active breakouts and post-acne marks",
-    steps: [
-      "Low pH Good Morning Gel Cleanser",
-      "AHA/BHA Clarifying Treatment Toner",
-      "Azelaic Acid 10 Redness Soothing Serum",
-    ],
-    price: 3450,
-    was: 4090,
-  },
-  {
-    name: "Glass Skin Starter",
-    concern: "Dullness and dehydration",
-    steps: [
-      "Heartleaf Pore Control Cleansing Oil",
-      "Advanced Snail 96 Mucin Power Essence",
-      "Advanced Snail 92 All In One Cream",
-    ],
-    price: 4470,
-    was: 5250,
-  },
-  {
-    name: "Everyday Sun Kit",
-    concern: "Daily protection in Dhaka heat",
-    steps: [
-      "Relief Sun: Rice + Probiotics SPF50+",
-      "Hyaluronic Acid Airy Sun Stick SPF50+",
-      "Madecassoside Blemish Pad",
-    ],
-    price: 4230,
-    was: 4750,
-  },
-];
+export const revalidate = 3600;
 
-export default function CombosPage() {
+export default async function CombosPage() {
+  const combos = await getCombos();
+
   return (
     <div className="container-page py-12">
       <p className="eyebrow">Combo offers</p>
@@ -60,49 +26,93 @@ export default function CombosPage() {
         Full routines, one price
       </h1>
       <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
-        Three steps that work together, priced below buying them separately.
-        Cash on delivery, same as everything else.
+        Products that work together, priced below buying them separately. Cash
+        on delivery, same as everything else.
       </p>
 
-      <div className="mt-8 grid gap-5 md:grid-cols-3">
-        {COMBOS.map((combo) => (
-          <div
-            key={combo.name}
-            className="flex flex-col border border-border bg-card p-6"
-          >
-            <Badge variant="saleSoft" className="self-start">
-              Save {formatBDT(combo.was - combo.price)}
-            </Badge>
-            <h2 className="mt-4 font-display text-xl">{combo.name}</h2>
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              {combo.concern}
-            </p>
+      {combos.length === 0 ? (
+        <p className="mt-8 border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+          No combos running right now — check back soon.
+        </p>
+      ) : (
+        <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {combos.map((combo) => {
+            const saving = combo.comparePrice
+              ? combo.comparePrice - combo.price
+              : 0;
 
-            <ul className="mt-5 space-y-2.5">
-              {combo.steps.map((step, i) => (
-                <li key={step} className="flex gap-3 text-[13px]">
-                  <span className="font-display text-primary">{i + 1}</span>
-                  <span>{step}</span>
-                </li>
-              ))}
-            </ul>
+            return (
+              <div
+                key={combo.id}
+                className="flex flex-col border border-border bg-card p-6"
+              >
+                {saving > 0 && (
+                  <Badge variant="saleSoft" className="self-start">
+                    Save {formatBDT(saving)}
+                  </Badge>
+                )}
 
-            <div className="mt-6 flex items-baseline gap-2.5">
-              <span className="font-display text-2xl">
-                {formatBDT(combo.price)}
-              </span>
-              <span className="text-[12.5px] text-faint line-through">
-                {formatBDT(combo.was)}
-              </span>
-            </div>
+                <h2 className="mt-4 font-display text-xl">{combo.name}</h2>
+                {combo.concern && (
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    {combo.concern}
+                  </p>
+                )}
+                {combo.description && (
+                  <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
+                    {combo.description}
+                  </p>
+                )}
 
-            <div className="flex-1" />
-            <Button className="mt-5 w-full" asChild>
-              <Link href="/shop">Shop these products</Link>
-            </Button>
-          </div>
-        ))}
-      </div>
+                <ul className="mt-5 space-y-2.5">
+                  {combo.products.map((product) => (
+                    <li key={product.slug}>
+                      <Link
+                        href={`/product/${product.slug}`}
+                        className="flex items-center gap-3 text-[13px] hover:text-primary"
+                      >
+                        <span className="relative size-10 shrink-0 border border-border bg-blush">
+                          {product.imageUrl && (
+                            <Image
+                              src={product.imageUrl}
+                              alt={product.name}
+                              fill
+                              sizes="40px"
+                              className="object-cover"
+                            />
+                          )}
+                        </span>
+                        <span className="flex-1 leading-snug">
+                          {product.name}
+                        </span>
+                        <span className="text-faint tabular-nums">
+                          {formatBDT(product.price)}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-6 flex items-baseline gap-2.5">
+                  <span className="font-display text-2xl">
+                    {formatBDT(combo.price)}
+                  </span>
+                  {combo.comparePrice && (
+                    <span className="text-[12.5px] text-faint line-through">
+                      {formatBDT(combo.comparePrice)}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex-1" />
+                <Button className="mt-5 w-full" asChild>
+                  <Link href="/shop?combo=1">Shop these products</Link>
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
