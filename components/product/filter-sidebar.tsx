@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { PriceRangeFilter } from "@/components/product/price-range-filter";
 import type { CatalogListing } from "@/server/queries/catalog";
 import { cn } from "@/lib/utils";
 
@@ -70,12 +71,25 @@ export function FilterSidebar({
     .filter(Boolean);
   const onSale = searchParams.get("sale") === "1";
   const inStock = searchParams.get("stock") === "1";
+  const inCombo = searchParams.get("combo") === "1";
+  const rating = searchParams.get("rating");
+
+  const bounds = facets.priceBounds;
+  const priceValue = {
+    min: Number(searchParams.get("min") ?? bounds.min),
+    max: Number(searchParams.get("max") ?? bounds.max),
+  };
+  const priceTouched =
+    searchParams.has("min") || searchParams.has("max");
 
   const hasFilters =
     selectedBrands.length > 0 ||
     selectedCategories.length > 0 ||
     onSale ||
-    inStock;
+    inStock ||
+    inCombo ||
+    Boolean(rating) ||
+    priceTouched;
 
   const apply = (mutate: (params: URLSearchParams) => void) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -162,24 +176,82 @@ export function FilterSidebar({
         </section>
       )}
 
-      <section className="px-5 py-4">
+      <section className="border-b border-border px-5 py-4">
         <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-          Availability
+          Rating
+        </h3>
+        <div className="mt-2">
+          {facets.rating.map((option) => {
+            const key = String(option.value);
+            const checked = rating === key || (key === "4" && rating === "4.0");
+            return (
+              <FacetRow
+                key={key}
+                label={`${option.value.toFixed(1)} and above`}
+                count={option.count}
+                checked={checked}
+                // a single-choice group, so ticking one replaces the other
+                onToggle={() =>
+                  apply((params) => {
+                    if (checked) params.delete("rating");
+                    else params.set("rating", key);
+                  })
+                }
+                disabled={isPending}
+              />
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="border-b border-border px-5 py-4">
+        <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          Offer
         </h3>
         <div className="mt-2">
           <FacetRow
-            label="On sale"
+            label="On discount"
             count={facets.onSale}
             checked={onSale}
             onToggle={() => setFlag("sale", !onSale)}
             disabled={isPending}
           />
           <FacetRow
-            label="In stock"
+            label="In stock only"
             count={facets.inStock}
             checked={inStock}
             onToggle={() => setFlag("stock", !inStock)}
             disabled={isPending}
+          />
+          <FacetRow
+            label="Part of a combo"
+            count={facets.inCombo}
+            checked={inCombo}
+            onToggle={() => setFlag("combo", !inCombo)}
+            disabled={isPending}
+          />
+        </div>
+      </section>
+
+      <section className="px-5 py-4">
+        <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          Price
+        </h3>
+        <div className="mt-3">
+          <PriceRangeFilter
+            bounds={bounds}
+            value={priceValue}
+            disabled={isPending}
+            onCommit={({ min, max }) =>
+              apply((params) => {
+                // an untouched end stays out of the URL entirely
+                if (min > bounds.min) params.set("min", String(min));
+                else params.delete("min");
+
+                if (max < bounds.max) params.set("max", String(max));
+                else params.delete("max");
+              })
+            }
           />
         </div>
       </section>

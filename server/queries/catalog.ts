@@ -8,6 +8,7 @@ import {
   Banner,
   Brand,
   Category,
+  Combo,
   DeliveryZone,
   Product,
   type ProductDoc,
@@ -159,6 +160,11 @@ export type CatalogFilters = {
   categories?: string[];
   onSale?: boolean;
   inStock?: boolean;
+  inCombo?: boolean;
+  /** 4.5 or 4.0 — "and above" */
+  minRating?: number;
+  minPrice?: number;
+  maxPrice?: number;
 };
 
 export type CatalogListing = {
@@ -170,6 +176,11 @@ export type CatalogListing = {
     brands: FacetOption[];
     onSale: number;
     inStock: number;
+    inCombo: number;
+    /** "4.5 and above" / "4.0 and above" */
+    rating: { value: number; count: number }[];
+    /** cheapest and dearest in scope, so the slider knows its ends */
+    priceBounds: { min: number; max: number };
   };
 };
 
@@ -232,6 +243,22 @@ export async function getCatalogListing({
 
   const base: ProductFilter = { isActive: true, ...scope };
 
+  // membership comes from the combos themselves, so a product is "in a combo"
+  // exactly when some active bundle lists it
+  const activeCombos = await Combo.find({ isActive: true })
+    .select("productSlugs")
+    .lean();
+  const comboSlugs = [
+    ...new Set(activeCombos.flatMap((combo) => combo.productSlugs)),
+  ];
+
+  const priceClause = () => {
+    const range: Record<string, number> = {};
+    if (typeof filters.minPrice === "number") range.$gte = filters.minPrice;
+    if (typeof filters.maxPrice === "number") range.$lte = filters.maxPrice;
+    return Object.keys(range).length ? { price: range } : {};
+  };
+
   const clauses = {
     brand: selectedBrandIds.length ? { brandId: { $in: selectedBrandIds } } : {},
     category: selectedCategoryIds.length
@@ -239,6 +266,11 @@ export async function getCatalogListing({
       : {},
     onSale: filters.onSale ? saleClause() : {},
     inStock: filters.inStock ? { stock: { $gt: 0 } } : {},
+    inCombo: filters.inCombo ? { slug: { $in: comboSlugs } } : {},
+    rating: filters.minRating
+      ? { ratingAvg: { $gte: filters.minRating } }
+      : {},
+    price: priceClause(),
   };
 
   const fullFilter: ProductFilter = {
@@ -247,22 +279,21 @@ export async function getCatalogListing({
     ...clauses.category,
     ...clauses.onSale,
     ...clauses.inStock,
+    ...clauses.inCombo,
+    ...clauses.rating,
+    ...clauses.price,
   };
 
-  // each facet is counted with the other filters applied but not its own,
-  // otherwise ticking one brand would show every other brand as zero
-  const brandFacetFilter = {
-    ...base,
-    ...clauses.category,
-    ...clauses.onSale,
-    ...clauses.inStock,
-  };
-  const categoryFacetFilter = {
-    ...base,
-    ...clauses.brand,
-    ...clauses.onSale,
-    ...clauses.inStock,
-  };
+  /** Everything except the named dimension, so a facet never zeroes itself. */
+  const without = (skip: keyof typeof clauses) =>
+    Object.entries(clauses).reduce<ProductFilter>(
+      (acc, [key, clause]) =>
+        key === skip ? acc : { ...acc, ...(clause as object) },
+      { ...base },
+    );
+
+  const brandFacetFilter = without("brand");
+  const categoryFacetFilter = without("category");
 
   const [
     docs,
@@ -272,6 +303,10 @@ export async function getCatalogListing({
     categoryCounts,
     onSaleCount,
     inStockCount,
+    inComboCount,
+    rating45Count,
+    rating40Count,
+    priceRange,
   ] = await Promise.all([
     Product.find(fullFilter)
       .select(CARD_FIELDS)
@@ -288,20 +323,26 @@ export async function getCatalogListing({
       { $match: categoryFacetFilter },
       { $group: { _id: "$categoryId", count: { $sum: 1 } } },
     ]),
+    Product.countDocuments({ ...without("onSale"), ...saleClause() }),
+    Product.countDocuments({ ...without("inStock"), stock: { $gt: 0 } }),
     Product.countDocuments({
-      ...base,
-      ...clauses.brand,
-      ...clauses.category,
-      ...clauses.inStock,
-      ...saleClause(),
+      ...without("inCombo"),
+      slug: { $in: comboSlugs },
     }),
     Product.countDocuments({
-      ...base,
-      ...clauses.brand,
-      ...clauses.category,
-      ...clauses.onSale,
-      stock: { $gt: 0 },
+      ...without("rating"),
+      ratingAvg: { $gte: 4.5 },
     }),
+    Product.countDocuments({
+      ...without("rating"),
+      ratingAvg: { $gte: 4.0 },
+    }),
+    // bounds ignore the current price selection, so dragging the slider
+    // cannot shrink the track out from under the handles
+    Product.aggregate<{ min: number; max: number }>([
+      { $match: without("price") },
+      { $group: { _id: null, min: { $min: "$price" }, max: { $max: "$price" } } },
+    ]),
   ]);
 
   const brandMap = await brandMapFor(docs);
@@ -337,8 +378,63 @@ export async function getCatalogListing({
         .filter((c) => c.count > 0),
       onSale: onSaleCount,
       inStock: inStockCount,
+      inCombo: inComboCount,
+      rating: [
+        { value: 4.5, count: rating45Count },
+        { value: 4.0, count: rating40Count },
+      ],
+      priceBounds: {
+        // round outwards to whole hundreds so the slider lands on tidy numbers
+        min: Math.floor((priceRange[0]?.min ?? 0) / 100) * 100,
+        max: Math.ceil((priceRange[0]?.max ?? 5000) / 100) * 100,
+      },
     },
   };
+}
+
+/** Active bundles with their member products resolved, for /combos. */
+export async function getCombos() {
+  await connectDb();
+
+  const combos = await Combo.find({ isActive: true })
+    .sort({ position: 1 })
+    .lean();
+
+  const slugs = [...new Set(combos.flatMap((c) => c.productSlugs))];
+
+  const products = await Product.find({ slug: { $in: slugs }, isActive: true })
+    .select("name slug price images")
+    .lean();
+
+  const bySlug = new Map(products.map((p) => [p.slug, p]));
+
+  return combos.map((combo) => ({
+    id: combo._id.toString(),
+    name: combo.name,
+    slug: combo.slug,
+    description: combo.description ?? null,
+    concern: combo.concern ?? null,
+    price: combo.price,
+    comparePrice: combo.comparePrice ?? null,
+    // a member whose product was removed simply drops out
+    products: combo.productSlugs.flatMap((slug) => {
+      const product = bySlug.get(slug);
+      if (!product) return [];
+
+      const image = [...(product.images ?? [])].sort(
+        (a, b) => a.position - b.position,
+      )[0];
+
+      return [
+        {
+          name: product.name,
+          slug: product.slug,
+          price: product.price,
+          imageUrl: image?.url ?? null,
+        },
+      ];
+    }),
+  }));
 }
 
 /** Category meta plus the ids a listing on that page should cover — the

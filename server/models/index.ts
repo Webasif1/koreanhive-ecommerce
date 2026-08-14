@@ -509,6 +509,43 @@ const bannerSchema = new Schema<BannerDoc>(
 
 bannerSchema.index({ isActive: 1, position: 1 });
 
+export type ComboDoc = {
+  _id: Types.ObjectId;
+  name: string;
+  slug: string;
+  description?: string | null;
+  concern?: string | null;
+  imageUrl?: string | null;
+  /** bundle price and the sum it replaces, both whole BDT */
+  price: number;
+  comparePrice?: number | null;
+  /** members are referenced by slug so a re-seed cannot orphan them */
+  productSlugs: string[];
+  position: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+const comboSchema = new Schema<ComboDoc>(
+  {
+    name: { type: String, required: true },
+    slug: { type: String, required: true, unique: true },
+    description: { type: String, default: null },
+    /** what the bundle is for, shown under the name */
+    concern: { type: String, default: null },
+    imageUrl: { type: String, default: null },
+    price: { type: Number, required: true, min: 0 },
+    comparePrice: { type: Number, default: null, min: 0 },
+    productSlugs: { type: [String], default: [] },
+    position: { type: Number, default: 0 },
+    isActive: { type: Boolean, default: true },
+  },
+  { timestamps: true },
+);
+
+comboSchema.index({ isActive: 1, position: 1 });
+
 // Reuse the compiled model across hot reloads, otherwise Mongoose throws
 // OverwriteModelError on the second evaluation of this module.
 function compile<T>(name: string, schema: Schema<T>): Model<T> {
@@ -526,3 +563,4 @@ export const Order = compile("Order", orderSchema);
 export const Review = compile("Review", reviewSchema);
 export const WishlistItem = compile("WishlistItem", wishlistItemSchema);
 export const Banner = compile("Banner", bannerSchema);
+export const Combo = compile("Combo", comboSchema);
