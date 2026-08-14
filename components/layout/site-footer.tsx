@@ -33,12 +33,17 @@ export function SiteFooter() {
       <div className="container-page grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-4">
           <Link href="/" className="block">
+            {/* Rendered as-is, like the header. It was previously filtered
+                with brightness-0 invert, which flattens every opaque pixel to
+                white — on artwork with real transparency that turns the
+                wordmark into a featureless block. The logo's own colour is a
+                light mulberry, so it already reads on the ink background. */}
             <Image
               src="/brand/logo.webp"
-              alt="Korean Hive"
-              width={200}
-              height={40}
-              className="h-9 w-auto brightness-0 invert"
+              alt="Korean Hive — authentic Korean skincare in Bangladesh"
+              width={220}
+              height={42}
+              className="h-9 w-auto"
             />
           </Link>
           <p className="text-sm leading-relaxed text-light">
