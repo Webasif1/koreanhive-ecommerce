@@ -1,7 +1,12 @@
 # Korean Hive — local container stack.
 #
-#   docker compose up --build                 # app only, using Atlas
+#   npm run docker:up                         # app only, using Atlas
 #   docker compose --profile local-db up      # app + a local MongoDB
+#
+# Use the npm script rather than `docker compose up --build` directly: it runs
+# `lock:linux` first. Any `npm install` on Windows silently drops the Linux-only
+# optional dependencies from package-lock.json, and `npm ci` inside the image
+# then fails with EUSAGE. Regenerating the lock first makes that unmissable.
 #
 # MONGODB_URI is read from .env (gitignored) and passed to the build as a
 # secret, because `next build` prerenders routes that query the database.

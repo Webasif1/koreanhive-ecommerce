@@ -9,7 +9,9 @@
     "lint": "eslint",
     "db:seed": "tsx scripts/seed.ts",
     "admin:create": "tsx scripts/create-admin.ts",
-    "lock:linux": "node scripts/lock-linux.mjs"
+    "lock:linux": "node scripts/lock-linux.mjs",
+    "docker:build": "npm run lock:linux && docker compose build",
+    "docker:up": "npm run lock:linux && docker compose up --build"
   },
   "dependencies": {
     "@radix-ui/react-slider": "^1.4.7",

@@ -12,6 +12,8 @@
  * target platform is the fix.
  *
  * Run this after any `npm install` on Windows, before building the image.
+ * `npm run docker:build` and `npm run docker:up` already chain it, so prefer
+ * those over calling `docker compose` directly.
  */
 import { spawnSync } from "node:child_process";
 
