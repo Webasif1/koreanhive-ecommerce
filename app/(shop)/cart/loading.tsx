@@ -1,4 +1,8 @@
-import { PageHeaderSkeleton, Skeleton } from "@/components/ui/skeleton";
+import {
+  PageHeaderSkeleton,
+  ProductGridSkeleton,
+  Skeleton,
+} from "@/components/ui/skeleton";
 
 export default function CartLoading() {
   return (
@@ -27,6 +31,12 @@ export default function CartLoading() {
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-12 w-full" />
         </div>
+      </div>
+
+      {/* the suggestions strip, so the page does not grow under the pointer */}
+      <div className="mt-16 space-y-6">
+        <Skeleton className="h-9 w-72" />
+        <ProductGridSkeleton count={4} />
       </div>
     </div>
   );

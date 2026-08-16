@@ -726,6 +726,77 @@ export async function getRelatedProducts({
   return [...sameCategory, ...fallbackDocs.map((p) => toCard(p, brands))];
 }
 
+/**
+ * Suggestions for a whole cart rather than a single product.
+ *
+ * Relatedness comes from the categories the cart already covers, which is what
+ * getRelatedProducts treats as related on the product page — keeping the two
+ * surfaces consistent. Anything already in the cart is excluded, so the strip
+ * never offers something the shopper has picked.
+ */
+async function cartRecommendations(productIds: string[], take = 4) {
+  if (productIds.length === 0) return [];
+
+  await connectDb();
+
+  // getCart selects only the fields a cart line renders, so the categories
+  // have to be looked up rather than read off the lines
+  const inCart = await Product.find({ _id: { $in: productIds } })
+    .select("categoryId")
+    .lean();
+
+  const categoryIds = [
+    ...new Set(
+      inCart.flatMap((p) => (p.categoryId ? [p.categoryId.toString()] : [])),
+    ),
+  ];
+
+  const sameCategory =
+    categoryIds.length > 0
+      ? await findCards(
+          {
+            isActive: true,
+            categoryId: { $in: categoryIds },
+            _id: { $nin: productIds },
+          },
+          "popular",
+          take,
+        )
+      : [];
+
+  if (sameCategory.length >= take) return sameCategory;
+
+  // a cart holding the only product in its category would otherwise render a
+  // half-empty row, so top up from the wider catalogue
+  const excludeIds = [...productIds, ...sameCategory.map((p) => p.id)];
+
+  const fallbackDocs = (await Product.find({
+    isActive: true,
+    _id: { $nin: excludeIds },
+  })
+    .select(CARD_FIELDS)
+    .sort({ isFeatured: -1, ratingCount: -1, _id: -1 })
+    .limit(take - sameCategory.length)
+    .lean()) as unknown as LeanProduct[];
+
+  const brands = await brandMapFor(fallbackDocs);
+
+  return [...sameCategory, ...fallbackDocs.map((p) => toCard(p, brands))];
+}
+
+/** Keyed by the cart's contents, so two shoppers with the same bag share the
+ *  result. Ids are plain strings, so they serialise into the cache key. */
+const getCartRecommendationsCached = unstable_cache(
+  cartRecommendations,
+  ["cart-recommendations"],
+  { revalidate: 3600, tags: ["products"] },
+);
+
+export function getCartRecommendations(productIds: string[], take = 4) {
+  // sorted so the same cart in a different order is the same cache entry
+  return getCartRecommendationsCached([...productIds].sort(), take);
+}
+
 /** Products in a category *and* its direct children, so "Skincare" is not
  *  empty just because every product sits on a leaf category. */
 export const getCategoryWithProducts = unstable_cache(

@@ -1,10 +1,13 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CartLineRow } from "@/components/cart/cart-line-row";
+import { CartRecommendations } from "@/components/cart/cart-recommendations";
 import { CouponForm } from "@/components/cart/coupon-form";
 import { FreeDeliveryBar } from "@/components/cart/free-delivery-bar";
 import { Button } from "@/components/ui/button";
+import { ProductGridSkeleton } from "@/components/ui/skeleton";
 import { formatBDT } from "@/lib/format";
 import { getCart } from "@/server/queries/cart";
 import { getDeliveryZones } from "@/server/queries/catalog";
@@ -103,6 +106,20 @@ export default async function CartPage() {
           </Link>
         </aside>
       </div>
+
+      {/* streamed, so the lines and the total are in the first flush and the
+          checkout path never waits on a recommendation query */}
+      <Suspense
+        fallback={
+          <div className="mt-16">
+            <ProductGridSkeleton count={4} />
+          </div>
+        }
+      >
+        <CartRecommendations
+          productIds={cart.lines.map((line) => line.productId)}
+        />
+      </Suspense>
     </div>
   );
 }
