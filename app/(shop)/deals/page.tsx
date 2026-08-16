@@ -1,18 +1,28 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 
 import { ProductListing } from "@/components/product/product-listing";
 import {
+  canonicalForPage,
   parseListingParams,
   type ListingSearchParams,
 } from "@/lib/listing-params";
 import { getCatalogListing } from "@/server/queries/catalog";
 
-export const metadata: Metadata = {
-  title: "Hot Deals",
-  description:
-    "Korean skincare and beauty currently marked down at Korean Hive, with cash on delivery across Bangladesh.",
-  alternates: { canonical: "/deals" },
-};
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<ListingSearchParams>;
+}): Promise<Metadata> {
+  const { page } = parseListingParams(await searchParams);
+
+  return {
+    title: "Hot Deals",
+    description:
+      "Korean skincare and beauty currently marked down at Korean Hive, with cash on delivery across Bangladesh.",
+    alternates: { canonical: canonicalForPage("/deals", page) },
+  };
+}
 
 export default async function DealsPage({
   searchParams,
@@ -20,7 +30,7 @@ export default async function DealsPage({
   searchParams: Promise<ListingSearchParams>;
 }) {
   const raw = await searchParams;
-  const { sort: requestedSort, filters } = parseListingParams(raw);
+  const { sort: requestedSort, page, filters } = parseListingParams(raw);
   // biggest saving first is the point of this page, so that is the default
   const sort = raw.sort ? requestedSort : "discount";
 
@@ -29,7 +39,10 @@ export default async function DealsPage({
     scope: { comparePrice: { $ne: null, $gt: 0 } },
     filters,
     sort,
+    page,
   });
+
+  if (page > listing.totalPages && page > 1) notFound();
 
   return (
     <div className="container-page py-12">

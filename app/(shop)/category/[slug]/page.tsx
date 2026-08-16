@@ -6,6 +6,7 @@ import { ProductListing } from "@/components/product/product-listing";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd } from "@/lib/json-ld";
 import {
+  canonicalForPage,
   parseListingParams,
   type ListingSearchParams,
 } from "@/lib/listing-params";
@@ -18,18 +19,23 @@ type CategoryPageProps = {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: CategoryPageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const [{ slug }, rawParams] = await Promise.all([params, searchParams]);
   const scope = await getCategoryScope(slug);
 
   if (!scope) return { title: "Category Not Found" };
+
+  const { page } = parseListingParams(rawParams);
 
   return {
     title: scope.category.metaTitle ?? scope.category.name,
     description:
       scope.category.metaDescription ?? scope.category.description ?? undefined,
-    // filter and sort combinations are the same listing
-    alternates: { canonical: `/category/${scope.category.slug}` },
+    // filter and sort combinations are the same listing; pages are not
+    alternates: {
+      canonical: canonicalForPage(`/category/${scope.category.slug}`, page),
+    },
   };
 }
 
@@ -38,7 +44,7 @@ export default async function CategoryPage({
   searchParams,
 }: CategoryPageProps) {
   const [{ slug }, rawParams] = await Promise.all([params, searchParams]);
-  const { sort, filters } = parseListingParams(rawParams);
+  const { sort, page, filters } = parseListingParams(rawParams);
 
   const scope = await getCategoryScope(slug);
   if (!scope) notFound();
@@ -49,7 +55,10 @@ export default async function CategoryPage({
     scope: { categoryId: { $in: categoryIds } },
     filters,
     sort,
+    page,
   });
+
+  if (page > listing.totalPages && page > 1) notFound();
 
   return (
     <div className="container-page py-12">

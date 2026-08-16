@@ -5,6 +5,7 @@ import { ProductListing } from "@/components/product/product-listing";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbJsonLd } from "@/lib/json-ld";
 import {
+  canonicalForPage,
   parseListingParams,
   type ListingSearchParams,
 } from "@/lib/listing-params";
@@ -17,18 +18,23 @@ type BrandPageProps = {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: BrandPageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const [{ slug }, rawParams] = await Promise.all([params, searchParams]);
   const scope = await getBrandScope(slug);
 
   if (!scope) return { title: "Brand Not Found" };
+
+  const { page } = parseListingParams(rawParams);
 
   return {
     title: scope.brand.metaTitle ?? scope.brand.name,
     description:
       scope.brand.metaDescription ?? scope.brand.description ?? undefined,
-    // filter and sort combinations are the same listing
-    alternates: { canonical: `/brand/${scope.brand.slug}` },
+    // filter and sort combinations are the same listing; pages are not
+    alternates: {
+      canonical: canonicalForPage(`/brand/${scope.brand.slug}`, page),
+    },
   };
 }
 
@@ -37,7 +43,7 @@ export default async function BrandPage({
   searchParams,
 }: BrandPageProps) {
   const [{ slug }, rawParams] = await Promise.all([params, searchParams]);
-  const { sort, filters } = parseListingParams(rawParams);
+  const { sort, page, filters } = parseListingParams(rawParams);
 
   const scope = await getBrandScope(slug);
   if (!scope) notFound();
@@ -48,7 +54,10 @@ export default async function BrandPage({
     scope: { brandId },
     filters,
     sort,
+    page,
   });
+
+  if (page > listing.totalPages && page > 1) notFound();
 
   return (
     <div className="container-page py-12">
