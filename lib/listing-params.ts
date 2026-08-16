@@ -2,6 +2,7 @@ import type { CatalogFilters, ProductSort } from "@/server/queries/catalog";
 
 export type ListingSearchParams = {
   sort?: string;
+  page?: string;
   brand?: string;
   category?: string;
   sale?: string;
@@ -11,6 +12,17 @@ export type ListingSearchParams = {
   min?: string;
   max?: string;
 };
+
+/** Divides by 2, 3 and 4 — the grid's column counts at mobile, tablet and
+ *  desktop — so the last row is never left ragged. */
+export const PER_PAGE = 12;
+
+/** Page 2 of a listing is distinct content, so it has to canonicalise to
+ *  itself. Collapsing every page onto page 1 tells Google the rest is
+ *  duplicate and drops it from the index. */
+export function canonicalForPage(path: string, page: number) {
+  return page > 1 ? `${path}?page=${page}` : path;
+}
 
 export function isProductSort(value: string | undefined): value is ProductSort {
   return (
@@ -30,6 +42,10 @@ const list = (value: string | undefined) =>
  *  stale URL still renders a page. */
 export function parseListingParams(params: ListingSearchParams) {
   const sort: ProductSort = isProductSort(params.sort) ? params.sort : "newest";
+
+  const parsedPage = Number(params.page);
+  const page =
+    Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
 
   const price = (value: string | undefined) => {
     if (!value) return undefined;
@@ -53,5 +69,5 @@ export function parseListingParams(params: ListingSearchParams) {
     maxPrice: price(params.max),
   };
 
-  return { sort, filters };
+  return { sort, page, filters };
 }

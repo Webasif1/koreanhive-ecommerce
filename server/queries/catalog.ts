@@ -3,6 +3,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import type { QueryFilter } from "mongoose";
 
+import { PER_PAGE } from "@/lib/listing-params";
 import { connectDb } from "@/server/db";
 import {
   Banner,
@@ -43,17 +44,24 @@ export type ProductSort =
   | "popular"
   | "discount";
 
+/**
+ * The trailing `_id` is not decoration. Every one of these fields has ties —
+ * dozens of products share a price, and ratingCount repeats — and MongoDB does
+ * not guarantee a stable order between tied documents. Under skip/limit that
+ * lets the same product appear on two pages while another never appears at
+ * all. `_id` is unique, so it makes the total order deterministic.
+ */
 function sortFor(sort: ProductSort): Record<string, 1 | -1> {
   switch (sort) {
     case "price-asc":
-      return { price: 1 };
+      return { price: 1, _id: -1 };
     case "price-desc":
-      return { price: -1 };
+      return { price: -1, _id: -1 };
     case "popular":
-      return { ratingCount: -1 };
-    // "discount" is a computed ratio, sorted in memory after the fetch
+      return { ratingCount: -1, _id: -1 };
+    // "discount" is a computed ratio, sorted by aggregation in findPage()
     default:
-      return { createdAt: -1 };
+      return { createdAt: -1, _id: -1 };
   }
 }
 
@@ -171,6 +179,11 @@ export type CatalogListing = {
   products: ProductCardData[];
   total: number;
   scopeTotal: number;
+  /** 1-based, already clamped to at least 1 by parseListingParams */
+  page: number;
+  perPage: number;
+  /** at least 1, so an empty result still renders a single (empty) page */
+  totalPages: number;
   facets: {
     categories: FacetOption[];
     brands: FacetOption[];
@@ -184,14 +197,53 @@ export type CatalogListing = {
   };
 };
 
-/** Higher discount first. Computed, so it is applied after the fetch rather
- *  than in the Mongo sort — the result set is capped, so this is cheap. */
-function byDiscount(a: ProductCardData, b: ProductCardData) {
-  const ratio = (p: ProductCardData) =>
-    p.comparePrice && p.comparePrice > p.price
-      ? (p.comparePrice - p.price) / p.comparePrice
-      : 0;
-  return ratio(b) - ratio(a);
+/**
+ * One page of cards.
+ *
+ * "discount" is a ratio rather than a stored field, so it is computed by the
+ * aggregation instead of after the fetch. Sorting in memory would only order
+ * the rows already fetched, which is fine for a single capped list but wrong
+ * the moment there is a page 2 — the biggest discounts on page 2 would be
+ * whatever happened to land in that slice, not the next-biggest overall.
+ */
+async function findPage(
+  filter: ProductFilter,
+  sort: ProductSort,
+  skip: number,
+  limit: number,
+) {
+  if (sort !== "discount") {
+    return Product.find(filter)
+      .select(CARD_FIELDS)
+      .sort(sortFor(sort))
+      .skip(skip)
+      .limit(limit)
+      .lean() as unknown as Promise<LeanProduct[]>;
+  }
+
+  return Product.aggregate<LeanProduct>([
+    { $match: filter },
+    {
+      $addFields: {
+        discountRatio: {
+          $cond: [
+            { $gt: ["$comparePrice", "$price"] },
+            {
+              $divide: [
+                { $subtract: ["$comparePrice", "$price"] },
+                "$comparePrice",
+              ],
+            },
+            0,
+          ],
+        },
+      },
+    },
+    { $sort: { discountRatio: -1, _id: -1 } },
+    { $skip: skip },
+    { $limit: limit },
+    { $project: Object.fromEntries(CARD_FIELDS.split(" ").map((f) => [f, 1])) },
+  ]);
 }
 
 function saleClause() {
@@ -210,12 +262,14 @@ export async function getCatalogListing({
   scope = {},
   filters = {},
   sort = "newest",
-  take = 60,
+  page = 1,
+  perPage = PER_PAGE,
 }: {
   scope?: ProductFilter;
   filters?: CatalogFilters;
   sort?: ProductSort;
-  take?: number;
+  page?: number;
+  perPage?: number;
 }): Promise<CatalogListing> {
   await connectDb();
 
@@ -308,11 +362,7 @@ export async function getCatalogListing({
     rating40Count,
     priceRange,
   ] = await Promise.all([
-    Product.find(fullFilter)
-      .select(CARD_FIELDS)
-      .sort(sortFor(sort))
-      .limit(take)
-      .lean() as unknown as Promise<LeanProduct[]>,
+    findPage(fullFilter, sort, (page - 1) * perPage, perPage),
     Product.countDocuments(fullFilter),
     Product.countDocuments(base),
     Product.aggregate<{ _id: unknown; count: number }>([
@@ -346,8 +396,7 @@ export async function getCatalogListing({
   ]);
 
   const brandMap = await brandMapFor(docs);
-  let products = docs.map((p) => toCard(p, brandMap));
-  if (sort === "discount") products = [...products].sort(byDiscount);
+  const products = docs.map((p) => toCard(p, brandMap));
 
   const brandCountBy = new Map(
     brandCounts.filter((r) => r._id).map((r) => [String(r._id), r.count]),
@@ -360,6 +409,9 @@ export async function getCatalogListing({
     products,
     total,
     scopeTotal,
+    page,
+    perPage,
+    totalPages: Math.max(1, Math.ceil(total / perPage)),
     facets: {
       // a facet with nothing behind it is noise, so empty options are dropped
       brands: allBrands

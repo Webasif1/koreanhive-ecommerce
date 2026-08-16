@@ -28,11 +28,14 @@ export function isProductSort(value: string | undefined): value is ProductSort {
  * JavaScript and every combination is a shareable URL.
  */
 export function ListingToolbar({
-  shown,
+  from,
+  to,
   total,
   active,
 }: {
-  shown: number;
+  /** 1-based index of the first card on this page; 0 when there are none */
+  from: number;
+  to: number;
   total: number;
   active: ProductSort;
 }) {
@@ -43,15 +46,26 @@ export function ListingToolbar({
     const params = new URLSearchParams(searchParams.toString());
     if (sort === "newest") params.delete("sort");
     else params.set("sort", sort);
+    // re-sorting reshuffles everything, so page 5 of the old order is meaningless
+    params.delete("page");
     return `${pathname}${params.size ? `?${params}` : ""}`;
   };
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 border border-border bg-white px-5 py-4">
       <p className="text-sm text-muted-foreground">
-        Showing <span className="font-bold text-foreground">{shown}</span> of{" "}
-        <span className="font-bold text-foreground">{total}</span>{" "}
-        {total === 1 ? "product" : "products"}
+        {total === 0 ? (
+          "No products"
+        ) : (
+          <>
+            Showing{" "}
+            <span className="font-bold text-foreground tabular-nums">
+              {from}–{to}
+            </span>{" "}
+            of <span className="font-bold text-foreground">{total}</span>{" "}
+            {total === 1 ? "product" : "products"}
+          </>
+        )}
       </p>
 
       <div className="flex flex-wrap gap-2">

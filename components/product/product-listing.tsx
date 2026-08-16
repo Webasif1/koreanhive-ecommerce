@@ -1,5 +1,10 @@
 import { FilterSidebar } from "@/components/product/filter-sidebar";
+import {
+  ListingPendingProvider,
+  PendingGrid,
+} from "@/components/product/listing-pending";
 import { ListingToolbar } from "@/components/product/listing-toolbar";
+import { Pagination } from "@/components/product/pagination";
 import { ProductGrid } from "@/components/product/product-grid";
 import { SidebarPromos } from "@/components/product/sidebar-promos";
 import type { CatalogListing, ProductSort } from "@/server/queries/catalog";
@@ -20,6 +25,10 @@ export function ProductListing({
   hideFacets?: ("brand" | "category")[];
   emptyMessage?: string;
 }) {
+  const from =
+    listing.products.length === 0 ? 0 : (listing.page - 1) * listing.perPage + 1;
+  const to = from === 0 ? 0 : from + listing.products.length - 1;
+
   return (
     <div className="mt-8 grid gap-6 lg:grid-cols-[260px_1fr] lg:items-start">
       {/* collapsed by default on mobile so the products stay above the fold */}
@@ -41,20 +50,29 @@ export function ProductListing({
         <SidebarPromos brandCount={listing.facets.brands.length} />
       </aside>
 
-      <div className="space-y-6">
-        <ListingToolbar
-          shown={listing.products.length}
-          total={listing.total}
-          active={sort}
-        />
+      {/* the provider spans the grid and the pager so a page click can dim the
+          cards it is replacing rather than blanking the whole route */}
+      <ListingPendingProvider>
+        <div className="space-y-6">
+          <ListingToolbar
+            from={from}
+            to={to}
+            total={listing.total}
+            active={sort}
+          />
 
-        <ProductGrid
-          products={listing.products}
-          emptyMessage={
-            emptyMessage ?? "Nothing matches those filters — try clearing one."
-          }
-        />
-      </div>
+          <PendingGrid>
+            <ProductGrid
+              products={listing.products}
+              emptyMessage={
+                emptyMessage ?? "Nothing matches those filters — try clearing one."
+              }
+            />
+          </PendingGrid>
+
+          <Pagination page={listing.page} totalPages={listing.totalPages} />
+        </div>
+      </ListingPendingProvider>
     </div>
   );
 }

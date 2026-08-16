@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { FirstVisitLoader } from "@/components/layout/first-visit-loader";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -14,6 +15,7 @@ export function StorefrontShell({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen flex-col pb-16 lg:pb-0">
       <JsonLd data={organizationJsonLd()} />
       <JsonLd data={websiteJsonLd()} />
+      <FirstVisitLoader />
 
       <WishlistProvider>
         <SiteHeader />
