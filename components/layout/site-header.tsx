@@ -1,8 +1,13 @@
+import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Search } from "lucide-react";
 
 import { CartBadge } from "@/components/cart/cart-badge";
+import {
+  HeaderSearchInput,
+  HeaderSearchInputFallback,
+} from "@/components/layout/header-search";
 import { mainNav } from "@/lib/navigation";
 
 export function SiteHeader() {
@@ -46,12 +51,12 @@ export function SiteHeader() {
             className="order-3 col-span-2 flex h-11 items-center gap-2.5 border border-border bg-cream px-3.5 lg:order-none lg:col-span-1 lg:h-[46px]"
           >
             <Search className="size-4 shrink-0 text-faint" />
-            <input
-              name="q"
-              placeholder="Search products — serum, sunscreen, Anua, acne care…"
-              aria-label="Search products"
-              className="w-full bg-transparent text-sm outline-none placeholder:text-faint"
-            />
+            {/* Suspense is load-bearing: the input reads useSearchParams, and
+                the header is on every page — unbounded, it would opt the whole
+                site out of static rendering. */}
+            <Suspense fallback={<HeaderSearchInputFallback />}>
+              <HeaderSearchInput />
+            </Suspense>
             <button
               type="submit"
               className="hidden shrink-0 text-[11px] font-semibold tracking-[0.06em] text-primary sm:block"

@@ -3,6 +3,9 @@ import type { CatalogFilters, ProductSort } from "@/server/queries/catalog";
 export type ListingSearchParams = {
   sort?: string;
   page?: string;
+  /** free-text query, only used by /search — carried by the other listings so
+   *  pagination and filter links rebuilt from the URL never drop it */
+  q?: string;
   brand?: string;
   category?: string;
   sale?: string;

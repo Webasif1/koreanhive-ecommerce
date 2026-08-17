@@ -444,6 +444,72 @@ export async function getCatalogListing({
   };
 }
 
+// --------------------------------------------------------------- search
+
+/** The query goes straight into $regex, so every metacharacter has to be
+ *  neutralised. Without this, "." matches the whole catalogue and "[" throws. */
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const MAX_TERMS = 6;
+
+/**
+ * Turns what somebody typed into a product filter.
+ *
+ * Terms are ANDed, so "cosrx snail" means both words, not either — matching
+ * what people expect from a search box. Each term is then ORed across the
+ * fields worth searching, including brand and category names, so "anua" finds
+ * Anua's products even though the brand is stored as a reference rather than
+ * on the product itself.
+ *
+ * Returns null for a query with nothing usable in it, which the page treats as
+ * "no search performed" rather than "no results".
+ */
+export async function buildSearchScope(
+  q: string,
+): Promise<ProductFilter | null> {
+  const terms = q
+    .trim()
+    .split(/\s+/)
+    // a single character matches almost everything, so it is not a search
+    .filter((term) => term.length > 1)
+    .slice(0, MAX_TERMS);
+
+  if (terms.length === 0) return null;
+
+  await connectDb();
+
+  const clauses = await Promise.all(
+    terms.map(async (term): Promise<ProductFilter> => {
+      const rx = new RegExp(escapeRegex(term), "i");
+
+      const [brands, categories] = await Promise.all([
+        Brand.find({ name: rx, isActive: true }).select("_id").lean(),
+        Category.find({ name: rx, isActive: true }).select("_id").lean(),
+      ]);
+
+      const or: ProductFilter[] = [
+        { name: rx },
+        { shortDescription: rx },
+        { sku: rx },
+        { slug: rx },
+      ];
+
+      if (brands.length > 0) {
+        or.push({ brandId: { $in: brands.map((b) => b._id) } });
+      }
+      if (categories.length > 0) {
+        or.push({ categoryId: { $in: categories.map((c) => c._id) } });
+      }
+
+      return { $or: or };
+    }),
+  );
+
+  return clauses.length === 1 ? clauses[0] : { $and: clauses };
+}
+
 /** Active bundles with their member products resolved, for /combos. */
 export async function getCombos() {
   await connectDb();
