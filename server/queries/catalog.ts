@@ -510,6 +510,56 @@ export async function buildSearchScope(
   return clauses.length === 1 ? clauses[0] : { $and: clauses };
 }
 
+export type SearchSuggestion = {
+  name: string;
+  slug: string;
+  price: number;
+  imageUrl: string | null;
+};
+
+async function searchSuggestions(
+  q: string,
+  take: number,
+): Promise<SearchSuggestion[]> {
+  const scope = await buildSearchScope(q);
+  if (!scope) return [];
+
+  // deliberately not CARD_FIELDS — a dropdown row shows a thumbnail, a name
+  // and a price, and has no use for variants, stock or ratings
+  const products = await Product.find({ isActive: true, ...scope })
+    .select("name slug price images")
+    .sort({ isFeatured: -1, ratingCount: -1, _id: -1 })
+    .limit(take)
+    .lean();
+
+  return products.map((product) => ({
+    name: product.name,
+    slug: product.slug,
+    price: product.price,
+    imageUrl:
+      [...(product.images ?? [])].sort((a, b) => a.position - b.position)[0]
+        ?.url ?? null,
+  }));
+}
+
+const getSearchSuggestionsCached = unstable_cache(
+  searchSuggestions,
+  ["search-suggestions"],
+  { revalidate: 3600, tags: ["products"] },
+);
+
+/**
+ * Typeahead rows for the header box.
+ *
+ * Runs off buildSearchScope so the dropdown and /search can never disagree
+ * about what matches. Cached because this is the only query in the app that
+ * fires on a keystroke — without it, every shopper typing "serum" one letter
+ * at a time would be four round trips to Atlas.
+ */
+export function getSearchSuggestions(q: string, take = 6) {
+  return getSearchSuggestionsCached(q.trim().toLowerCase(), take);
+}
+
 /** Active bundles with their member products resolved, for /combos. */
 export async function getCombos() {
   await connectDb();
