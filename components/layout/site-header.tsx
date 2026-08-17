@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Search } from "lucide-react";
 
 import { CartBadge } from "@/components/cart/cart-badge";
 import {
@@ -46,24 +45,13 @@ export function SiteHeader() {
             />
           </Link>
 
-          <form
-            action="/search"
-            className="order-3 col-span-2 flex h-11 items-center gap-2.5 border border-border bg-cream px-3.5 lg:order-none lg:col-span-1 lg:h-[46px]"
-          >
-            <Search className="size-4 shrink-0 text-faint" />
-            {/* Suspense is load-bearing: the input reads useSearchParams, and
-                the header is on every page — unbounded, it would opt the whole
-                site out of static rendering. */}
-            <Suspense fallback={<HeaderSearchInputFallback />}>
-              <HeaderSearchInput />
-            </Suspense>
-            <button
-              type="submit"
-              className="hidden shrink-0 text-[11px] font-semibold tracking-[0.06em] text-primary sm:block"
-            >
-              SEARCH
-            </button>
-          </form>
+          {/* Suspense is load-bearing: the box reads useSearchParams, and the
+              header is on every page — unbounded, it would opt the whole site
+              out of static rendering. The form lives inside the component
+              because the suggestions dropdown is positioned against it. */}
+          <Suspense fallback={<HeaderSearchInputFallback />}>
+            <HeaderSearchInput />
+          </Suspense>
 
           <div className="flex items-center justify-end gap-4 text-xs text-muted-foreground lg:gap-5">
             <Link href="/account" className="hidden hover:text-primary sm:block">
