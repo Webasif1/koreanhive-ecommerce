@@ -21,7 +21,7 @@ import {
   Coupon,
   DeliveryZone,
   Product,
-} from "../server/models";
+} from "../src/server/models";
 
 // Local artwork shipped with the design, served from public/. Swap these for
 // an ImageKit endpoint when the account is ready — ik.imagekit.io is already

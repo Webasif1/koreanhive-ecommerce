@@ -79,15 +79,20 @@ Two things worth knowing:
 
 ## 📁 Project Structure
 
+Application code lives under `src/`; the root holds configuration and tooling.
+
 ```
-app/         # routes (storefront, account, admin, api)
-components/   # UI, product, cart, checkout, layout
-server/       # Mongoose models, queries, Server Actions
-lib/          # auth, seo, pricing, formatting helpers
-scripts/      # seed + admin bootstrap (tsx)
-cms/          # Payload config & collections
-workers/      # background jobs (order notify, reindex)
-docs/         # architecture roadmap & planning docs
+src/
+  app/          # routes (storefront, account, admin, api)
+  components/   # UI, product, cart, checkout, layout
+  server/       # Mongoose models, queries, Server Actions
+  lib/          # auth, seo, pricing, formatting helpers
+  types/        # ambient type declarations
+  auth.ts       # Auth.js entry (auth.config.ts is the edge-safe half)
+  proxy.ts      # route guard — must sit beside app/, so inside src/
+public/         # static assets; Next only serves these from the root
+scripts/        # seed + admin bootstrap + image tooling (tsx)
+docs/           # architecture roadmap & planning docs
 ```
 
 ## 📄 Documentation

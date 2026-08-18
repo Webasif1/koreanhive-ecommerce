@@ -2,8 +2,8 @@ import "dotenv/config";
 
 import mongoose from "mongoose";
 
-import { hashPassword } from "../lib/password";
-import { User } from "../server/models";
+import { hashPassword } from "../src/lib/password";
+import { User } from "../src/server/models";
 
 async function main() {
   const uri = process.env.MONGODB_URI;
