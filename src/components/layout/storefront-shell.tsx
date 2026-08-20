@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { ChatWidget } from "@/components/chatbot/chat-widget";
 import { FirstVisitLoader } from "@/components/layout/first-visit-loader";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -22,6 +23,7 @@ export function StorefrontShell({ children }: { children: ReactNode }) {
         <main className="flex-1">{children}</main>
         <SiteFooter />
         <MobileBottomNav />
+        <ChatWidget />
       </WishlistProvider>
     </div>
   );
