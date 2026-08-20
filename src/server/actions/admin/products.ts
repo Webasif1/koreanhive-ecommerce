@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { isValidObjectId } from "mongoose";
 
@@ -102,6 +102,10 @@ export async function saveProductAction(
   revalidatePath("/admin/products");
   revalidatePath("/shop");
   revalidatePath(`/product/${slug}`);
+  // search suggestions, cart recommendations and the chat catalogue are
+  // unstable_cache entries tagged "products" — revalidatePath does not clear
+  // those, so without this an edited price stays stale for up to an hour
+  revalidateTag("products", "max");
 
   redirect("/admin/products");
 }
@@ -121,6 +125,7 @@ export async function toggleProductActiveAction(formData: FormData) {
   revalidatePath("/admin/products");
   revalidatePath("/shop");
   revalidatePath(`/product/${product.slug}`);
+  revalidateTag("products", "max");
 }
 
 /** Deactivates rather than deletes: order items keep a reference to the
@@ -139,4 +144,5 @@ export async function archiveProductAction(formData: FormData) {
 
   revalidatePath("/admin/products");
   revalidatePath("/shop");
+  revalidateTag("products", "max");
 }
