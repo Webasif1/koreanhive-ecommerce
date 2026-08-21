@@ -5,18 +5,10 @@ import { redirect } from "next/navigation";
 import { isValidObjectId } from "mongoose";
 
 import type { AdminFormState } from "@/lib/admin-state";
+import { slugify } from "@/lib/slugify";
 import { requireAdmin } from "@/server/admin-guard";
 import { connectDb } from "@/server/db";
 import { Product } from "@/server/models";
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-")
-    .slice(0, 80);
-}
 
 function intOrNull(value: FormDataEntryValue | null) {
   const raw = String(value ?? "").trim();
