@@ -20,9 +20,14 @@ export default async function AdminProductsPage() {
         <h1 className="font-display text-2xl font-semibold tracking-tight">
           Products
         </h1>
-        <Button asChild>
-          <Link href="/admin/products/new">New product</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline">
+            <Link href="/admin/products/import">Import</Link>
+          </Button>
+          <Button asChild>
+            <Link href="/admin/products/new">New product</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-xl border bg-card">
