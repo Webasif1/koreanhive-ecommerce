@@ -3,7 +3,12 @@
 import { redirect } from "next/navigation";
 import { isValidObjectId, Types } from "mongoose";
 
-import { isValidBdPhone, normalizeBdPhone } from "@/lib/bd-districts";
+import {
+  isBdDistrict,
+  isValidBdPhone,
+  normalizeBdPhone,
+  zoneSlugForDistrict,
+} from "@/lib/bd-districts";
 import type { CheckoutState } from "@/lib/checkout-state";
 import { calcDiscount, calcShipping, type CouponRule } from "@/lib/pricing";
 import {
@@ -50,7 +55,6 @@ export async function placeOrderAction(
   const district = field(formData, "district");
   const postalCode = field(formData, "postalCode");
   const note = field(formData, "note");
-  const zoneSlug = field(formData, "zoneSlug");
 
   const errors: Record<string, string> = {};
 
@@ -69,7 +73,10 @@ export async function placeOrderAction(
   if (area.length < 2) {
     errors.area = "Enter your area or thana.";
   }
-  if (!district) {
+  // an allow-list, not a presence check: the district decides the delivery
+  // charge below, and it is also stored on the order as the courier's
+  // destination, so an arbitrary string must never get that far
+  if (!isBdDistrict(district)) {
     errors.district = "Select your district.";
   }
 
@@ -84,8 +91,12 @@ export async function placeOrderAction(
 
   await connectDb();
 
+  // Derived from the district here, never read from the form. The checkout
+  // form computes the same thing for display, but a submitted zone would let
+  // anyone pick their own delivery charge — Inside Dhaka is half the price of
+  // Outside and has a lower free-shipping threshold.
   const zone = await DeliveryZone.findOne({
-    slug: zoneSlug,
+    slug: zoneSlugForDistrict(district),
     isActive: true,
   }).lean();
 

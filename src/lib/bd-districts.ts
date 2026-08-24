@@ -70,6 +70,15 @@ export const BD_DISTRICTS = [
 export const INSIDE_DHAKA_SLUG = "inside-dhaka";
 export const OUTSIDE_DHAKA_SLUG = "outside-dhaka";
 
+/** Narrows a submitted string to a real district. The delivery charge is
+ *  derived from this value, so checkout treats anything else as invalid
+ *  rather than falling through to the Outside Dhaka default. */
+export function isBdDistrict(
+  value: string,
+): value is (typeof BD_DISTRICTS)[number] {
+  return (BD_DISTRICTS as readonly string[]).includes(value);
+}
+
 export function zoneSlugForDistrict(district: string) {
   return district.trim().toLowerCase() === "dhaka"
     ? INSIDE_DHAKA_SLUG
