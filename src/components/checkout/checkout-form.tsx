@@ -64,8 +64,9 @@ export function CheckoutForm({
     if (!state.message) lastMessage.current = null;
   }, [state.message]);
 
-  // shipping follows the district automatically: Dhaka is Inside, the rest
-  // Outside. The server recomputes this before the order is written.
+  // Display only. The server derives the zone from the district itself and
+  // never reads one from this form, so nothing here can change what is
+  // charged — it only decides what the shopper is shown before submitting.
   const zone = useMemo(() => {
     if (!district) return null;
     const slug = zoneSlugForDistrict(district);
@@ -77,8 +78,6 @@ export function CheckoutForm({
 
   return (
     <form action={formAction} className="grid gap-10 lg:grid-cols-[1fr_360px]">
-      <input type="hidden" name="zoneSlug" value={zone?.slug ?? ""} />
-
       <div className="space-y-6">
         {state.message && (
           <p
