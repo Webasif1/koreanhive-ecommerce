@@ -43,7 +43,7 @@ export function CartLineRow({ line }: { line: CartLine }) {
     <li className="flex gap-4 py-4" data-pending={isPending || undefined}>
       <Link
         href={`/product/${line.slug}`}
-        className="relative size-20 shrink-0 overflow-hidden border border-border bg-blush"
+        className="relative size-20 shrink-0 overflow-hidden border border-border bg-white"
       >
         {line.imageUrl && (
           <Image
@@ -51,7 +51,7 @@ export function CartLineRow({ line }: { line: CartLine }) {
             alt={line.name}
             fill
             sizes="80px"
-            className="object-cover"
+            className="object-contain p-1"
           />
         )}
       </Link>

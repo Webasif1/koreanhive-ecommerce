@@ -25,7 +25,7 @@ export function ChatProductCard({ product }: { product: ChatProductCardData }) {
             alt=""
             fill
             sizes="64px"
-            className="object-cover"
+            className="object-contain p-1"
           />
         )}
       </span>

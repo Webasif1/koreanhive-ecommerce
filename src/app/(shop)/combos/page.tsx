@@ -78,7 +78,7 @@ export default async function CombosPage() {
                               alt={product.name}
                               fill
                               sizes="40px"
-                              className="object-cover"
+                              className="object-contain p-1"
                             />
                           )}
                         </span>
