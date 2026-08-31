@@ -6,17 +6,13 @@ export type NavItem = {
 /**
  * Primary desktop header navigation, per the design's second nav row.
  *
- * Every href here must resolve against the real catalogue. "Skincare" and
- * "Makeup" used to point at /category/skincare and /category/cosmetics, which
- * were slugs from the old demo seed — the live taxonomy is one flat level of
- * twelve categories, so both had been silently serving the 404 page.
- *
- * They now point at destinations that cannot rot: the category index lists
- * whatever categories exist, and /category/makeup is a real category. Adding a
- * category to the sheet needs no change here.
+ * Skincare and Makeup point at parent categories, which the catalogue sync
+ * creates and hangs the sheet's leaf categories off. getCategoryScope resolves
+ * a category plus its direct children, so these return every product in the
+ * group rather than an empty page.
  */
 export const mainNav: NavItem[] = [
-  { href: "/categories", label: "Skincare" },
+  { href: "/category/skincare", label: "Skincare" },
   { href: "/category/makeup", label: "Makeup" },
   { href: "/concerns", label: "Skin Concerns" },
   { href: "/brands", label: "Korean Brands" },

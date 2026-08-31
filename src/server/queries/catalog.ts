@@ -1014,14 +1014,34 @@ async function productCountsByCategory() {
   );
 }
 
+/** One image per category, taken from its best-known product. Featured first,
+ *  then most-reviewed, so the tile shows something representative. */
+async function coverImageByCategory() {
+  const rows = await Product.aggregate<{ _id: unknown; url: string }>([
+    { $match: { isActive: true, "images.0": { $exists: true } } },
+    { $sort: { isFeatured: -1, ratingCount: -1, _id: -1 } },
+    {
+      $group: {
+        _id: "$categoryId",
+        url: { $first: { $first: "$images.url" } },
+      },
+    },
+  ]);
+
+  return new Map(
+    rows.filter((r) => r._id && r.url).map((r) => [String(r._id), r.url]),
+  );
+}
+
 export async function getCategoryTree() {
   await connectDb();
 
-  const [parents, counts] = await Promise.all([
+  const [parents, counts, covers] = await Promise.all([
     Category.find({ isActive: true, parentId: null })
       .sort({ position: 1 })
       .lean(),
     productCountsByCategory(),
+    coverImageByCategory(),
   ]);
 
   const children = await Category.find({
@@ -1031,29 +1051,23 @@ export async function getCategoryTree() {
     .sort({ position: 1 })
     .lean();
 
-  const asEntry = (category: (typeof parents)[number]) => ({
-    id: category._id.toString(),
-    name: category.name,
-    slug: category.slug,
-    imageUrl: category.imageUrl ?? null,
-    _count: { products: counts.get(category._id.toString()) ?? 0 },
-  });
-
-  return parents.map((parent) => {
-    const own = children.filter(
-      (child) => child.parentId?.toString() === parent._id.toString(),
-    );
-
-    return {
-      id: parent._id.toString(),
-      name: parent.name,
-      slug: parent.slug,
-      // A flat taxonomy — which is what the real catalogue has — would
-      // otherwise render as headings with nothing beneath them. A category
-      // with no children stands in as its own entry so it is still browsable.
-      children: own.length > 0 ? own.map(asEntry) : [asEntry(parent)],
-    };
-  });
+  return parents.map((parent) => ({
+    id: parent._id.toString(),
+    name: parent.name,
+    slug: parent.slug,
+    children: children
+      .filter((c) => c.parentId?.toString() === parent._id.toString())
+      .map((c) => ({
+        id: c._id.toString(),
+        name: c.name,
+        slug: c.slug,
+        // falls back to a product actually in the category, so a tile shows
+        // real stock rather than an empty box — the imported categories carry
+        // no artwork of their own
+        imageUrl: c.imageUrl ?? covers.get(c._id.toString()) ?? null,
+        _count: { products: counts.get(c._id.toString()) ?? 0 },
+      })),
+  }));
 }
 
 export async function getBrands() {
