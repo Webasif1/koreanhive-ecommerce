@@ -43,6 +43,8 @@ export type ProductFields = {
   variants: VariantInput[];
   brandId: string | null;
   categoryId: string | null;
+  ratingAvg: number;
+  ratingCount: number;
 };
 
 export type RowOutcome =

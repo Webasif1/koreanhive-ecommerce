@@ -275,7 +275,12 @@ export async function getCatalogListing({
 
   const [allBrands, allCategories] = await Promise.all([
     Brand.find({ isActive: true }).select("name slug").sort({ name: 1 }).lean(),
-    Category.find({ isActive: true, parentId: { $ne: null } })
+    // Every active category, flat or nested. This used to require a parent, on
+    // the assumption of a Skincare > Cleansers tree; the real catalogue is one
+    // flat level, so that filter matched nothing and the Category facet
+    // vanished from every listing sidebar. Counts already drop empty options,
+    // so a parent that holds no products of its own still does not show up.
+    Category.find({ isActive: true })
       .select("name slug")
       .sort({ position: 1 })
       .lean(),
@@ -1026,20 +1031,29 @@ export async function getCategoryTree() {
     .sort({ position: 1 })
     .lean();
 
-  return parents.map((parent) => ({
-    id: parent._id.toString(),
-    name: parent.name,
-    slug: parent.slug,
-    children: children
-      .filter((c) => c.parentId?.toString() === parent._id.toString())
-      .map((c) => ({
-        id: c._id.toString(),
-        name: c.name,
-        slug: c.slug,
-        imageUrl: c.imageUrl ?? null,
-        _count: { products: counts.get(c._id.toString()) ?? 0 },
-      })),
-  }));
+  const asEntry = (category: (typeof parents)[number]) => ({
+    id: category._id.toString(),
+    name: category.name,
+    slug: category.slug,
+    imageUrl: category.imageUrl ?? null,
+    _count: { products: counts.get(category._id.toString()) ?? 0 },
+  });
+
+  return parents.map((parent) => {
+    const own = children.filter(
+      (child) => child.parentId?.toString() === parent._id.toString(),
+    );
+
+    return {
+      id: parent._id.toString(),
+      name: parent.name,
+      slug: parent.slug,
+      // A flat taxonomy — which is what the real catalogue has — would
+      // otherwise render as headings with nothing beneath them. A category
+      // with no children stands in as its own entry so it is still browsable.
+      children: own.length > 0 ? own.map(asEntry) : [asEntry(parent)],
+    };
+  });
 }
 
 export async function getBrands() {

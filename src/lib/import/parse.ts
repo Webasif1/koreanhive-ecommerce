@@ -6,6 +6,8 @@ import {
   parseBoolean,
   parseCount,
   parseMoney,
+  parseRating,
+  parseStockStatus,
   type CanonicalColumn,
 } from "@/lib/import/columns";
 import type {
@@ -78,7 +80,14 @@ function readJson(text: string): { rows: ParsedRow[]; error: string | null } {
   };
 }
 
-function readImages(raw: string, name: string): { images: ImageInput[]; errors: string[] } {
+/** `alt` is the sheet's own alt text when it has a column for it, falling back
+ *  to the product name — never left empty, which is what a screen reader
+ *  needs and what the storefront already assumes. */
+function readImages(
+  raw: string,
+  name: string,
+  alt?: string,
+): { images: ImageInput[]; errors: string[] } {
   // CSV writes "a | b"; JSON may hand over a re-serialised array of strings or
   // of { url, alt } objects
   let urls: string[];
@@ -107,7 +116,7 @@ function readImages(raw: string, name: string): { images: ImageInput[]; errors: 
       continue;
     }
 
-    images.push({ url, alt: name || null, position: images.length });
+    images.push({ url, alt: alt || name || null, position: images.length });
   }
 
   return { images, errors };
@@ -192,6 +201,26 @@ function readRow(
     const stock = parseCount(get("stock"));
     if (stock === null) errors.push(`stock is not a whole number: "${get("stock")}"`);
     else fields.stock = stock;
+  } else if (has("stockStatus")) {
+    // A sheet that tracks availability as words rather than a count. Only used
+    // when there is no real number to prefer — an explicit stock column always
+    // wins, because it carries information this one cannot.
+    const status = parseStockStatus(get("stockStatus"));
+    if (status === null) {
+      errors.push(`stock status is not in/out of stock: "${get("stockStatus")}"`);
+    } else {
+      fields.stock = status;
+    }
+  }
+
+  for (const [column, parse] of [
+    ["ratingAvg", parseRating],
+    ["ratingCount", parseCount],
+  ] as const) {
+    if (!has(column)) continue;
+    const parsed = parse(get(column));
+    if (parsed === null) errors.push(`${column} is not a number: "${get(column)}"`);
+    else fields[column] = parsed;
   }
 
   if (has("sku")) fields.sku = get("sku");
@@ -224,7 +253,7 @@ function readRow(
   }
 
   if (has("images")) {
-    const result = readImages(get("images"), name || slug || "");
+    const result = readImages(get("images"), name || slug || "", get("imageAlt"));
     errors.push(...result.errors);
     if (result.images.length > 0) fields.images = result.images;
   }
@@ -233,6 +262,21 @@ function readRow(
     const result = readVariants(get("variants"));
     errors.push(...result.errors);
     if (result.variants.length > 0) fields.variants = result.variants;
+  } else if (has("size")) {
+    // A size column is a one-variant product described the short way: the
+    // buy box needs something concrete to put in the cart, and "50ml" is a
+    // better label than the product name repeated.
+    fields.variants = [
+      {
+        name: get("size"),
+        // the product's own SKU identifies it; a lone variant needs no second one
+        sku: null,
+        price: null,
+        stock: fields.stock ?? 0,
+        isDefault: true,
+        position: 0,
+      },
+    ];
   }
 
   return { slug, name: name || null, fields, errors };

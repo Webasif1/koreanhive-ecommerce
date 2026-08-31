@@ -8,6 +8,7 @@ import type { ImportFormat, ImportState, ProductFields } from "@/lib/import/type
 import { requireAdmin } from "@/server/admin-guard";
 import { connectDb } from "@/server/db";
 import { Product, type ProductDoc } from "@/server/models";
+import { isGoogleSheetRedirectTarget } from "@/lib/google-sheet";
 import { getImportLookups } from "@/server/queries/import";
 
 /**
@@ -84,8 +85,9 @@ async function readUpload(formData: FormData): Promise<
  * The host allowlist is the security control here, not decoration. Without it
  * this is an admin-triggered fetch of any URL — a probe into whatever the
  * server can reach, including cloud metadata endpoints and internal services.
- * Matching on an exact hostname refuses all of that, including redirects,
- * since `redirect: "error"` stops Google's response from bouncing elsewhere.
+ * Matching on an exact hostname refuses all of that. Google's own 307 to its
+ * content CDN is the one hop allowed through, and its destination is checked
+ * before the second request goes out.
  */
 async function fetchSheet(input: string): Promise<{ text: string } | { error: string }> {
   let url: URL;
@@ -106,18 +108,40 @@ async function fetchSheet(input: string): Promise<{ text: string } | { error: st
     return { error: "That is not a Google Sheets link — it needs /spreadsheets/d/…" };
   }
 
-  // the tab id lives in the fragment on a normal share link, and in the query
-  // on a "publish to web" one
-  const gid = url.hash.match(/gid=(\d+)/)?.[1] ?? url.searchParams.get("gid") ?? "0";
+  // The tab id lives in the fragment on a normal share link, and in the query
+  // on a "publish to web" one. Left off entirely when the link names no tab:
+  // defaulting to gid=0 breaks any sheet whose first tab was renamed or
+  // recreated, because there is then no tab 0 and Google answers 400.
+  const gid = url.hash.match(/gid=(\d+)/)?.[1] ?? url.searchParams.get("gid");
 
-  const exportUrl = `https://${SHEET_HOST}/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
+  const exportUrl =
+    `https://${SHEET_HOST}/spreadsheets/d/${id}/export?format=csv` +
+    (gid ? `&gid=${gid}` : "");
 
   try {
-    const response = await fetch(exportUrl, {
-      redirect: "error",
+    let response = await fetch(exportUrl, {
+      // Google answers the export with a 307 to a per-request
+      // *.googleusercontent.com host, so "error" here refused every sheet.
+      // The hop is taken manually and its destination checked, rather than
+      // following redirects freely — that would undo the host allowlist above.
+      redirect: "manual",
       signal: AbortSignal.timeout(SHEET_TIMEOUT_MS),
       cache: "no-store",
     });
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+
+      if (!location || !isGoogleSheetRedirectTarget(location, exportUrl)) {
+        return { error: "Google Sheets redirected somewhere unexpected." };
+      }
+
+      response = await fetch(new URL(location, exportUrl).toString(), {
+        redirect: "error",
+        signal: AbortSignal.timeout(SHEET_TIMEOUT_MS),
+        cache: "no-store",
+      });
+    }
 
     if (!response.ok) {
       return {

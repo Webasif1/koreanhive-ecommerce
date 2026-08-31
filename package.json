@@ -12,7 +12,9 @@
     "admin:create": "tsx scripts/create-admin.ts",
     "lock:linux": "node scripts/lock-linux.mjs",
     "docker:build": "npm run lock:linux && docker compose build",
-    "docker:up": "npm run lock:linux && docker compose up --build"
+    "docker:up": "npm run lock:linux && docker compose up --build",
+    "catalogue:sync": "tsx scripts/import-sheet.ts",
+    "catalogue:verify": "tsx scripts/verify-catalogue.ts"
   },
   "dependencies": {
     "@radix-ui/react-slider": "^1.4.7",

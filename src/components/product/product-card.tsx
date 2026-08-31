@@ -5,6 +5,7 @@ import { CardBuyButtons } from "@/components/cart/card-buy-buttons";
 import { StarRating } from "@/components/product/star-rating";
 import { WishlistButton } from "@/components/product/wishlist-button";
 import { Badge } from "@/components/ui/badge";
+import { ProductPlaceholder } from "@/components/ui/product-placeholder";
 import { discountPercent, formatBDT } from "@/lib/format";
 import type { ProductCardData } from "@/server/queries/catalog";
 
@@ -46,9 +47,7 @@ export function ProductCard({
                 className="object-cover"
               />
             ) : (
-              <div className="grid h-full place-items-center text-xs text-muted-foreground">
-                No image
-              </div>
+              <ProductPlaceholder />
             )}
           </div>
         </Link>

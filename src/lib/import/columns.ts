@@ -27,6 +27,11 @@ export const CANONICAL_COLUMNS = [
   "metaTitle",
   "metaDescription",
   "variants",
+  "imageAlt",
+  "stockStatus",
+  "ratingAvg",
+  "ratingCount",
+  "size",
 ] as const;
 
 export type CanonicalColumn = (typeof CANONICAL_COLUMNS)[number];
@@ -62,6 +67,27 @@ const ALIASES: Record<string, CanonicalColumn> = {
   featured: "isFeatured",
   seotitle: "metaTitle",
   seodescription: "metaDescription",
+
+  // The catalogue sheet's own spellings. Its price headers carry a currency
+  // suffix — "Regular Price (BDT)" folds to `regularpricebdt`, which matched
+  // nothing, so both prices imported as empty while every other column looked
+  // fine. Keys here are folded on the way into the lookup, so they can stay
+  // readable.
+  "Selling Price (BDT)": "price",
+  "Regular Price (BDT)": "comparePrice",
+  "SEO Slug": "slug",
+  "Full Description": "description",
+  "Key Ingredients": "ingredients",
+  "User Guidance (Bangla + English)": "howToUse",
+  "User Guidance": "howToUse",
+  "Image Alt Text": "imageAlt",
+  "Stock Status": "stockStatus",
+  "Review Count": "ratingCount",
+  rating: "ratingAvg",
+  ratingaverage: "ratingAvg",
+  reviews: "ratingCount",
+  "Size / Volume": "size",
+  volume: "size",
 };
 
 function fold(header: string): string {
@@ -133,6 +159,41 @@ export function parseMoney(value: string): number | null {
   if (!Number.isInteger(parsed)) return null;
 
   return parsed;
+}
+
+/**
+ * Availability written as words.
+ *
+ * A sheet that says "In Stock" is telling you it is sellable, not how many
+ * there are, so in-stock resolves to a nominal quantity rather than a real
+ * count. Keep an eye on it: the storefront will happily sell that many before
+ * it reports the product as gone.
+ */
+export const NOMINAL_IN_STOCK = 25;
+
+const IN_STOCK = new Set(["instock", "in", "available", "yes", "true"]);
+const OUT_OF_STOCK = new Set([
+  "outofstock",
+  "out",
+  "unavailable",
+  "soldout",
+  "no",
+  "false",
+]);
+
+export function parseStockStatus(value: string): number | null {
+  const folded = value.toLowerCase().replace(/[^a-z]/g, "");
+  if (IN_STOCK.has(folded)) return NOMINAL_IN_STOCK;
+  if (OUT_OF_STOCK.has(folded)) return 0;
+  return null;
+}
+
+/** 0–5, one decimal place. Anything outside that is a data error, not a
+ *  rating to clamp silently. */
+export function parseRating(value: string): number | null {
+  const parsed = Number(value.trim());
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 5) return null;
+  return Math.round(parsed * 10) / 10;
 }
 
 export function parseCount(value: string): number | null {
