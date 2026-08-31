@@ -70,7 +70,7 @@ export function ProductGallery({
           className={cn(
             // contain so the whole product is visible at a consistent scale,
             // matching the grid cards; cover cropped the taller packshots
-            "object-contain p-4 transition-transform duration-200",
+            "object-contain p-2 transition-transform duration-200",
             zoomed ? "scale-[2]" : "scale-100",
           )}
         />

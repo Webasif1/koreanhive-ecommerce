@@ -51,7 +51,12 @@ export function ProductCard({
                 // the square — a tall bottle got zoomed until it overflowed
                 // the tile while a wide jar sat small. Contain fits the whole
                 // product and keeps every card at the same visual scale.
-                className="object-contain p-3"
+                //
+                // Scaled up with no padding of our own because the packshots
+                // already carry a white border; adding more left the shorter
+                // products floating in the middle of the tile. The tile clips,
+                // so the only thing pushed out of frame is that border.
+                className="scale-[1.12] object-contain"
               />
             ) : (
               <ProductPlaceholder />
