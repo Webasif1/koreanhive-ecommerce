@@ -10,8 +10,9 @@ import { Button } from "@/components/ui/button";
 import { faqJsonLd, type FaqEntry } from "@/lib/json-ld";
 import {
   getActiveBanners,
+  getBestSellers,
   getBrands,
-  getFeaturedProducts,
+  getProducts,
 } from "@/server/queries/catalog";
 
 export const metadata: Metadata = {
@@ -127,12 +128,23 @@ const JOURNAL = [
   },
 ];
 
+/** Below this, the order history is too thin for "best seller" to mean
+ *  anything, so the section says what it is actually showing instead. */
+const MIN_REAL_SALES = 4;
+
 export default async function Home() {
-  const [featured, brands, banners] = await Promise.all([
-    getFeaturedProducts(8),
+  const [brands, banners, sold] = await Promise.all([
     getBrands(),
     getActiveBanners(),
+    getBestSellers(8),
   ]);
+
+  // Ranked by units actually sold once there is enough trade to rank. Until
+  // then the same slot shows new arrivals under a heading that says so —
+  // an empty grid was what it did before, and a fabricated ranking would be
+  // worse than either.
+  const hasRealSales = sold.length >= MIN_REAL_SALES;
+  const popular = hasRealSales ? sold : await getProducts({ take: 8 });
 
   return (
     <>
@@ -263,9 +275,13 @@ export default async function Home() {
       <section id="bestsellers" className="container-page py-14">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="eyebrow">Best sellers this month</p>
+            <p className="eyebrow">
+              {hasRealSales ? "Best sellers this month" : "New this month"}
+            </p>
             <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
-              What Bangladeshi women keep reordering
+              {hasRealSales
+                ? "What Bangladeshi women keep reordering"
+                : "Just landed from Seoul"}
             </h2>
           </div>
           <Link
@@ -276,7 +292,11 @@ export default async function Home() {
           </Link>
         </div>
         <div className="mt-8">
-          <ProductGrid products={featured} badge="BEST SELLER" />
+          {/* the badge is a sales claim, so it only appears when sales back it */}
+          <ProductGrid
+            products={popular}
+            badge={hasRealSales ? "BEST SELLER" : undefined}
+          />
         </div>
       </section>
 

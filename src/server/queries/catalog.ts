@@ -1,7 +1,7 @@
 import "server-only";
 
 import { unstable_cache } from "next/cache";
-import type { QueryFilter } from "mongoose";
+import type { QueryFilter, Types } from "mongoose";
 
 import { PER_PAGE } from "@/lib/listing-params";
 import { connectDb } from "@/server/db";
@@ -11,6 +11,7 @@ import {
   Category,
   Combo,
   DeliveryZone,
+  Order,
   Product,
   type ProductDoc,
 } from "@/server/models";
@@ -731,6 +732,55 @@ export function getDiscountedProducts(take = 48) {
 export function getFeaturedProducts(take = 4) {
   return findCards({ isActive: true, isFeatured: true }, "newest", take);
 }
+
+/**
+ * Products ranked by how many units actually sold.
+ *
+ * Real sales, not a curated list and not a proxy like rating — a best-seller
+ * claim the order history cannot support is one the shop should not be making.
+ * Callers get however many products genuinely have sales, which may be none;
+ * deciding what to show when that is too few is the page's job, not this
+ * query's.
+ */
+async function bestSellers(take: number): Promise<ProductCardData[]> {
+  await connectDb();
+
+  const rows = await Order.aggregate<{ _id: Types.ObjectId; units: number }>([
+    // a cancelled or returned order is not a sale
+    { $match: { status: { $nin: ["CANCELLED", "RETURNED"] } } },
+    { $unwind: "$items" },
+    { $match: { "items.productId": { $ne: null } } },
+    {
+      $group: {
+        _id: "$items.productId",
+        units: { $sum: "$items.quantity" },
+      },
+    },
+    { $sort: { units: -1, _id: -1 } },
+    // over-fetch: some of these may since have been unpublished or deleted
+    { $limit: take * 3 },
+  ]);
+
+  if (rows.length === 0) return [];
+
+  const cards = await findCards(
+    { isActive: true, _id: { $in: rows.map((row) => row._id) } },
+    "newest",
+    take * 3,
+  );
+
+  // findCards sorts by its own key, so restore the units-sold order here
+  const rank = new Map(rows.map((row, index) => [row._id.toString(), index]));
+
+  return cards
+    .sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0))
+    .slice(0, take);
+}
+
+export const getBestSellers = unstable_cache(bestSellers, ["best-sellers"], {
+  revalidate: 3600,
+  tags: ["products"],
+});
 
 /**
  * /shop reads ?sort=, which makes the route dynamic — it cannot be
