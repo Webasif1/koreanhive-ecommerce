@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 
+import { ProductPlaceholder } from "@/components/ui/product-placeholder";
 import { cn } from "@/lib/utils";
 
 type GalleryImage = {
@@ -26,8 +27,8 @@ export function ProductGallery({
 
   if (!active) {
     return (
-      <div className="grid aspect-square place-items-center rounded-xl border bg-muted text-sm text-muted-foreground">
-        No image
+      <div className="aspect-square overflow-hidden border border-border">
+        <ProductPlaceholder />
       </div>
     );
   }
