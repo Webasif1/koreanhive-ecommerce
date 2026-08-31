@@ -34,6 +34,12 @@ const LOOKUPS: ImportLookups = {
         brandId: "b1",
         categoryId: "c1",
         imageUrls: [],
+        text: {
+          shortDescription: "A snail cream.",
+          description: null,
+          ingredients: null,
+          howToUse: null,
+        },
       },
     ],
   ]),
@@ -194,6 +200,32 @@ describe("preview", () => {
     assert.equal(row.status, "create");
     assert.equal(row.status === "create" && row.fields.images?.length, 2);
     assert.equal(row.status === "create" && row.fields.images?.[1].position, 1);
+  });
+
+  it("does not call a row changed when its description is the same one", () => {
+    // The same trap as the images case below, and the one that actually bit:
+    // a sheet carries a description on every row, so flagging presence rather
+    // than difference reported all 345 products as updates on every sync and
+    // moved every sitemap lastModified date.
+    const unchanged = preview(
+      "slug,name,price,shortDescription\ncosrx-snail-cream,Snail Cream,1650,A snail cream.",
+    );
+
+    assert.equal(rowAt(unchanged, 0).status, "update");
+    assert.deepEqual(
+      (rowAt(unchanged, 0) as Extract<RowOutcome, { status: "update" }>).changes,
+      [],
+      "an identical description must not count as a change",
+    );
+
+    const edited = preview(
+      "slug,name,price,shortDescription\ncosrx-snail-cream,Snail Cream,1650,A better snail cream.",
+    );
+
+    assert.deepEqual(
+      (rowAt(edited, 0) as Extract<RowOutcome, { status: "update" }>).changes,
+      ["shortDescription updated"],
+    );
   });
 
   it("does not call a row changed when its images are the same ones", () => {

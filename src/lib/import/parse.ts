@@ -317,11 +317,19 @@ function describeChanges(
     if (differs) changes.push("images replaced");
   }
 
-  // text fields are not diffed line by line — an operator wants to know a row
-  // will be written, not to read a wall of prose comparisons
+  // Compared by value, then reported by name: an operator wants to know a row
+  // will be written, not to read a wall of prose diffs.
+  //
+  // This used to flag any row whose file *carried* these columns, changed or
+  // not. A sheet with a description on every row therefore reported every row
+  // as an update, so each sync rewrote the entire catalogue and moved every
+  // sitemap lastModified date — the same trap the image comparison above
+  // already avoids.
   const textual = (
     ["shortDescription", "description", "ingredients", "howToUse"] as const
-  ).filter((key) => fields[key] !== undefined);
+  ).filter(
+    (key) => fields[key] !== undefined && fields[key] !== existing.text[key],
+  );
 
   if (textual.length > 0) changes.push(`${textual.join(", ")} updated`);
 

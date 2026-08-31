@@ -39,6 +39,20 @@ const BRAND_COLUMN = "Brand";
 const CATEGORY_COLUMN = "Category";
 const COUNTRY_COLUMN = "Country of Origin";
 
+/**
+ * The two groups the sheet's flat category list hangs off.
+ *
+ * Only the makeup members are listed: everything else falls through to the
+ * default group, so adding a skincare category to the sheet needs no change
+ * here. Only a new *makeup* category would, and there are two.
+ */
+const GROUPS = [
+  { name: "Skincare", members: [] as string[] },
+  { name: "Makeup", members: ["Makeup", "Cushion & Foundation"] },
+];
+
+const DEFAULT_GROUP = 0;
+
 function fail(message: string): never {
   console.error(`\n  ${message}\n`);
   process.exit(1);
@@ -187,8 +201,65 @@ async function main() {
   await Brand.bulkWrite(brandWrites, { ordered: false });
   await Category.bulkWrite(categoryWrites, { ordered: false });
 
+  // ------------------------------------------------- category parents
+  // The sheet is one flat list, but the storefront is built for two levels:
+  // getCategoryScope resolves a category *plus its direct children*, so
+  // /category/skincare only returns anything if the leaf categories hang off a
+  // parent. Without this the header's Skincare and Makeup links have nothing to
+  // point at.
+  // "Makeup" is both a group and one of the sheet's own categories. Upserting a
+  // separate parent by that name would collide on the slug and end up setting
+  // the category as its own parent, so a group whose name the sheet already
+  // uses promotes that category instead of creating a sibling. /category/makeup
+  // then returns its own products plus its children's.
+  const parents = await Promise.all(
+    GROUPS.map((group, index) =>
+      Category.findOneAndUpdate(
+        { slug: slugify(group.name) },
+        {
+          $set: { isActive: true, parentId: null },
+          $setOnInsert: {
+            name: group.name,
+            slug: slugify(group.name),
+            position: index,
+          },
+        },
+        { upsert: true, returnDocument: "after" },
+      ),
+    ),
+  );
+
+  const parentSlugs = new Set(parents.map((parent) => parent?.slug));
+
+  const parentIdFor = (categoryName: string) => {
+    const group = GROUPS.findIndex((entry) =>
+      entry.members.some(
+        (member) => member.toLowerCase() === categoryName.toLowerCase(),
+      ),
+    );
+
+    // anything the makeup list does not claim is skincare, so a new skincare
+    // category in the sheet is grouped correctly with no code change
+    return parents[group === -1 ? DEFAULT_GROUP : group]?._id ?? null;
+  };
+
+  await Category.bulkWrite(
+    categoryNames
+      // a promoted group is already a top-level parent; parenting it to itself
+      // would hide it and everything under it
+      .filter((name) => !parentSlugs.has(slugify(name)))
+      .map((name) => ({
+        updateOne: {
+          filter: { slug: slugify(name) },
+          update: { $set: { parentId: parentIdFor(name) } },
+        },
+      })),
+    { ordered: false },
+  );
+
   console.log(
-    `  brands: ${brandNames.length}   categories: ${categoryNames.length}`,
+    `  brands: ${brandNames.length}   categories: ${categoryNames.length}` +
+      ` under ${GROUPS.length} groups`,
   );
 
   // ---------------------------------------------------------- lookups
@@ -199,7 +270,10 @@ async function main() {
     Brand.find({}).select("name slug").lean(),
     Category.find({}).select("name slug").lean(),
     Product.find({})
-      .select("slug name price stock brandId categoryId images")
+      .select(
+        "slug name price stock brandId categoryId images " +
+          "shortDescription description ingredients howToUse",
+      )
       .lean(),
   ]);
 
@@ -231,6 +305,12 @@ async function main() {
           imageUrls: [...(product.images ?? [])]
             .sort((a, b) => a.position - b.position)
             .map((image) => image.url),
+          text: {
+            shortDescription: product.shortDescription ?? null,
+            description: product.description ?? null,
+            ingredients: product.ingredients ?? null,
+            howToUse: product.howToUse ?? null,
+          },
         },
       ]),
     ),

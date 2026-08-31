@@ -87,6 +87,15 @@ export type ExistingProduct = {
   categoryId: string | null;
   /** In position order, so a re-import of the same sheet compares equal. */
   imageUrls: string[];
+  /** Compared, not displayed. Without these the importer cannot tell a
+   *  description that changed from one that was merely present in the file,
+   *  and rewrites the whole catalogue on every run. */
+  text: {
+    shortDescription: string | null;
+    description: string | null;
+    ingredients: string | null;
+    howToUse: string | null;
+  };
 };
 
 export type ImportLookups = {
