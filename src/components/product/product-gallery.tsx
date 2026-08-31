@@ -57,7 +57,7 @@ export function ProductGallery({
             setZoomed((z) => !z);
           }
         }}
-        className="relative aspect-square cursor-zoom-in overflow-hidden rounded-xl border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="relative aspect-square cursor-zoom-in overflow-hidden rounded-xl border bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Image
           key={active.id}
@@ -68,7 +68,9 @@ export function ProductGallery({
           sizes="(min-width: 1024px) 45vw, 100vw"
           style={{ transformOrigin: origin }}
           className={cn(
-            "object-cover transition-transform duration-200",
+            // contain so the whole product is visible at a consistent scale,
+            // matching the grid cards; cover cropped the taller packshots
+            "object-contain p-4 transition-transform duration-200",
             zoomed ? "scale-[2]" : "scale-100",
           )}
         />
@@ -84,7 +86,7 @@ export function ProductGallery({
               aria-label={`View image ${i + 1} of ${images.length}`}
               aria-current={i === activeIndex}
               className={cn(
-                "relative size-16 shrink-0 overflow-hidden rounded-lg border transition-colors",
+                "relative size-16 shrink-0 overflow-hidden rounded-lg border bg-white transition-colors",
                 i === activeIndex
                   ? "border-primary"
                   : "border-border hover:border-primary/50",
@@ -95,7 +97,7 @@ export function ProductGallery({
                 alt=""
                 fill
                 sizes="64px"
-                className="object-cover"
+                className="object-contain p-1"
               />
             </button>
           ))}

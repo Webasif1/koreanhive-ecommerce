@@ -3,10 +3,21 @@ export type NavItem = {
   label: string;
 };
 
-/** Primary desktop header navigation, per the design's second nav row. */
+/**
+ * Primary desktop header navigation, per the design's second nav row.
+ *
+ * Every href here must resolve against the real catalogue. "Skincare" and
+ * "Makeup" used to point at /category/skincare and /category/cosmetics, which
+ * were slugs from the old demo seed — the live taxonomy is one flat level of
+ * twelve categories, so both had been silently serving the 404 page.
+ *
+ * They now point at destinations that cannot rot: the category index lists
+ * whatever categories exist, and /category/makeup is a real category. Adding a
+ * category to the sheet needs no change here.
+ */
 export const mainNav: NavItem[] = [
-  { href: "/category/skincare", label: "Skincare" },
-  { href: "/category/cosmetics", label: "Makeup" },
+  { href: "/categories", label: "Skincare" },
+  { href: "/category/makeup", label: "Makeup" },
   { href: "/concerns", label: "Skin Concerns" },
   { href: "/brands", label: "Korean Brands" },
   { href: "/shop?sort=newest", label: "New Arrivals" },

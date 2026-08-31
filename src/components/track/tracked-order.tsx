@@ -62,7 +62,7 @@ export function TrackedOrder({ order }: { order: TrackedOrderData }) {
                 <li key={item.id} className="flex items-center gap-3 py-3">
                   <Link
                     href={`/product/${item.productSlug}`}
-                    className="relative size-12 shrink-0 overflow-hidden rounded-lg border bg-muted"
+                    className="relative size-12 shrink-0 overflow-hidden rounded-lg border bg-white"
                   >
                     {item.imageUrl && (
                       <Image
@@ -70,7 +70,7 @@ export function TrackedOrder({ order }: { order: TrackedOrderData }) {
                         alt={item.productName}
                         fill
                         sizes="48px"
-                        className="object-cover"
+                        className="object-contain p-1"
                       />
                     )}
                   </Link>

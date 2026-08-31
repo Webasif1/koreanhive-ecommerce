@@ -208,7 +208,7 @@ export function HeaderSearchInput() {
                     alt=""
                     fill
                     sizes="36px"
-                    className="object-cover"
+                    className="object-contain p-1"
                   />
                 )}
               </span>

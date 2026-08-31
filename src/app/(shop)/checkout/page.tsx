@@ -34,7 +34,7 @@ export default async function CheckoutPage() {
           <li key={line.key} className="flex items-center gap-3 py-3">
             <Link
               href={`/product/${line.slug}`}
-              className="relative size-12 shrink-0 overflow-hidden rounded-lg border bg-muted"
+              className="relative size-12 shrink-0 overflow-hidden rounded-lg border bg-white"
             >
               {line.imageUrl && (
                 <Image
@@ -42,7 +42,7 @@ export default async function CheckoutPage() {
                   alt={line.name}
                   fill
                   sizes="48px"
-                  className="object-cover"
+                  className="object-contain p-1"
                 />
               )}
             </Link>

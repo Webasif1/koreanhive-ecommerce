@@ -36,7 +36,9 @@ export function ProductCard({
     <div className="flex flex-col border border-border bg-card">
       <div className="relative">
         <Link href={`/product/${product.slug}`} className="block">
-          <div className="relative aspect-square overflow-hidden bg-blush">
+          {/* White, not blush: these are packshots photographed on white, and
+              a tinted tile puts a visible square behind every one of them. */}
+          <div className="relative aspect-square overflow-hidden bg-white">
             {image ? (
               <Image
                 src={image.url}
@@ -44,7 +46,12 @@ export function ProductCard({
                 fill
                 priority={priority}
                 sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-                className="object-cover"
+                // contain, not cover: the catalogue's photos are not a
+                // consistent aspect ratio, and cover crops each one to fill
+                // the square — a tall bottle got zoomed until it overflowed
+                // the tile while a wide jar sat small. Contain fits the whole
+                // product and keeps every card at the same visual scale.
+                className="object-contain p-3"
               />
             ) : (
               <ProductPlaceholder />
