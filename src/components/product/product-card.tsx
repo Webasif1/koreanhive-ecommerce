@@ -52,11 +52,13 @@ export function ProductCard({
                 // the tile while a wide jar sat small. Contain fits the whole
                 // product and keeps every card at the same visual scale.
                 //
-                // Scaled up with no padding of our own because the packshots
-                // already carry a white border; adding more left the shorter
-                // products floating in the middle of the tile. The tile clips,
-                // so the only thing pushed out of frame is that border.
-                className="scale-[1.12] object-contain"
+                // No padding and no scale. Every catalogue image is a 1200x1200
+                // square and the tile is aspect-square, so contain fits each one
+                // exactly edge to edge — there is no letterboxing to reclaim. A
+                // scale here only pushed the tightly-framed products past the
+                // tile and clipped them. How large a product looks is decided by
+                // how much of its own frame it fills, which is the photography.
+                className="object-contain"
               />
             ) : (
               <ProductPlaceholder />
