@@ -75,8 +75,10 @@ const APPROACH = [
   },
 ];
 
+/* Operational facts only. This list also led with "4.9★ across 3,400+
+   reviews", a second copy of a rating no customer has ever left. */
 const WHY = [
-  { stat: "4.9★", label: "average rating across 3,400+ reviews" },
+  { stat: "0", label: "replicas or grey-market stock" },
   { stat: "64", label: "districts we deliver to" },
   { stat: "1–2 days", label: "delivery inside Dhaka" },
   { stat: "0৳", label: "paid upfront — cash on delivery" },
@@ -176,10 +178,13 @@ export default async function Home() {
               </Button>
             </div>
             <div className="mt-9 flex flex-wrap items-center gap-6">
+              {/* Every figure here has to be one we can stand behind. This
+                  row used to lead with "4.9★ / 3,400+ reviews" against a
+                  catalogue holding no reviews at all. */}
               {[
-                { value: "4.9★", label: "3,400+ reviews" },
                 { value: String(brands.length), label: "Korean brands stocked" },
                 { value: "64", label: "districts delivered" },
+                { value: "100%", label: "authentic, batch-checked" },
               ].map((stat) => (
                 <div key={stat.label}>
                   <div className="font-display text-[22px]">{stat.value}</div>
@@ -192,24 +197,18 @@ export default async function Home() {
           </div>
 
           <div className="relative min-h-[420px] self-stretch bg-blush lg:min-h-[600px]">
+            {/* Served from ImageKit rather than public/, like the 279 product
+                shots — the host is already allow-listed, so next/image
+                optimises it the same way and the asset can be swapped without
+                a deploy. */}
             <Image
-              src="/editorial/hero-model.webp"
-              alt="Korean skincare routine"
+              src="https://ik.imagekit.io/koreanhive/Hero-image/hero-image2.png"
+              alt="A woman with clear, glowing skin after a Korean skincare routine"
               fill
               priority
               sizes="(min-width: 1024px) 50vw, 100vw"
               className="object-cover"
             />
-            <div className="absolute bottom-5 left-4 max-w-[270px] border border-border bg-white p-4 shadow-[0_18px_40px_rgba(36,26,36,.08)] lg:-left-14">
-              <div className="text-xs tracking-[0.1em] text-star">★★★★★</div>
-              <p className="mt-2 text-[13.5px] leading-snug">
-                Three weeks in and my acne marks are visibly lighter. Delivery
-                was next-day in Dhaka.
-              </p>
-              <div className="mt-2 text-[11px] text-muted-foreground">
-                Nusrat J. — Verified purchase
-              </div>
-            </div>
           </div>
         </div>
       </section>
