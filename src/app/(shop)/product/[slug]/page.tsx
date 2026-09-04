@@ -276,27 +276,20 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
       {/* ------------------------------------------------ detail sections */}
       <section className="mt-16 border border-border bg-white">
-        <div className="grid lg:grid-cols-2">
-          <div className="p-8 lg:p-12">
-            <p className="eyebrow">Why you&apos;ll love it</p>
-            <h2 className="mt-3.5 font-display text-2xl leading-snug md:text-[32px]">
-              What it actually does
-            </h2>
-            <p className="mt-4 whitespace-pre-line text-[15px] leading-relaxed text-muted-foreground">
-              {product.description ??
-                product.shortDescription ??
-                "Description coming soon."}
-            </p>
-          </div>
-          <div className="relative min-h-[320px] bg-blush lg:min-h-[520px]">
-            <Image
-              src="/editorial/lifestyle.webp"
-              alt={`${product.name} as part of a Korean skincare routine`}
-              fill
-              sizes="(min-width: 1024px) 50vw, 100vw"
-              className="object-cover"
-            />
-          </div>
+        {/* Copy only. This used to sit beside a lifestyle photo, but the asset
+            was an unfilled mock-up — "drop your image here" — shown on every
+            product page. max-w-3xl because without that second column the text
+            would run the full container width, around 150 characters a line. */}
+        <div className="max-w-3xl p-8 lg:p-12">
+          <p className="eyebrow">Why you&apos;ll love it</p>
+          <h2 className="mt-3.5 font-display text-2xl leading-snug md:text-[32px]">
+            What it actually does
+          </h2>
+          <p className="mt-4 whitespace-pre-line text-[15px] leading-relaxed text-muted-foreground">
+            {product.description ??
+              product.shortDescription ??
+              "Description coming soon."}
+          </p>
         </div>
       </section>
 
