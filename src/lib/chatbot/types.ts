@@ -30,20 +30,6 @@ export type Intent =
   | "SAFETY_CREDENTIALS"
   | "UNKNOWN";
 
-/** The editorial layer, maintained by hand in data/chatbot/knowledge.ts. */
-export type ProductKnowledge = {
-  concerns: Concern[];
-  skinTypes: SkinType[];
-  /** Hard exclusion — a rich oil for very oily skin, an acid for reactive skin. */
-  avoidFor?: SkinType[];
-  useCases: UseCase[];
-  keyIngredients?: string[];
-  /** Factual notes only ("contains fragrance"). Never advice. */
-  cautions?: string[];
-  /** 0-10 merchandising nudge. Weighted low so it cannot outrank a real match. */
-  priority?: number;
-};
-
 /**
  * Exactly what the engine is allowed to see about a product.
  *
@@ -68,7 +54,13 @@ export type ChatCatalogItem = {
   /** Quoted verbatim when asked. Never interpreted. */
   ingredients: string | null;
   howToUse: string | null;
-  knowledge: ProductKnowledge | null;
+  /**
+   * Concerns this product targets, imported from the sheet. Replaced a
+   * hand-written editorial file keyed by slug, which the catalogue import
+   * orphaned wholesale — 51 entries, none matching a live product, so every
+   * concern-based weight silently scored zero.
+   */
+  concerns: Concern[];
 };
 
 /** Delivery and policy facts, read from the same tables checkout charges from. */

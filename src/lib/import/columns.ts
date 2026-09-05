@@ -32,6 +32,7 @@ export const CANONICAL_COLUMNS = [
   "ratingAvg",
   "ratingCount",
   "size",
+  "concerns",
 ] as const;
 
 export type CanonicalColumn = (typeof CANONICAL_COLUMNS)[number];
@@ -88,6 +89,8 @@ const ALIASES: Record<string, CanonicalColumn> = {
   reviews: "ratingCount",
   "Size / Volume": "size",
   volume: "size",
+  "Skin Concerns Targeted": "concerns",
+  "Skin Concerns": "concerns",
 };
 
 function fold(header: string): string {

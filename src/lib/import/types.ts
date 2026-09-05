@@ -45,6 +45,8 @@ export type ProductFields = {
   categoryId: string | null;
   ratingAvg: number;
   ratingCount: number;
+  /** Taxonomy concerns, mapped from the sheet's own phrasing. */
+  concerns: string[];
 };
 
 export type RowOutcome =
@@ -96,6 +98,8 @@ export type ExistingProduct = {
     ingredients: string | null;
     howToUse: string | null;
   };
+  /** Sorted, so a re-import of the same sheet compares equal. */
+  concerns: string[];
 };
 
 export type ImportLookups = {

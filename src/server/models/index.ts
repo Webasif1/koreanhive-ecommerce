@@ -194,6 +194,7 @@ export type ProductDoc = {
   categoryId?: Types.ObjectId | null;
   images: ProductImageSub[];
   variants: ProductVariantSub[];
+  concerns: string[];
   metaTitle?: string | null;
   metaDescription?: string | null;
   createdAt: Date;
@@ -226,6 +227,12 @@ const productSchema = new Schema<ProductDoc>(
     },
     images: { type: [productImageSchema], default: [] },
     variants: { type: [productVariantSchema], default: [] },
+    /**
+     * Taxonomy concerns this product targets, imported from the sheet's
+     * "Skin Concerns Targeted" column. Drives the chat advisor's
+     * recommendations — see data/chatbot/concern-map.ts for the mapping.
+     */
+    concerns: { type: [String], default: [] },
     metaTitle: { type: String, default: null },
     metaDescription: { type: String, default: null },
   },
@@ -234,6 +241,8 @@ const productSchema = new Schema<ProductDoc>(
 
 productSchema.index({ isActive: 1, isFeatured: 1 });
 productSchema.index({ isActive: 1, createdAt: -1 });
+// the advisor's main query: active products targeting a given concern
+productSchema.index({ isActive: 1, concerns: 1 });
 
 // ---------------------------------------------------------- commerce
 

@@ -58,20 +58,28 @@ export const USE_CASES = [
 export type UseCase = (typeof USE_CASES)[number];
 
 /**
- * Category slugs as seeded. Kept as a literal union so the knowledge file
- * cannot point a product at a category that does not exist.
+ * The catalogue's real category slugs, as created by the sheet sync. Kept as a
+ * literal union so a mistyped slug is a compile error rather than a category
+ * that silently never matches.
+ *
+ * These must stay in step with the sheet's Category column. The previous list
+ * was the demo seed's ("toners-essences", "face-ampoules"…) and survived the
+ * catalogue import unnoticed, so every category the advisor tried to match on
+ * resolved to nothing.
  */
 export const CATEGORY_SLUGS = [
-  "cleansers",
-  "makeup-removers",
-  "toners-essences",
-  "face-ampoules",
-  "moisturisers",
-  "eye-creams",
-  "brightening",
+  "ampoule",
+  "body-care",
+  "cleanser",
+  "cushion-foundation",
+  "essence",
+  "eye-care",
+  "makeup",
+  "moisturizer",
+  "serum",
+  "sheet-mask-masks",
   "sunscreen",
-  "masks-patches",
-  "cosmetics",
+  "toner",
 ] as const;
 
 export type CategorySlug = (typeof CATEGORY_SLUGS)[number];
@@ -119,16 +127,18 @@ export const USE_CASE_LABELS: Record<UseCase, string> = {
 };
 
 export const CATEGORY_LABELS: Record<CategorySlug, string> = {
-  cleansers: "cleanser",
-  "makeup-removers": "makeup remover",
-  "toners-essences": "toner or essence",
-  "face-ampoules": "serum or ampoule",
-  moisturisers: "moisturiser",
-  "eye-creams": "eye cream",
-  brightening: "brightening product",
+  ampoule: "ampoule",
+  "body-care": "body care product",
+  cleanser: "cleanser",
+  "cushion-foundation": "cushion or foundation",
+  essence: "essence",
+  "eye-care": "eye care product",
+  makeup: "makeup product",
+  moisturizer: "moisturiser",
+  serum: "serum",
+  "sheet-mask-masks": "mask",
   sunscreen: "sunscreen",
-  "masks-patches": "mask or patch",
-  cosmetics: "makeup product",
+  toner: "toner",
 };
 
 /**
@@ -242,16 +252,28 @@ export const USE_CASE_SYNONYMS: Record<UseCase, string[]> = {
 };
 
 export const CATEGORY_SYNONYMS: Record<CategorySlug, string[]> = {
-  cleansers: ["cleanser", "face wash", "facewash", "foam", "gel cleanser"],
-  "makeup-removers": ["cleansing oil", "cleansing balm", "makeup remover", "first cleanse"],
-  "toners-essences": ["toner", "essence", "toners", "essences", "skin water"],
-  "face-ampoules": ["serum", "ampoule", "serums", "ampoules"],
-  moisturisers: ["moisturiser", "moisturizer", "cream", "gel cream", "lotion"],
-  "eye-creams": ["eye cream", "eye serum", "under eye cream"],
-  brightening: ["brightening product", "vitamin c serum", "brightening serum"],
-  sunscreen: ["sunscreen", "sunblock", "spf", "sun stick", "sun serum"],
-  "masks-patches": ["mask", "sheet mask", "pad", "pads", "patch", "patches", "wrapping mask"],
-  cosmetics: ["makeup", "lip tint", "lipstick", "eyeshadow", "palette", "powder", "cosmetics"],
+  ampoule: ["ampoule", "ampoules", "ampule"],
+  "body-care": ["body lotion", "body wash", "body cream", "body care", "hand cream"],
+  cleanser: [
+    "cleanser",
+    "face wash",
+    "facewash",
+    "foam",
+    "gel cleanser",
+    "cleansing oil",
+    "cleansing balm",
+    "makeup remover",
+    "first cleanse",
+  ],
+  "cushion-foundation": ["cushion", "foundation", "bb cream", "cc cream", "concealer"],
+  essence: ["essence", "essences", "skin water", "first essence"],
+  "eye-care": ["eye cream", "eye serum", "under eye cream", "eye patch", "eye care"],
+  makeup: ["makeup", "lip tint", "lipstick", "eyeshadow", "palette", "powder", "cosmetics"],
+  moisturizer: ["moisturiser", "moisturizer", "cream", "gel cream", "lotion"],
+  serum: ["serum", "serums", "vitamin c serum", "brightening serum"],
+  "sheet-mask-masks": ["mask", "sheet mask", "pad", "pads", "patch", "patches", "wrapping mask"],
+  sunscreen: ["sunscreen", "sunblock", "spf", "sun stick", "sun serum", "sun cream"],
+  toner: ["toner", "toners", "toner pad"],
 };
 
 /**
