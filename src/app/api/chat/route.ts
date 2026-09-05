@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 
 import { runChatTurn } from "@/lib/chatbot";
 import { parseSlots } from "@/lib/chatbot/slots";
+import type { Slots } from "@/lib/chatbot/types";
+import {
+  geminiEnabled,
+  phraseResponse,
+  understand,
+} from "@/server/chat/gemini";
 import { getChatCatalog, getPolicyFacts } from "@/server/queries/chatbot";
 
 export const runtime = "nodejs";
@@ -39,6 +45,20 @@ function rateLimit(key: string) {
  * Nothing about a shopper is stored, so there is no chat history to leak — and
  * a forged payload can only ever give the forger a worse recommendation.
  */
+/** Slots the conversation has actually established, so merging keeps them.
+ *  An empty list or a null is "not known", not "known to be nothing". */
+function withoutEmpty(slots: Slots): Partial<Slots> {
+  const kept: Partial<Slots> = {};
+
+  if (slots.concerns.length > 0) kept.concerns = slots.concerns;
+  if (slots.useCases.length > 0) kept.useCases = slots.useCases;
+  if (slots.skinType) kept.skinType = slots.skinType;
+  if (slots.category) kept.category = slots.category;
+  if (slots.budgetMax !== null) kept.budgetMax = slots.budgetMax;
+
+  return kept;
+}
+
 export async function POST(request: Request) {
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
@@ -82,9 +102,31 @@ export async function POST(request: Request) {
   try {
     const [catalog, policy] = await Promise.all([getChatCatalog(), getPolicyFacts()]);
 
-    const response = runChatTurn({ message, slots: parseSlots(raw.slots) }, catalog, policy);
+    const carried = parseSlots(raw.slots);
 
-    return NextResponse.json(response, {
+    // Gemini reads the message into slots; the keyword engine reads it too.
+    // The model's answer goes through parseSlots exactly like the client's
+    // does — it is untrusted input from outside, not a privileged caller — so
+    // an invented concern or an injected instruction becomes "nothing
+    // recognised" rather than a bad query.
+    //
+    // Whatever Gemini finds is merged under what the conversation already
+    // knew, so a model miss never erases a slot the shopper actually gave us.
+    const understood = geminiEnabled() ? await understand(message) : null;
+
+    const slots = understood
+      ? { ...parseSlots(understood), ...withoutEmpty(carried) }
+      : carried;
+
+    const response = runChatTurn({ message, slots }, catalog, policy);
+
+    // Products, prices, links and intent are already decided. Only the wording
+    // is handed to the model, and only when it is not a safety reply.
+    const phrased = geminiEnabled()
+      ? await phraseResponse(response, message)
+      : response;
+
+    return NextResponse.json(phrased, {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {

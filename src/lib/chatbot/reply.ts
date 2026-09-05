@@ -4,8 +4,6 @@ import {
   CONCERN_QUICK_REPLIES,
   FALLBACK_QUICK_REPLIES,
   OPENING_QUICK_REPLIES,
-  SKIN_TYPE_QUICK_REPLIES,
-  USE_CASE_QUICK_REPLIES,
 } from "@/data/chatbot/quick-replies";
 import {
   CATEGORY_LABELS,
@@ -49,58 +47,41 @@ function base(intent: Intent, slots: Slots): ChatResponse {
 }
 
 /**
- * How many *independent* things the advisor knows.
+ * How much the advisor knows that actually changes the answer.
  *
  * Concern and skin type count as one, because "dry skin" fills both from a
- * single phrase — counting them separately would make one restated fact look
- * like two and skip the follow-up question entirely.
+ * single phrase and counting them twice would overstate what is known.
+ *
+ * Only slots the scorer reads count. Use cases used to count here, but nothing
+ * scores on them any more — the editorial file that carried per-product use
+ * cases was orphaned by the catalogue import — so requiring one meant asking a
+ * follow-up whose answer could not affect the result.
  */
 function slotDepth(slots: Slots): number {
   return (
     (slots.concerns.length > 0 || slots.skinType ? 1 : 0) +
-    (slots.useCases.length > 0 ? 1 : 0) +
     (slots.category ? 1 : 0) +
     (slots.budgetMax !== null ? 1 : 0)
   );
 }
 
 /**
- * The follow-up question, or null when the advisor knows enough.
+ * The follow-up question, or null when the advisor knows enough to answer.
  *
- * One dimension is not enough to recommend on. "Something for dry skin" could
- * mean a cleanser, an essence or a night cream at four different price points,
- * and picking one at random is how a bot loses trust. Asking is what makes it
- * read as an assistant rather than a search box.
+ * It asks only when it has nothing to rank on. It used to demand two
+ * dimensions before answering, which was right when three of them fed the
+ * score; now that concerns carry the ranking, "my skin is oily" is enough, and
+ * making someone answer a budget question before seeing a single product reads
+ * as an obstacle rather than an assistant. Budget is offered afterwards as a
+ * quick reply, so narrowing stays one tap away.
  */
 function nextQuestion(slots: Slots): { message: string; quickReplies: string[] } | null {
-  if (slotDepth(slots) >= 2) return null;
-
-  if (slots.concerns.length === 0 && slots.useCases.length === 0) {
-    return {
-      message:
-        "Happy to help you find something. What's the main thing you'd like to work on?",
-      quickReplies: CONCERN_QUICK_REPLIES,
-    };
-  }
-
-  if (slots.concerns.length > 0 && slots.useCases.length === 0) {
-    const concern = CONCERN_LABELS[slots.concerns[0]];
-    return {
-      message: `Got it — ${concern}. Are you after everyday upkeep, repairing it properly, or something targeted?`,
-      quickReplies: USE_CASE_QUICK_REPLIES,
-    };
-  }
-
-  if (!slots.skinType) {
-    return {
-      message: "And how would you describe your skin overall?",
-      quickReplies: SKIN_TYPE_QUICK_REPLIES,
-    };
-  }
+  if (slotDepth(slots) >= 1) return null;
 
   return {
-    message: "One more thing — is there a budget you'd like me to stay within?",
-    quickReplies: BUDGET_QUICK_REPLIES,
+    message:
+      "Happy to help you find something. What's the main thing you'd like to work on?",
+    quickReplies: CONCERN_QUICK_REPLIES,
   };
 }
 
@@ -203,15 +184,19 @@ export function recommendationReply({
       ? `Based on ${summary}, this is what I'd pick:`
       : `Based on ${summary}, here's what I'd look at:`;
 
-  const cautions = ranked[0].item.knowledge?.cautions ?? [];
-
   return {
     ...base("PRODUCT_RECOMMENDATION", slots),
-    // cautions are factual product notes, not advice — worth surfacing before
-    // someone buys an acid or a retinal without realising
-    message: cautions.length > 0 ? `${lead}\n\nOne note: ${cautions[0]}` : lead,
+    // The per-product "one note" caution came from the editorial file the
+    // catalogue import orphaned. The sheet has no equivalent column, so rather
+    // than keep a line that could never fire, cautions are gone until there is
+    // real data behind them.
+    message: lead,
     products: ranked.map(toProductCard),
-    quickReplies: ["Something else", "How much is delivery?"],
+    // narrowing offered rather than demanded — the products are already shown
+    quickReplies:
+      slots.budgetMax === null
+        ? [...BUDGET_QUICK_REPLIES.slice(0, 2), "Something else"]
+        : ["Something else", "How much is delivery?"],
   };
 }
 

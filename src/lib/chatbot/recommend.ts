@@ -1,8 +1,6 @@
 import {
   CATEGORY_LABELS,
   CONCERN_LABELS,
-  SKIN_TYPE_LABELS,
-  USE_CASE_LABELS,
   isCategorySlug,
 } from "@/data/chatbot/taxonomy";
 import type { NormalizedMessage } from "@/lib/chatbot/normalize";
@@ -19,13 +17,10 @@ import type { ChatCatalogItem, ChatProductCard, Slots } from "@/lib/chatbot/type
  */
 const WEIGHTS = {
   concern: 40,
-  useCase: 20,
-  skinType: 15,
   budget: 10,
   category: 8,
   text: 7,
   popularity: 5,
-  priority: 5,
 } as const;
 
 /**
@@ -83,16 +78,16 @@ function textFit(item: ChatCatalogItem, message: NormalizedMessage | null): numb
 }
 
 /**
- * Hard filters. These are not deductions — an out-of-stock product must never
- * be recommended however well it scores, and a product marked `avoidFor` a
- * skin type must never reach that shopper.
+ * Hard filters. Not deductions — an out-of-stock product must never be
+ * recommended however well it scores.
+ *
+ * There is no longer an `avoidFor` exclusion. It was driven by the editorial
+ * file the catalogue import orphaned, and the sheet carries no equivalent
+ * column, so keeping it would have been a guard that never fired while looking
+ * like one that did.
  */
 function isEligible(item: ChatCatalogItem, slots: Slots): boolean {
   if (!item.inStock) return false;
-
-  if (slots.skinType && item.knowledge?.avoidFor?.includes(slots.skinType)) {
-    return false;
-  }
 
   if (slots.budgetMax !== null && item.price > slots.budgetMax * BUDGET_TOLERANCE) {
     return false;
@@ -102,35 +97,16 @@ function isEligible(item: ChatCatalogItem, slots: Slots): boolean {
 }
 
 function buildReason(item: ChatCatalogItem, slots: Slots): string {
-  const knowledge = item.knowledge;
   const parts: string[] = [];
 
-  const concerns = knowledge
-    ? slots.concerns.filter((concern) => knowledge.concerns.includes(concern))
-    : [];
+  // said only about concerns the product is actually recorded against, so the
+  // stated reason is always something the catalogue backs
+  const concerns = slots.concerns.filter((concern) =>
+    item.concerns.includes(concern),
+  );
 
   if (concerns.length > 0) {
     parts.push(`targets ${concerns.map((c) => CONCERN_LABELS[c]).join(" and ")}`);
-  }
-
-  const useCases = knowledge
-    ? slots.useCases.filter((useCase) => knowledge.useCases.includes(useCase))
-    : [];
-
-  if (useCases.length > 0) {
-    parts.push(`made for ${useCases.map((u) => USE_CASE_LABELS[u]).join(" and ")}`);
-  }
-
-  // "dry skin" is both a concern and a skin type, and fills both slots from
-  // one phrase — saying "targets dry skin, suits dry skin" reads like a bug
-  const namedConcerns = new Set(concerns.map((c) => CONCERN_LABELS[c]));
-
-  if (
-    slots.skinType &&
-    knowledge?.skinTypes.includes(slots.skinType) &&
-    !namedConcerns.has(SKIN_TYPE_LABELS[slots.skinType])
-  ) {
-    parts.push(`suits ${SKIN_TYPE_LABELS[slots.skinType]}`);
   }
 
   if (slots.category && item.categorySlug === slots.category) {
@@ -154,21 +130,14 @@ export function scoreProduct(
   slots: Slots,
   message: NormalizedMessage | null,
 ): number {
-  const knowledge = item.knowledge;
   let score = 0;
 
-  if (knowledge && slots.concerns.length > 0) {
-    const hits = slots.concerns.filter((c) => knowledge.concerns.includes(c)).length;
+  // The dominant signal, and now the only one that reads product knowledge.
+  // Concerns come from the catalogue rather than a hand-maintained file, so
+  // this scores for all 345 products instead of the 51 the file once covered.
+  if (slots.concerns.length > 0) {
+    const hits = slots.concerns.filter((c) => item.concerns.includes(c)).length;
     score += (hits / slots.concerns.length) * WEIGHTS.concern;
-  }
-
-  if (knowledge && slots.useCases.length > 0) {
-    const hits = slots.useCases.filter((u) => knowledge.useCases.includes(u)).length;
-    score += (hits / slots.useCases.length) * WEIGHTS.useCase;
-  }
-
-  if (knowledge && slots.skinType && knowledge.skinTypes.includes(slots.skinType)) {
-    score += WEIGHTS.skinType;
   }
 
   score += budgetFit(item.price, slots.budgetMax) * WEIGHTS.budget;
@@ -179,7 +148,6 @@ export function scoreProduct(
 
   score += textFit(item, message) * WEIGHTS.text;
   score += popularityFit(item) * WEIGHTS.popularity;
-  score += ((knowledge?.priority ?? 0) / 10) * WEIGHTS.priority;
 
   return score;
 }

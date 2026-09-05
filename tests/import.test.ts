@@ -34,6 +34,7 @@ const LOOKUPS: ImportLookups = {
         brandId: "b1",
         categoryId: "c1",
         imageUrls: [],
+        concerns: [],
         text: {
           shortDescription: "A snail cream.",
           description: null,

@@ -26,7 +26,7 @@ export async function getImportLookups(): Promise<ImportLookups> {
     // large enough to need a stored digest, not a smaller comparison.
     Product.find({})
       .select(
-        "slug name price stock brandId categoryId images " +
+        "slug name price stock brandId categoryId images concerns " +
           "shortDescription description ingredients howToUse",
       )
       .lean(),
@@ -59,6 +59,7 @@ export async function getImportLookups(): Promise<ImportLookups> {
         imageUrls: [...(product.images ?? [])]
           .sort((a, b) => a.position - b.position)
           .map((image) => image.url),
+        concerns: product.concerns ?? [],
         text: {
           shortDescription: product.shortDescription ?? null,
           description: product.description ?? null,

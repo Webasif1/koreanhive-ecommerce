@@ -1,3 +1,4 @@
+import { concernsFromSheet } from "@/data/chatbot/concern-map";
 import { isAllowedImageHost } from "@/lib/image-hosts";
 import { slugify } from "@/lib/slugify";
 import { parseCsv, toObjects } from "@/lib/import/csv";
@@ -223,6 +224,13 @@ function readRow(
     else fields[column] = parsed;
   }
 
+  if (has("concerns")) {
+    // Unrecognised phrasing yields an empty list rather than an error: a
+    // concern the map does not know is a gap in the advisor's vocabulary, not
+    // a reason to refuse an otherwise valid product row.
+    fields.concerns = concernsFromSheet(get("concerns"));
+  }
+
   if (has("sku")) fields.sku = get("sku");
   if (has("shortDescription")) fields.shortDescription = get("shortDescription");
   if (has("description")) fields.description = get("description");
@@ -315,6 +323,19 @@ function describeChanges(
       incoming.some((url, index) => url !== current[index]);
 
     if (differs) changes.push("images replaced");
+  }
+
+  if (fields.concerns !== undefined) {
+    // order-insensitive: the map returns concerns in table order, the database
+    // returns them as stored, and a reshuffle is not a change
+    const incoming = [...fields.concerns].sort();
+    const current = [...existing.concerns].sort();
+
+    const differs =
+      incoming.length !== current.length ||
+      incoming.some((concern, index) => concern !== current[index]);
+
+    if (differs) changes.push("concerns updated");
   }
 
   // Compared by value, then reported by name: an operator wants to know a row

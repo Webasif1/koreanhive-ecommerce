@@ -2,7 +2,7 @@ import "server-only";
 
 import { unstable_cache } from "next/cache";
 
-import { PRODUCT_KNOWLEDGE } from "@/data/chatbot/knowledge";
+import { toConcerns } from "@/data/chatbot/concern-map";
 import type { ChatCatalogItem, PolicyFacts } from "@/lib/chatbot/types";
 import { connectDb } from "@/server/db";
 import { Brand, Category, Product } from "@/server/models";
@@ -23,12 +23,14 @@ import { getDeliveryZones } from "@/server/queries/catalog";
  *     read inventory depth.
  *
  * Price and stock come from the live catalogue rather than a snapshot, so the
- * bot cannot quote yesterday's price. The editorial half — what a product is
- * *for* — comes from data/chatbot/knowledge.ts and is joined here by slug.
+ * bot cannot quote yesterday's price. What a product is *for* comes from the
+ * same place now — `concerns`, imported from the sheet — rather than a
+ * hand-maintained file keyed by slug, which the catalogue import silently
+ * orphaned in full.
  */
 
 const CHAT_FIELDS =
-  "name slug price comparePrice stock ratingAvg ratingCount shortDescription ingredients howToUse brandId categoryId images";
+  "name slug price comparePrice stock ratingAvg ratingCount shortDescription ingredients howToUse brandId categoryId images concerns";
 
 async function chatCatalog(): Promise<ChatCatalogItem[]> {
   await connectDb();
@@ -75,7 +77,9 @@ async function chatCatalog(): Promise<ChatCatalogItem[]> {
       benefit: product.shortDescription ?? null,
       ingredients: product.ingredients ?? null,
       howToUse: product.howToUse ?? null,
-      knowledge: PRODUCT_KNOWLEDGE[product.slug] ?? null,
+      // Narrowed on the way out. A concern stored before the taxonomy changed
+      // must not reach the engine as a value it does not recognise.
+      concerns: toConcerns(product.concerns),
     };
   });
 }

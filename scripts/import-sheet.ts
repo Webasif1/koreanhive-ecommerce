@@ -271,7 +271,7 @@ async function main() {
     Category.find({}).select("name slug").lean(),
     Product.find({})
       .select(
-        "slug name price stock brandId categoryId images " +
+        "slug name price stock brandId categoryId images concerns " +
           "shortDescription description ingredients howToUse",
       )
       .lean(),
@@ -305,6 +305,7 @@ async function main() {
           imageUrls: [...(product.images ?? [])]
             .sort((a, b) => a.position - b.position)
             .map((image) => image.url),
+          concerns: product.concerns ?? [],
           text: {
             shortDescription: product.shortDescription ?? null,
             description: product.description ?? null,

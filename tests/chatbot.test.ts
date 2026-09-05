@@ -37,7 +37,7 @@ function product(over: Partial<ChatCatalogItem> & { slug: string }): ChatCatalog
     benefit: null,
     ingredients: null,
     howToUse: null,
-    knowledge: null,
+    concerns: [],
     ...over,
   };
 }
@@ -47,60 +47,35 @@ const CATALOG: ChatCatalogItem[] = [
     slug: "hydra-essence",
     name: "Deep Hydra Essence",
     price: 1200,
-    categorySlug: "toners-essences",
-    knowledge: {
-      concerns: ["dryness", "dehydration"],
-      skinTypes: ["dry", "normal", "sensitive"],
-      useCases: ["daily-hydration"],
-      priority: 8,
-    },
+    categorySlug: "essence",
+    concerns: ["dryness", "dehydration"],
   }),
   product({
     slug: "rich-repair-oil",
     name: "Rich Repair Facial Oil",
     price: 1400,
-    categorySlug: "moisturisers",
-    knowledge: {
-      concerns: ["dryness"],
-      skinTypes: ["dry"],
-      avoidFor: ["oily"],
-      useCases: ["barrier-repair", "daily-hydration"],
-    },
+    categorySlug: "moisturizer",
+    concerns: ["dryness"],
   }),
   product({
     slug: "sold-out-cream",
     name: "Sold Out Dry Skin Cream",
     price: 900,
     inStock: false,
-    knowledge: {
-      concerns: ["dryness"],
-      skinTypes: ["dry"],
-      useCases: ["daily-hydration"],
-      priority: 10,
-    },
+    concerns: ["dryness"],
   }),
   product({
     slug: "acid-toner",
     name: "Clarifying Acid Toner",
     price: 1300,
-    categorySlug: "toners-essences",
-    knowledge: {
-      concerns: ["acne", "large-pores"],
-      skinTypes: ["oily", "combination"],
-      avoidFor: ["sensitive"],
-      useCases: ["exfoliation"],
-      cautions: ["Contains exfoliating acids — wear sunscreen."],
-    },
+    categorySlug: "essence",
+    concerns: ["acne", "large-pores", "oiliness"],
   }),
   product({
     slug: "luxury-serum",
     name: "Luxury Ceramide Serum",
     price: 6000,
-    knowledge: {
-      concerns: ["dryness"],
-      skinTypes: ["dry"],
-      useCases: ["barrier-repair"],
-    },
+    concerns: ["dryness"],
   }),
 ];
 
@@ -179,13 +154,19 @@ describe("safety", () => {
 });
 
 describe("recommendation", () => {
-  it("asks a follow-up instead of guessing from one dimension", () => {
+  it("answers on a single named concern, and offers to narrow", () => {
+    // It used to demand a second dimension before showing anything. That made
+    // sense when skin type and use case also fed the score; now concerns carry
+    // the ranking, so making someone answer a budget question before seeing a
+    // product is an obstacle, not a conversation.
     const result = turn("i need something for dry skin");
+
     assert.equal(result.intent, "PRODUCT_RECOMMENDATION");
-    assert.equal(result.needsMoreInfo, true);
-    assert.equal(result.products.length, 0);
-    assert.ok(result.quickReplies.length > 0);
     assert.deepEqual(result.slots.concerns, ["dryness"]);
+    assert.ok(result.products.length > 0, "one concern is enough to answer");
+    assert.equal(result.needsMoreInfo, false);
+    // narrowing is still one tap away
+    assert.ok(result.quickReplies.some((reply) => /taka|budget/i.test(reply)));
   });
 
   it("asks rather than recommends when nothing is known", () => {
@@ -212,8 +193,22 @@ describe("recommendation", () => {
     assert.ok(result.products.every((p) => p.inStock));
   });
 
-  it("honours avoidFor as an exclusion rather than a deduction", () => {
-    const result = turn("oily skin, i want hydration under 2000 taka");
+  it("ranks on the concerns the catalogue records against a product", () => {
+    // the question this whole feature exists to answer
+    const result = turn("my skin is oily, what should i use");
+
+    assert.ok(result.products.length > 0, "oily skin must return something");
+    assert.equal(
+      result.products[0].slug,
+      "acid-toner",
+      "the only product recorded against oiliness must rank first",
+    );
+  });
+
+  it("does not recommend a product for a concern it is not recorded against", () => {
+    const result = turn("my skin is oily, what should i use");
+
+    // rich-repair-oil is a dryness product; nothing marks it for oily skin
     assert.ok(result.products.every((p) => p.slug !== "rich-repair-oil"));
   });
 
@@ -231,10 +226,12 @@ describe("recommendation", () => {
     assert.doesNotMatch(result.products[0].reason, /dry skin.*dry skin/);
   });
 
-  it("surfaces a product caution before someone buys an acid", () => {
-    const result = turn("oily skin with acne, exfoliation, under 1500 taka");
+  it("states a reason the catalogue actually supports", () => {
+    const result = turn("oily skin with acne, under 1500 taka");
+
     assert.ok(result.products.length > 0);
-    assert.match(result.message, /sunscreen/i);
+    // the reason may only name concerns recorded against that product
+    assert.match(result.products[0].reason, /acne|pores|oil/i);
   });
 
   it("says so honestly when nothing fits, instead of offering a random product", () => {
