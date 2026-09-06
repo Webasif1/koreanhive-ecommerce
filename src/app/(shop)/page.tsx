@@ -7,6 +7,7 @@ import { ProductGrid } from "@/components/product/product-grid";
 import { JsonLd } from "@/components/seo/json-ld";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CONCERNS } from "@/data/concerns";
 import { formatBDT } from "@/lib/format";
 import { faqJsonLd, type FaqEntry } from "@/lib/json-ld";
 import {
@@ -22,45 +23,6 @@ export const metadata: Metadata = {
 };
 
 export const revalidate = 3600;
-
-const CONCERNS = [
-  {
-    label: "Acne & breakouts",
-    copy: "Calm active spots without stripping",
-    href: "/category/ampoule",
-    image: "/categories/cat1.webp",
-  },
-  {
-    label: "Dark spots",
-    copy: "Fade post-acne marks and uneven tone",
-    href: "/category/serum",
-    image: "/categories/cat2.webp",
-  },
-  {
-    label: "Dryness",
-    copy: "Layerable hydration that holds all day",
-    href: "/category/moisturizer",
-    image: "/categories/cat3.webp",
-  },
-  {
-    label: "Oily skin",
-    copy: "Control shine in Dhaka humidity",
-    href: "/category/cleanser",
-    image: "/categories/cat4.webp",
-  },
-  {
-    label: "Sun protection",
-    copy: "Daily SPF that never leaves a cast",
-    href: "/category/sunscreen",
-    image: "/categories/cat5.webp",
-  },
-  {
-    label: "Sensitive skin",
-    copy: "Short ingredient lists, no fragrance",
-    href: "/category/toner",
-    image: "/categories/cat6.webp",
-  },
-];
 
 const APPROACH = [
   {

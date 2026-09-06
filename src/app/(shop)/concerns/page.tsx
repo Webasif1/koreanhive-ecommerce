@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
+import { CONCERNS } from "@/data/concerns";
+
 export const metadata: Metadata = {
   title: "Shop by Skin Concern",
   description:
@@ -13,45 +15,6 @@ export const metadata: Metadata = {
  * Static routing into real categories. There is no Concern model; when one
  * exists these tiles read from it without the layout changing.
  */
-const CONCERNS = [
-  {
-    label: "Acne & breakouts",
-    copy: "Calm active spots without stripping the barrier.",
-    href: "/category/ampoule",
-    image: "/categories/cat1.webp",
-  },
-  {
-    label: "Dark spots",
-    copy: "Fade post-acne marks and uneven tone over 4–6 weeks.",
-    href: "/category/serum",
-    image: "/categories/cat2.webp",
-  },
-  {
-    label: "Dryness",
-    copy: "Layerable hydration that holds through the day.",
-    href: "/category/moisturizer",
-    image: "/categories/cat3.webp",
-  },
-  {
-    label: "Oily skin",
-    copy: "Control shine without the tight, squeaky feeling.",
-    href: "/category/cleanser",
-    image: "/categories/cat4.webp",
-  },
-  {
-    label: "Sun protection",
-    copy: "Daily SPF that never leaves a white cast.",
-    href: "/category/sunscreen",
-    image: "/categories/cat5.webp",
-  },
-  {
-    label: "Sensitive skin",
-    copy: "Short ingredient lists, no fragrance, no sting.",
-    href: "/category/toner",
-    image: "/categories/cat6.webp",
-  },
-];
-
 export default function ConcernsPage() {
   return (
     <div className="container-page py-12">
@@ -85,7 +48,7 @@ export default function ConcernsPage() {
                 {concern.label}
               </h2>
               <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
-                {concern.copy}
+                {concern.detail}
               </p>
             </div>
           </Link>
