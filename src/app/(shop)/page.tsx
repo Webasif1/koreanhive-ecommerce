@@ -7,11 +7,13 @@ import { ProductGrid } from "@/components/product/product-grid";
 import { JsonLd } from "@/components/seo/json-ld";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { formatBDT } from "@/lib/format";
 import { faqJsonLd, type FaqEntry } from "@/lib/json-ld";
 import {
   getActiveBanners,
   getBestSellers,
   getBrands,
+  getCombos,
   getProducts,
 } from "@/server/queries/catalog";
 
@@ -25,25 +27,25 @@ const CONCERNS = [
   {
     label: "Acne & breakouts",
     copy: "Calm active spots without stripping",
-    href: "/category/face-ampoules",
+    href: "/category/ampoule",
     image: "/categories/cat1.webp",
   },
   {
     label: "Dark spots",
     copy: "Fade post-acne marks and uneven tone",
-    href: "/category/brightening",
+    href: "/category/serum",
     image: "/categories/cat2.webp",
   },
   {
     label: "Dryness",
     copy: "Layerable hydration that holds all day",
-    href: "/category/moisturisers",
+    href: "/category/moisturizer",
     image: "/categories/cat3.webp",
   },
   {
     label: "Oily skin",
     copy: "Control shine in Dhaka humidity",
-    href: "/category/cleansers",
+    href: "/category/cleanser",
     image: "/categories/cat4.webp",
   },
   {
@@ -55,7 +57,7 @@ const CONCERNS = [
   {
     label: "Sensitive skin",
     copy: "Short ingredient lists, no fragrance",
-    href: "/category/toners-essences",
+    href: "/category/toner",
     image: "/categories/cat6.webp",
   },
 ];
@@ -135,10 +137,11 @@ const JOURNAL = [
 const MIN_REAL_SALES = 4;
 
 export default async function Home() {
-  const [brands, banners, sold] = await Promise.all([
+  const [brands, banners, sold, combos] = await Promise.all([
     getBrands(),
     getActiveBanners(),
     getBestSellers(8),
+    getCombos(),
   ]);
 
   // Ranked by units actually sold once there is enough trade to rank. Until
@@ -326,51 +329,50 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* --------------------------------------------------------- combos */}
-      <section className="container-page py-14">
-        <p className="eyebrow">Combo offers</p>
-        <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
-          Full routines, one price
-        </h2>
-        <div className="mt-6 grid gap-5 md:grid-cols-3">
-          {[
-            {
-              name: "The Acne Reset",
-              steps: "Cleanser · Toner · Ampoule",
-              save: 640,
-            },
-            {
-              name: "Glass Skin Starter",
-              steps: "Cleansing oil · Essence · Cream",
-              save: 780,
-            },
-            {
-              name: "Everyday Sun Kit",
-              steps: "Sunscreen · Sun stick · Mask",
-              save: 520,
-            },
-          ].map((combo) => (
-            <Link
-              key={combo.name}
-              href="/combos"
-              className="group flex flex-col border border-border bg-card p-6"
-            >
-              <Badge variant="saleSoft" className="self-start">
-                Save ৳{combo.save}
-              </Badge>
-              <h3 className="mt-4 font-display text-xl group-hover:text-primary">
-                {combo.name}
-              </h3>
-              <p className="mt-2 text-[13px] text-muted-foreground">
-                {combo.steps}
-              </p>
-              <span className="mt-5 border-b border-chip-border pb-1 text-sm font-semibold text-primary">
-                See the combo
-              </span>
-            </Link>
-          ))}
-        </div>
-      </section>
+      {/* --------------------------------------------------------- combos
+          Real bundles, or nothing at all. This block used to hard-code three
+          invented combos — "The Acne Reset", "Glass Skin Starter", "Everyday
+          Sun Kit" — with invented savings on the badges, none of which existed
+          in the database or anywhere else. */}
+      {combos.length > 0 && (
+        <section className="container-page py-14">
+          <p className="eyebrow">Combo offers</p>
+          <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
+            Full routines, one price
+          </h2>
+          <div className="mt-6 grid gap-5 md:grid-cols-3">
+            {combos.map((combo) => {
+              const saving = combo.comparePrice
+                ? combo.comparePrice - combo.price
+                : 0;
+
+              return (
+                <Link
+                  key={combo.id}
+                  href="/combos"
+                  className="group flex flex-col border border-border bg-card p-6"
+                >
+                  {saving > 0 && (
+                    <Badge variant="saleSoft" className="self-start">
+                      Save {formatBDT(saving)}
+                    </Badge>
+                  )}
+                  <h3 className="mt-4 font-display text-xl group-hover:text-primary">
+                    {combo.name}
+                  </h3>
+                  <p className="mt-2 text-[13px] text-muted-foreground">
+                    {combo.products.map((product) => product.name).join(" · ")}
+                  </p>
+                  <div className="flex-1" />
+                  <span className="mt-5 border-b border-chip-border pb-1 text-sm font-semibold text-primary">
+                    See the combo
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ---------------------------------------------------------- reels */}
       <section className="border-y border-border bg-white">
