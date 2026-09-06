@@ -21,12 +21,19 @@ Premium Korean beauty & skincare e-commerce platform for Bangladesh. A fast, SEO
 | Language | TypeScript |
 | Styling | Tailwind CSS + shadcn/ui + Framer Motion |
 | Database | MongoDB + Mongoose |
-| Auth | Auth.js (guest-first, phone OTP) |
-| Search | Meilisearch |
+| Auth | Auth.js v5 — staff only; shoppers never sign in |
+| Search | MongoDB regex (Meilisearch remains a future swap) |
 | Media / CDN | ImageKit |
-| CMS / Admin | Payload CMS + custom commerce admin |
-| Payments | Cash on Delivery → SSLCommerz (planned) |
-| Hosting | Vercel · MongoDB Atlas (DB) · Railway/DigitalOcean (search, workers) |
+| Admin | Hand-built commerce admin |
+| Chat | Rule engine, optionally augmented by Google Gemini |
+| Payments | Cash on Delivery |
+| Hosting | Docker (`node:24-alpine`, standalone) · MongoDB Atlas |
+
+Planned but **not built**: Meilisearch, phone OTP, SSLCommerz. Their
+environment variables are stubbed in `.env.example` and unused.
+
+See **[docs/PROJECT.md](docs/PROJECT.md)** for the detailed status — what is
+built, the catalogue pipeline, the security posture, and everything still open.
 
 ## 🚀 Getting Started
 
