@@ -17,25 +17,25 @@ const CONCERNS = [
   {
     label: "Acne & breakouts",
     copy: "Calm active spots without stripping the barrier.",
-    href: "/category/face-ampoules",
+    href: "/category/ampoule",
     image: "/categories/cat1.webp",
   },
   {
     label: "Dark spots",
     copy: "Fade post-acne marks and uneven tone over 4–6 weeks.",
-    href: "/category/brightening",
+    href: "/category/serum",
     image: "/categories/cat2.webp",
   },
   {
     label: "Dryness",
     copy: "Layerable hydration that holds through the day.",
-    href: "/category/moisturisers",
+    href: "/category/moisturizer",
     image: "/categories/cat3.webp",
   },
   {
     label: "Oily skin",
     copy: "Control shine without the tight, squeaky feeling.",
-    href: "/category/cleansers",
+    href: "/category/cleanser",
     image: "/categories/cat4.webp",
   },
   {
@@ -47,7 +47,7 @@ const CONCERNS = [
   {
     label: "Sensitive skin",
     copy: "Short ingredient lists, no fragrance, no sting.",
-    href: "/category/toners-essences",
+    href: "/category/toner",
     image: "/categories/cat6.webp",
   },
 ];
