@@ -9,6 +9,7 @@ import {
   understand,
 } from "@/server/chat/gemini";
 import { getChatCatalog, getPolicyFacts } from "@/server/queries/chatbot";
+import { clientIpFromHeaders, rateLimitByCaller } from "@/server/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,25 +18,9 @@ const MAX_MESSAGE_LENGTH = 500;
 const WINDOW_MS = 60_000;
 const MAX_REQUESTS = 20;
 
-/** Per-instance throttle, the same shape as the order-tracking one in
- *  server/actions/track.ts — memory-local, so a serverless fleet gives each
- *  instance its own budget. Enough for an endpoint that writes nothing. */
-const attempts = new Map<string, { count: number; resetAt: number }>();
-
-function rateLimit(key: string) {
-  const now = Date.now();
-  const entry = attempts.get(key);
-
-  if (!entry || entry.resetAt < now) {
-    attempts.set(key, { count: 1, resetAt: now + WINDOW_MS });
-    return true;
-  }
-
-  if (entry.count >= MAX_REQUESTS) return false;
-
-  entry.count += 1;
-  return true;
-}
+/** Shares server/rate-limit.ts, so this endpoint resolves the caller through
+ *  the same trusted-proxy logic as login and order tracking. Memory-local, so
+ *  a horizontally scaled fleet gives each instance its own budget. */
 
 /**
  * The shop assistant.
@@ -60,12 +45,9 @@ function withoutEmpty(slots: Slots): Partial<Slots> {
 }
 
 export async function POST(request: Request) {
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    request.headers.get("x-real-ip") ??
-    "unknown";
+  const ip = clientIpFromHeaders(request.headers);
 
-  if (!rateLimit(ip)) {
+  if (!rateLimitByCaller("chat", ip, MAX_REQUESTS, WINDOW_MS)) {
     return NextResponse.json(
       { error: "Too many messages. Please wait a moment." },
       { status: 429, headers: { "Cache-Control": "no-store" } },
