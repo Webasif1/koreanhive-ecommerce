@@ -75,8 +75,13 @@ const SPELLING_FIXES: Record<string, string> = {
 export function normalize(input: string): NormalizedMessage {
   const text = input
     .toLowerCase()
-    // keep digits: budgets are numbers. Keep nothing else non-alphanumeric.
-    .replace(/[^a-z0-9\s]/g, " ")
+    // Keep digits (budgets are numbers) and the Bangla block, U+0980–U+09FF.
+    // This used to strip everything outside [a-z0-9], which deleted Bangla
+    // script entirely before any matching ran — so "আমার ত্বক খুব শুষ্ক" reached
+    // the intent classifier as an empty string and always came back UNKNOWN,
+    // in an assistant documented as understanding Bangla. Banglish worked only
+    // because it is written in Latin letters.
+    .replace(/[^a-z0-9\u0980-\u09FF\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 

@@ -86,10 +86,73 @@ function textFit(item: ChatCatalogItem, message: NormalizedMessage | null): numb
  * column, so keeping it would have been a guard that never fired while looking
  * like one that did.
  */
-function isEligible(item: ChatCatalogItem, slots: Slots): boolean {
+/**
+ * Body care answers a body question, not a face one.
+ *
+ * "My skin is very dry in winter, need a moisturizer" was returning an
+ * underarm whitening cream in third place: it sits in the moisturizer
+ * category, carries the dryness concern, and nothing in the scoring knew the
+ * difference between a face and an armpit. Concern and category matching alone
+ * cannot tell them apart, so the exclusion has to be explicit — and lifted the
+ * moment the shopper actually asks for body care.
+ */
+const BODY_TERMS = [
+  "body",
+  "hand",
+  "foot",
+  "feet",
+  "underarm",
+  "armpit",
+  "elbow",
+  "knee",
+  "শরীর",
+  "হাত",
+  "পা",
+  "বগল",
+];
+
+/**
+ * Some body products are filed under a face category in the sheet — the
+ * underarm cream that kept surfacing for "my skin is very dry" is categorised
+ * as a moisturizer — so the category alone does not identify them. The name
+ * does.
+ */
+const BODY_PRODUCT_NAME_TERMS = [
+  "body",
+  "underarm",
+  "armpit",
+  "hand cream",
+  "foot",
+  "elbow",
+  "knee",
+  "intimate",
+];
+
+function isBodyProduct(item: ChatCatalogItem) {
+  if (item.categorySlug === "body-care") return true;
+
+  const name = item.name.toLowerCase();
+  return BODY_PRODUCT_NAME_TERMS.some((term) => name.includes(term));
+}
+
+function wantsBodyCare(slots: Slots, message: NormalizedMessage | null) {
+  if (slots.category === "body-care") return true;
+  if (!message) return false;
+  return BODY_TERMS.some((term) => message.text.includes(term));
+}
+
+function isEligible(
+  item: ChatCatalogItem,
+  slots: Slots,
+  message: NormalizedMessage | null,
+): boolean {
   if (!item.inStock) return false;
 
   if (slots.budgetMax !== null && item.price > slots.budgetMax * BUDGET_TOLERANCE) {
+    return false;
+  }
+
+  if (isBodyProduct(item) && !wantsBodyCare(slots, message)) {
     return false;
   }
 
@@ -164,7 +227,7 @@ export function rankProducts({
   take?: number;
 }): ScoredProduct[] {
   return catalog
-    .filter((item) => isEligible(item, slots))
+    .filter((item) => isEligible(item, slots, message ?? null))
     .map((item) => ({
       item,
       score: scoreProduct(item, slots, message ?? null),
