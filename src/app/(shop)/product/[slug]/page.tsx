@@ -12,7 +12,7 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { Badge } from "@/components/ui/badge";
 import { discountPercent, formatBDT, formatDeliveryWindow } from "@/lib/format";
 import { breadcrumbJsonLd, productJsonLd } from "@/lib/json-ld";
-import { absoluteUrl } from "@/lib/site";
+import { absoluteUrl, withSiteSuffix } from "@/lib/site";
 import {
   getDeliveryZones,
   getProductBySlug,
@@ -46,11 +46,24 @@ export async function generateMetadata({
   if (!product) return { title: "Product Not Found" };
 
   return {
-    title: product.metaTitle ?? product.name,
+    // The sheet's metaTitle usually ends "| Korean Hive" already, and the root
+    // layout's template appends it again — every one of the 279 product pages
+    // was titled "… | Korean Hive | Korean Hive", which wastes the pixels a
+    // SERP snippet gives the product name. Absolute when the sheet supplies a
+    // title, templated when it does not.
+    title: product.metaTitle
+      ? { absolute: withSiteSuffix(product.metaTitle) }
+      : product.name,
     description:
       product.metaDescription ?? product.shortDescription ?? undefined,
     alternates: { canonical: `/product/${product.slug}` },
     openGraph: {
+      // Left as "website": Next's typed Metadata API has no "product" value,
+      // and the `other` escape hatch emits <meta name="…"> where Open Graph
+      // needs <meta property="…">, so those tags would be ignored by every
+      // parser that reads them. Shipping markup that only looks right is worse
+      // than not shipping it. Google reads the Product JSON-LD below, which is
+      // complete; a richer social card needs a raw <meta> in the layout head.
       type: "website",
       url: absoluteUrl(`/product/${product.slug}`),
       title: product.name,
