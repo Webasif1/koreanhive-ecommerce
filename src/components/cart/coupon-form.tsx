@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { applyCouponAction, clearCouponAction } from "@/server/actions/cart";
+import { notifyCartChanged } from "@/lib/cart-events";
 
 export function CouponForm({
   appliedCode,
@@ -28,6 +29,7 @@ export function CouponForm({
           onClick={() =>
             startTransition(async () => {
               const result = await clearCouponAction();
+              notifyCartChanged();
               toast.success(result.message);
             })
           }
@@ -44,6 +46,7 @@ export function CouponForm({
       action={(formData: FormData) => {
         startTransition(async () => {
           const result = await applyCouponAction(formData);
+          notifyCartChanged();
 
           if (result.ok) {
             toast.success(result.message);

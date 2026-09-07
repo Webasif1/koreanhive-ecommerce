@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { addToCartAction, buyNowAction } from "@/server/actions/cart";
+import { notifyCartChanged } from "@/lib/cart-events";
 
 /** Buy Now redirects to checkout, so it stays a plain form action — a toast
  *  would be replaced by the navigation before anyone read it. */
@@ -61,6 +62,7 @@ export function CardBuyButtons({
             const result = await addToCartAction(data);
 
             if (result.ok) {
+              notifyCartChanged();
               toast.success(result.message, { description: productName });
             } else {
               toast.error(result.message);

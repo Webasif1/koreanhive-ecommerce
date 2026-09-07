@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
+import { CART_CHANGED_EVENT } from "@/lib/cart-events";
+
 /** The header sits in the root layout. Reading the cart cookie there would
- *  make every page dynamic and kill ISR, so the count is fetched instead. */
+ *  make every page dynamic and kill ISR, so the count is fetched instead —
+ *  on navigation, on a cart change anywhere on the page, and when the tab
+ *  regains focus after the cart may have moved in another one. */
 export function CartBadge() {
   const [count, setCount] = useState<number | null>(null);
   const pathname = usePathname();
 
-  useEffect(() => {
+  const refresh = useCallback(() => {
     let cancelled = false;
 
     fetch("/api/cart/count")
@@ -24,7 +28,24 @@ export function CartBadge() {
     return () => {
       cancelled = true;
     };
-  }, [pathname]);
+  }, []);
+
+  useEffect(() => refresh(), [pathname, refresh]);
+
+  useEffect(() => {
+    const onChange = () => refresh();
+    const onFocus = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+
+    window.addEventListener(CART_CHANGED_EVENT, onChange);
+    document.addEventListener("visibilitychange", onFocus);
+
+    return () => {
+      window.removeEventListener(CART_CHANGED_EVENT, onChange);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [refresh]);
 
   if (!count) return null;
 

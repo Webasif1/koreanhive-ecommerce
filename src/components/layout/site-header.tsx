@@ -7,17 +7,21 @@ import {
   HeaderSearchInput,
   HeaderSearchInputFallback,
 } from "@/components/layout/header-search";
+import { MobileNavDrawer } from "@/components/layout/mobile-nav-drawer";
 import { mainNav } from "@/lib/navigation";
 
-export function SiteHeader() {
+export function SiteHeader({ deliveryLine }: { deliveryLine: string }) {
   return (
     <>
-      {/* Bangla carries the offer, English the rest — never mixed in one sentence */}
+      {/* Bangla carries the offer, English the rest — never mixed in one sentence.
+          The threshold comes from the live DeliveryZone rows, so this banner can
+          never promise free delivery that checkout then charges for. */}
       <div className="bg-ink text-[12.5px] text-blush">
         <div className="container-page flex flex-wrap items-center justify-center gap-x-7 gap-y-1 py-2.5 text-center">
-          <span lang="bn">
-            ৳2500+ অর্ডারে সারা বাংলাদেশে{" "}
-            <strong className="text-white">FREE DELIVERY</strong>
+          {/* deliveryPromise() already ends in "ফ্রি ডেলিভারি" — appending a
+              bold "FREE DELIVERY" here said it twice */}
+          <span lang="bn" className="font-semibold text-white">
+            {deliveryLine}
           </span>
           <span className="opacity-35" aria-hidden>
             ·
@@ -34,16 +38,22 @@ export function SiteHeader() {
 
       <header className="sticky top-0 z-40 border-b border-border bg-white">
         <div className="container-page grid grid-cols-[auto_1fr] items-center gap-4 py-4 lg:grid-cols-[220px_1fr_auto] lg:gap-8">
-          <Link href="/" className="block">
-            <Image
-              src="/brand/logo.webp"
-              alt="Korean Hive — authentic Korean skincare in Bangladesh"
-              width={220}
-              height={42}
-              priority
-              className="h-9 w-auto lg:h-[42px]"
-            />
-          </Link>
+          {/* drawer and logo share the first grid cell, so adding the mobile
+              menu does not disturb the desktop three-column layout */}
+          <div className="flex items-center gap-1">
+            <MobileNavDrawer />
+
+            <Link href="/" className="block">
+              <Image
+                src="https://ik.imagekit.io/koreanhive/logo.webp"
+                alt="Korean Hive — authentic Korean skincare in Bangladesh"
+                width={220}
+                height={42}
+                priority
+                className="h-9 w-auto lg:h-[42px]"
+              />
+            </Link>
+          </div>
 
           {/* Suspense is load-bearing: the box reads useSearchParams, and the
               header is on every page — unbounded, it would opt the whole site
@@ -54,8 +64,8 @@ export function SiteHeader() {
           </Suspense>
 
           <div className="flex items-center justify-end gap-4 text-xs text-muted-foreground lg:gap-5">
-            <Link href="/account" className="hidden hover:text-primary sm:block">
-              Account
+            <Link href="/track" className="hidden hover:text-primary sm:block">
+              Track Order
             </Link>
             <Link
               href="/wishlist"

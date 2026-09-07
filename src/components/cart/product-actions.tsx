@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { formatBDT } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { addToCartAction, buyNowAction } from "@/server/actions/cart";
+import { notifyCartChanged } from "@/lib/cart-events";
 
 type Variant = {
   id: string;
@@ -181,6 +182,7 @@ export function ProductActions({
               const result = await addToCartAction(data);
 
               if (result.ok) {
+                notifyCartChanged();
                 toast.success(result.message, {
                   description: `Quantity ${quantity}`,
                 });
