@@ -1,0 +1,164 @@
+name: CI
+
+# Runs on every push and every pull request. This is the gate the project has
+# never had: 131 tests cover the order-integrity, rate-limit, delivery-promise
+# and sale-scope fixes, and until now nothing stopped a change from quietly
+# undoing them.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+concurrency:
+  # a new push to the same branch cancels the run in flight
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Keep in step with the Node version the production host actually runs.
+  # Next.js 16 requires 20.9 or newer.
+  NODE_VERSION: "22.x"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  quality:
+    name: Lint, typecheck and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      # `npm ci` on Linux, which is the point: the committed lockfile is
+      # generated on Windows and drops the Linux-only optional dependencies.
+      # If this step fails on a missing platform package, run `npm run
+      # lock:linux` locally and commit the regenerated lockfile.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Unit and regression tests
+        run: npm test
+
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Six routes are prerendered by `next build` and query MongoDB, so the
+      # build genuinely needs a reachable database. Fail with a sentence that
+      # says what to do rather than a stack trace from Mongoose.
+      - name: Check build secrets
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+        run: |
+          if [ -z "$MONGODB_URI" ]; then
+            echo "::error::MONGODB_URI is not set. Add it under Settings → Secrets and variables → Actions."
+            echo "The build prerenders six routes that query MongoDB, so it cannot run without one."
+            exit 1
+          fi
+
+      - name: Build
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          # Inlined into the client bundle at build time, so it has to be the
+          # real public URL here — it cannot be corrected at runtime.
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+          NODE_ENV: production
+        run: npm run build
+
+      # The standalone output is the whole deployable: server.js plus only the
+      # node_modules Next actually traced as reachable. Keeping it as an
+      # artifact means a deploy job never has to rebuild.
+      - name: Package standalone output
+        run: |
+          mkdir -p deploy
+          cp -r .next/standalone/. deploy/
+          mkdir -p deploy/.next
+          cp -r .next/static deploy/.next/static
+          if [ -d public ]; then cp -r public deploy/public; fi
+          echo "${{ github.sha }}" > deploy/BUILD_SHA
+          du -sh deploy
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: standalone-${{ github.sha }}
+          path: deploy
+          retention-days: 7
+
+  deploy:
+    name: Deploy to cPanel
+    runs-on: ubuntu-latest
+    needs: build
+    # only the main branch ships, and only on a real push — never from a PR
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: standalone-${{ github.sha }}
+          path: deploy
+
+      # Passenger restarts the app when this file's timestamp changes. With no
+      # SSH there is no other way to restart from CI — cPanel → Node.js →
+      # Restart does exactly the same thing by hand.
+      - name: Stamp the restart trigger
+        run: |
+          mkdir -p deploy/tmp
+          echo "restarted for ${{ github.sha }} at $(date -u +%FT%TZ)" > deploy/tmp/restart.txt
+
+      # Incremental: the action keeps a state file on the server and uploads
+      # only what changed. The first deploy pushes the whole standalone tree
+      # and is slow; later ones are seconds.
+      - name: Upload over FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./deploy/
+          server-dir: ${{ vars.CPANEL_APP_PATH }}
+          # never let a deploy wipe files it does not know about
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/.cache/**
+
+      - name: Confirm the app is answering
+        run: |
+          echo "Waiting for Passenger to pick up the restart…"
+          sleep 25
+          for attempt in 1 2 3 4 5 6; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "${{ vars.NEXT_PUBLIC_SITE_URL }}/api/health" || echo "000")
+            if [ "$code" = "200" ]; then
+              echo "Health check passed on attempt $attempt."
+              exit 0
+            fi
+            echo "Attempt $attempt: /api/health returned $code. Retrying in 15s…"
+            sleep 15
+          done
+          echo "::error::/api/health never returned 200. The upload succeeded but the app is not serving."
+          echo "Check cPanel → Node.js → your app for the startup log, then Restart it by hand."
+          exit 1

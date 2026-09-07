@@ -45,6 +45,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Every product image is served from ImageKit, and the first of them
+            is the LCP element on most pages. Opening the TLS connection while
+            the HTML is still parsing takes the handshake off the critical
+            path — worth ~100-300ms on a Bangladeshi mobile connection. */}
+        <link rel="preconnect" href="https://ik.imagekit.io" crossOrigin="" />
+        <link rel="dns-prefetch" href="https://ik.imagekit.io" />
+      </head>
       <body
         className={cn(
           manrope.variable,

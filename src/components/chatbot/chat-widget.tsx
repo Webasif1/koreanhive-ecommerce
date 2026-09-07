@@ -1,8 +1,30 @@
 "use client";
 
 import { useRef, useState } from "react";
+import dynamic from "next/dynamic";
 
-import { ChatPanel, type ChatTurn } from "@/components/chatbot/chat-panel";
+import type { ChatTurn } from "@/components/chatbot/chat-panel";
+
+/**
+ * The panel — message list, product cards, quick replies, input — is the bulk
+ * of the assistant, and it shipped on every page even though most visitors
+ * never open it. Loaded on the first click instead. The launcher button below
+ * is the only part that has to be there from the start.
+ *
+ * `ssr: false` because nothing about a conversation that has not started yet
+ * belongs in the server HTML.
+ */
+const ChatPanel = dynamic(
+  () => import("@/components/chatbot/chat-panel").then((m) => m.ChatPanel),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full items-center justify-center border border-border bg-white text-sm text-muted-foreground">
+        Opening the assistant…
+      </div>
+    ),
+  },
+);
 import { OPENING_QUICK_REPLIES } from "@/data/chatbot/quick-replies";
 import { EMPTY_SLOTS, type ChatResponse, type Slots } from "@/lib/chatbot/types";
 

@@ -183,3 +183,183 @@
 @utility eyebrow {
   @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-primary;
 }
+
+/* ---------------------------------------------------------------
+   Welcome screen — components/layout/first-visit-loader.tsx
+
+   Hidden unless the inline gate script adds .kh-welcome to <html>,
+   so a repeat visit, a reduced-motion preference or a browser with
+   no sessionStorage pays nothing but a few bytes of markup.
+
+   Everything here is keyframes. The previous version used
+   framer-motion, which shipped on every page for a greeting shown
+   once a session.
+   --------------------------------------------------------------- */
+
+.kh-welcome-screen {
+  display: none;
+}
+
+/* the page underneath must not scroll while the overlay is up */
+html.kh-welcome,
+html.kh-welcome body {
+  overflow: hidden;
+}
+
+html.kh-welcome .kh-welcome-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: var(--brand-cream);
+  opacity: 1;
+  transition: opacity 400ms ease-out;
+}
+
+html.kh-welcome-out .kh-welcome-screen {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.kh-welcome-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.75rem;
+}
+
+/* --- the hive ------------------------------------------------- */
+
+.kh-hive {
+  overflow: visible;
+}
+
+.kh-hive use {
+  fill: var(--brand-mulberry);
+}
+
+/* six cells settle in around the centre, one after another */
+.kh-hex-ring use {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: kh-cell-settle 1.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  animation-delay: calc(var(--i) * 110ms);
+}
+
+.kh-hex-core {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: kh-core-pulse 1.6s ease-in-out infinite;
+}
+
+/* The lattice tiles exactly, so the cells would touch at scale 1. Holding
+   the settled state just under it leaves the thin gap that makes a honeycomb
+   read as a honeycomb rather than a solid blob. */
+@keyframes kh-cell-settle {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  22%,
+  55% {
+    opacity: 0.9;
+    transform: scale(0.93);
+  }
+  85%,
+  100% {
+    opacity: 0.12;
+    transform: scale(0.84);
+  }
+}
+
+@keyframes kh-core-pulse {
+  0%,
+  100% {
+    opacity: 0.18;
+    transform: scale(0.84);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(0.96);
+  }
+}
+
+/* --- wordmark and progress ------------------------------------ */
+
+.kh-welcome-mark {
+  height: 2.5rem;
+  width: auto;
+  opacity: 0;
+  animation: kh-rise 520ms 180ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes kh-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.kh-welcome-bar {
+  display: block;
+  height: 2px;
+  width: 10rem;
+  overflow: hidden;
+  background: var(--brand-rose-border);
+}
+
+.kh-welcome-bar > span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: left;
+  background: var(--brand-mulberry);
+  animation: kh-fill 1.9s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* eases towards full rather than reaching it, so the bar never sits
+   completed while the page is still settling */
+@keyframes kh-fill {
+  from {
+    transform: scaleX(0);
+  }
+  60% {
+    transform: scaleX(0.72);
+  }
+  to {
+    transform: scaleX(0.94);
+  }
+}
+
+/* Belt and braces: the gate script already refuses to run under a
+   reduced-motion preference, but if the class is ever set another
+   way, hold everything still. */
+@media (prefers-reduced-motion: reduce) {
+  .kh-hex-ring use,
+  .kh-hex-core,
+  .kh-welcome-mark,
+  .kh-welcome-bar > span {
+    animation: none;
+    opacity: 1;
+  }
+
+  /* the still frame keeps the same gap the animated one settles to */
+  .kh-hex-ring use,
+  .kh-hex-core {
+    transform: scale(0.93);
+  }
+
+  .kh-welcome-mark {
+    transform: none;
+  }
+
+  .kh-welcome-bar > span {
+    transform: scaleX(0.94);
+  }
+}

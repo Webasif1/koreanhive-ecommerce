@@ -9,8 +9,16 @@ const nextConfig: NextConfig = {
   // copies that instead of installing dependencies again.
   output: "standalone",
   images: {
-    // built from the same list the product importer validates against, so an
-    // imported image URL can never be one the storefront refuses to render
+    // ImageKit resizes, not our server. Next's built-in optimizer needs
+    // `sharp` — a native binary, and the most common thing to fail on shared
+    // hosting — and burns CPU and memory doing work a transformation CDN is
+    // already there to do. See src/lib/image-loader.ts; remove these two lines
+    // to hand the job back to Next.
+    loader: "custom",
+    loaderFile: "./src/lib/image-loader.ts",
+    // Kept even though a custom loader bypasses them: the product importer
+    // validates against the same list, so leaving it here keeps one source of
+    // truth if the loader is ever removed.
     remotePatterns: ALLOWED_IMAGE_HOSTS.map((hostname) => ({
       protocol: "https" as const,
       hostname,
