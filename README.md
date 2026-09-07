@@ -27,7 +27,7 @@ Premium Korean beauty & skincare e-commerce platform for Bangladesh. A fast, SEO
 | Admin | Hand-built commerce admin |
 | Chat | Rule engine, optionally augmented by Google Gemini |
 | Payments | Cash on Delivery |
-| Hosting | Docker (`node:24-alpine`, standalone) · MongoDB Atlas |
+| Hosting | cPanel + Phusion Passenger (Node 22, standalone output) · MongoDB Atlas |
 
 Planned but **not built**: Meilisearch, phone OTP, SSLCommerz. Their
 environment variables are stubbed in `.env.example` and unused.
@@ -56,33 +56,36 @@ npm run dev
 
 App runs at `http://localhost:3000`.
 
-## 🐳 Docker
+## 🚢 Deployment
 
-```bash
-# app only, against MongoDB Atlas (reads MONGODB_URI from .env)
-docker compose up --build
+Production runs on **shared cPanel hosting** behind Phusion Passenger, and
+ships from GitHub Actions. There is no container anywhere in the pipeline.
 
-# app + a local single-node replica set, if you want to work offline
-docker compose --profile local-db up --build
+```
+push to main
+  -> quality   npm ci, lint, tsc --noEmit, 131 tests
+  -> build     next build, package .next/standalone as an artifact
+  -> deploy    FTPS upload to the cPanel app path, stamp tmp/restart.txt,
+               poll /api/health until it answers 200
 ```
 
-Or build the image directly:
+The pipeline lives in [`.github/workflows/ci.yml`](.github/workflows/ci.yml);
+the host setup, environment variables and every footgun are written up in
+**[docs/DEPLOY-CPANEL.md](docs/DEPLOY-CPANEL.md)**.
 
-```bash
-docker build \
-  --secret id=mongodb_uri,env=MONGODB_URI \
-  --build-arg NEXT_PUBLIC_SITE_URL=https://your-domain.com \
-  -t koreanhive .
-```
-
-Two things worth knowing:
+Three things worth knowing:
 
 - **The build needs a reachable database.** Six routes are prerendered by
-  `next build` and query MongoDB. The URI is passed as a BuildKit *secret*
-  rather than a build arg, so it never lands in `docker history`.
+  `next build` and query MongoDB, so `MONGODB_URI` has to be set as a GitHub
+  Actions secret and Atlas has to accept connections from the runner.
 - **MongoDB must be a replica set.** Checkout writes the order in a
-  transaction, which standalone `mongod` does not support. Atlas is a replica
-  set by default; the bundled `local-db` service runs one deliberately.
+  transaction, which a standalone `mongod` does not support. Atlas is a
+  replica set by default; a hand-rolled local `mongod` is not, and will fail
+  at checkout and nowhere else.
+- **Regenerate the lock file after any `npm install`.** Windows drops the
+  platform-gated optional dependencies and `npm ci` on the Linux runner then
+  refuses to install. Run `npm run lock:fix` and commit `package-lock.json`.
+
 
 ## 📁 Project Structure
 

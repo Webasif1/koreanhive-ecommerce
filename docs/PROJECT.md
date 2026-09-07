@@ -57,7 +57,7 @@ product has an image — both enforced by `npm run catalogue:verify`.
 | Images | ImageKit CDN through `next/image` |
 | Chat | Rule engine, optionally augmented by Google Gemini |
 | Payments | Cash on delivery |
-| Container | Docker, `node:24-alpine`, standalone output, non-root |
+| Hosting | cPanel + Phusion Passenger, Node 22, `output: "standalone"` |
 
 **Not built, despite appearing in the original brief:** Meilisearch (search is
 MongoDB regex), Payload CMS (the admin is hand-built), phone OTP, SSLCommerz.
@@ -88,7 +88,7 @@ Auth.js (JWT) ── requireAdmin() on every admin mutation
 Mongoose 9 → MongoDB Atlas        Cart + coupon → httpOnly cookies
    │
    ▼
-Docker: standalone server.js, healthcheck on /api/health
+Passenger runs .next/standalone/server.js; /api/health reports liveness
 ```
 
 **Cart and coupon state live in `httpOnly` cookies, holding ids and quantities
@@ -180,11 +180,13 @@ every row before writing.
 | `npm run combos:sync` | Publish routine bundles, refusing broken ones |
 | `npm run db:seed` | Delivery zones and the launch coupon only |
 | `npm run admin:create` | Create/update the staff login from `.env` |
-| `npm run docker:up` | Regenerate the Linux lockfile, then build and run |
+| `npm run lock:fix` | Repair `package-lock.json` after an `npm install` |
 
-**Always use `npm run docker:up` rather than `docker compose up`.** Installing
-packages on Windows silently drops the Linux-only optional dependencies, and
-`npm ci` then fails inside Alpine. The wrapper regenerates the lockfile first.
+**Run `npm run lock:fix` after any `npm install` on Windows, and commit the
+result.** A plain install writes a lock file describing only what it installed,
+dropping the platform-gated `@emnapi/*` packages the wasm fallbacks need. `npm
+ci` on the Linux CI runner then refuses with `Missing: @emnapi/runtime from
+lock file`. The script re-resolves the full graph and verifies the result.
 
 ---
 
@@ -283,18 +285,20 @@ the assistant and no direct route.
 
 ## 9. Deployment
 
-```bash
-npm run lock:linux          # required after any npm install on Windows
-npm run docker:up
-```
+Deployment is **shared cPanel hosting behind Phusion Passenger**, driven by
+GitHub Actions (`.github/workflows/ci.yml`): `quality` -> `build` -> `deploy`.
+The build job packages `.next/standalone` as an artifact; the deploy job
+uploads it over FTPS, stamps `tmp/restart.txt` so Passenger reloads, and polls
+`/api/health` until it answers 200. Step-by-step host setup is in
+[DEPLOY-CPANEL.md](DEPLOY-CPANEL.md).
 
 Required environment variables: `MONGODB_URI`, `AUTH_SECRET`,
 `NEXT_PUBLIC_SITE_URL`, `SHEET_CSV_URL`. Optional: `GEMINI_API_KEY`.
 `ADMIN_EMAIL` / `ADMIN_PASSWORD` are read once by `npm run admin:create`.
 
 The build prerenders pages that query MongoDB, so it needs a reachable
-database. The URI is passed as a BuildKit **secret**, not a build argument, so
-it never lands in `docker history`.
+database. In CI the URI comes from the `MONGODB_URI` Actions **secret**, which
+is masked in logs and never written into the build output.
 
 After deploying: `npm run catalogue:sync && npm run catalogue:verify`.
 

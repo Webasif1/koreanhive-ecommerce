@@ -4,9 +4,11 @@ import type { NextConfig } from "next";
 import { ALLOWED_IMAGE_HOSTS } from "./src/lib/image-hosts";
 
 const nextConfig: NextConfig = {
-  // Emits .next/standalone with a self-contained server.js and only the
-  // node_modules actually traced as reachable — the Docker runtime stage
-  // copies that instead of installing dependencies again.
+  // Emits .next/standalone: a self-contained server.js plus only the
+  // node_modules Next traced as reachable. This is what gets deployed —
+  // cPanel has no `npm install` we can trust and Phusion Passenger just runs
+  // the entry file, so shipping a pre-traced tree is the whole strategy.
+  // Do not remove this; the CI deploy job packages .next/standalone verbatim.
   output: "standalone",
   images: {
     // ImageKit resizes, not our server. Next's built-in optimizer needs
