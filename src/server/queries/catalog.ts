@@ -1,6 +1,8 @@
 import "server-only";
 
 import { unstable_cache } from "next/cache";
+
+import { truncateBenefit } from "@/lib/format";
 import type { QueryFilter, Types } from "mongoose";
 
 import { PER_PAGE } from "@/lib/listing-params";
@@ -119,7 +121,7 @@ function toCard(
     stock: product.stock,
     ratingAvg: product.ratingAvg,
     ratingCount: product.ratingCount,
-    benefit: product.shortDescription ?? null,
+    benefit: truncateBenefit(product.shortDescription),
     brand: product.brandId
       ? (brands.get(product.brandId.toString()) ?? null)
       : null,
@@ -185,6 +187,11 @@ export type CatalogListing = {
   perPage: number;
   /** at least 1, so an empty result still renders a single (empty) page */
   totalPages: number;
+  /** Brands with at least one published product, site-wide — NOT scoped to
+   *  the current listing. The sidebar's "browse by brand" blurb used
+   *  facets.brands.length, which showed 1 on a brand page and 0 on an empty
+   *  one. This is the directory total that link actually leads to. */
+  brandDirectoryCount: number;
   facets: {
     categories: FacetOption[];
     brands: FacetOption[];
@@ -247,8 +254,19 @@ async function findPage(
   ]);
 }
 
-function saleClause() {
-  return { comparePrice: { $ne: null, $gt: 0 } };
+/**
+ * A product is on sale only when its compare price is genuinely *above* its
+ * price. This used to test `comparePrice != null && > 0`, which never compared
+ * the two — and `catalogue:verify` only rejects a compare price *below* price,
+ * so the very common `comparePrice === price` row counted as discounted. The
+ * effect was that /deals advertised the entire catalogue as "marked down" and
+ * the "On discount" facet matched everything.
+ */
+export function saleScope(): ProductFilter {
+  return {
+    comparePrice: { $ne: null, $gt: 0 },
+    $expr: { $gt: ["$comparePrice", "$price"] },
+  };
 }
 
 /**
@@ -324,7 +342,7 @@ export async function getCatalogListing({
     category: selectedCategoryIds.length
       ? { categoryId: { $in: selectedCategoryIds } }
       : {},
-    onSale: filters.onSale ? saleClause() : {},
+    onSale: filters.onSale ? saleScope() : {},
     inStock: filters.inStock ? { stock: { $gt: 0 } } : {},
     inCombo: filters.inCombo ? { slug: { $in: comboSlugs } } : {},
     rating: filters.minRating
@@ -367,6 +385,7 @@ export async function getCatalogListing({
     rating45Count,
     rating40Count,
     priceRange,
+    brandDirectoryRows,
   ] = await Promise.all([
     findPage(fullFilter, sort, (page - 1) * perPage, perPage),
     Product.countDocuments(fullFilter),
@@ -379,7 +398,7 @@ export async function getCatalogListing({
       { $match: categoryFacetFilter },
       { $group: { _id: "$categoryId", count: { $sum: 1 } } },
     ]),
-    Product.countDocuments({ ...without("onSale"), ...saleClause() }),
+    Product.countDocuments({ ...without("onSale"), ...saleScope() }),
     Product.countDocuments({ ...without("inStock"), stock: { $gt: 0 } }),
     Product.countDocuments({
       ...without("inCombo"),
@@ -398,6 +417,11 @@ export async function getCatalogListing({
     Product.aggregate<{ min: number; max: number }>([
       { $match: without("price") },
       { $group: { _id: null, min: { $min: "$price" }, max: { $max: "$price" } } },
+    ]),
+    // site-wide, deliberately ignoring `base` and every filter
+    Product.aggregate<{ _id: unknown }>([
+      { $match: { isActive: true, brandId: { $ne: null } } },
+      { $group: { _id: "$brandId" } },
     ]),
   ]);
 
@@ -418,6 +442,7 @@ export async function getCatalogListing({
     page,
     perPage,
     totalPages: Math.max(1, Math.ceil(total / perPage)),
+    brandDirectoryCount: brandDirectoryRows.length,
     facets: {
       // a facet with nothing behind it is noise, so empty options are dropped
       brands: allBrands
@@ -675,14 +700,23 @@ export async function getBrandScope(slug: string) {
 export async function getSitemapEntries() {
   await connectDb();
 
-  const [products, categories, brands] = await Promise.all([
+  const [products, categories, brands, stockedBrandRows] = await Promise.all([
     Product.find({ isActive: true })
       .select("slug updatedAt")
       .sort({ updatedAt: -1 })
       .lean(),
     Category.find({ isActive: true }).select("slug updatedAt").lean(),
     Brand.find({ isActive: true }).select("slug updatedAt").lean(),
+    // brands that actually have something to show
+    Product.aggregate<{ _id: unknown }>([
+      { $match: { isActive: true, brandId: { $ne: null } } },
+      { $group: { _id: "$brandId" } },
+    ]),
   ]);
+
+  // Six brands hold nothing but image-less drafts. Submitting their pages was
+  // six thin, empty results for Google and six dead ends for shoppers.
+  const stocked = new Set(stockedBrandRows.map((row) => String(row._id)));
 
   return {
     products: products.map((p) => ({ slug: p.slug, updatedAt: p.updatedAt })),
@@ -690,7 +724,9 @@ export async function getSitemapEntries() {
       slug: c.slug,
       updatedAt: c.updatedAt,
     })),
-    brands: brands.map((b) => ({ slug: b.slug, updatedAt: b.updatedAt })),
+    brands: brands
+      .filter((b) => stocked.has(b._id.toString()))
+      .map((b) => ({ slug: b.slug, updatedAt: b.updatedAt })),
   };
 }
 
@@ -1135,16 +1171,21 @@ export async function getBrands() {
     rows.filter((r) => r._id).map((r) => [String(r._id), r.count]),
   );
 
-  return brands.map((brand) => ({
-    id: brand._id.toString(),
-    name: brand.name,
-    slug: brand.slug,
-    description: brand.description ?? null,
-    _count: { products: counts.get(brand._id.toString()) ?? 0 },
-  }));
+  // A tile reading "0 products" is a dead end for the shopper and a thin page
+  // for Google. Brands whose whole range is still in draft simply do not show
+  // until they have something published.
+  return brands
+    .map((brand) => ({
+      id: brand._id.toString(),
+      name: brand.name,
+      slug: brand.slug,
+      description: brand.description ?? null,
+      _count: { products: counts.get(brand._id.toString()) ?? 0 },
+    }))
+    .filter((brand) => brand._count.products > 0);
 }
 
-export async function getDeliveryZones() {
+async function deliveryZones() {
   await connectDb();
 
   const zones = await DeliveryZone.find({ isActive: true })
@@ -1161,3 +1202,18 @@ export async function getDeliveryZones() {
     maxDays: zone.maxDays,
   }));
 }
+
+/**
+ * Cached, because the storefront chrome now reads it on every page to render
+ * the free-delivery promise. Two rows that change a few times a year must not
+ * cost a round trip per request — and, more importantly, an uncached read in
+ * the layout would opt every route out of static rendering.
+ *
+ * Tagged "delivery-zones", the same tag the chat assistant's policy facts use,
+ * so one revalidation refreshes both.
+ */
+export const getDeliveryZones = unstable_cache(
+  deliveryZones,
+  ["delivery-zones"],
+  { revalidate: 3600, tags: ["delivery-zones"] },
+);

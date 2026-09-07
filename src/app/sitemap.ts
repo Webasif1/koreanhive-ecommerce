@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 
+import { CONCERNS } from "@/data/concerns";
 import { absoluteUrl } from "@/lib/site";
 import { getSitemapEntries } from "@/server/queries/catalog";
 
@@ -14,8 +15,11 @@ const STATIC_ROUTES: {
   { path: "/shop", priority: 0.9, changeFrequency: "daily" },
   { path: "/categories", priority: 0.8, changeFrequency: "weekly" },
   { path: "/brands", priority: 0.8, changeFrequency: "weekly" },
+  // indexable listings that were reachable from the nav but absent here
+  { path: "/deals", priority: 0.8, changeFrequency: "daily" },
+  { path: "/concerns", priority: 0.8, changeFrequency: "weekly" },
+  { path: "/combos", priority: 0.7, changeFrequency: "weekly" },
   { path: "/track", priority: 0.7, changeFrequency: "monthly" },
-  { path: "/blog", priority: 0.6, changeFrequency: "weekly" },
   { path: "/about", priority: 0.5, changeFrequency: "monthly" },
   { path: "/contact", priority: 0.5, changeFrequency: "monthly" },
   { path: "/shipping", priority: 0.5, changeFrequency: "monthly" },
@@ -46,6 +50,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: category.updatedAt,
       changeFrequency: "weekly" as const,
       priority: 0.7,
+    })),
+    ...CONCERNS.map((concern) => ({
+      url: absoluteUrl(`/concern/${concern.slug}`),
+      lastModified: now,
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
     })),
     ...brands.map((brand) => ({
       url: absoluteUrl(`/brand/${brand.slug}`),
