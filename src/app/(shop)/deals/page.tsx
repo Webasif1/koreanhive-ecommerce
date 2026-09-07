@@ -7,7 +7,7 @@ import {
   parseListingParams,
   type ListingSearchParams,
 } from "@/lib/listing-params";
-import { getCatalogListing } from "@/server/queries/catalog";
+import { getCatalogListing, saleScope } from "@/server/queries/catalog";
 
 export async function generateMetadata({
   searchParams,
@@ -35,8 +35,9 @@ export default async function DealsPage({
   const sort = raw.sort ? requestedSort : "discount";
 
   const listing = await getCatalogListing({
-    // being discounted is the scope here, not a toggle
-    scope: { comparePrice: { $ne: null, $gt: 0 } },
+    // being discounted is the scope here, not a toggle. Same test the
+    // "On discount" facet uses, so the page and the filter can never disagree.
+    scope: saleScope(),
     filters,
     sort,
     page,

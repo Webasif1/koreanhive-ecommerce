@@ -17,7 +17,7 @@ export const mainNav: NavItem[] = [
   { href: "/concerns", label: "Skin Concerns" },
   { href: "/brands", label: "Korean Brands" },
   { href: "/shop?sort=newest", label: "New Arrivals" },
-  { href: "/blog", label: "Journal" },
+  { href: "/deals", label: "Hot Deals" },
 ];
 
 /** Footer link groups. */
@@ -45,7 +45,6 @@ export const footerNav: { title: string; items: NavItem[] }[] = [
     title: "Company",
     items: [
       { href: "/about", label: "About Korean Hive" },
-      { href: "/blog", label: "The Hive Journal" },
       { href: "/privacy", label: "Privacy Policy" },
       { href: "/terms", label: "Terms & Conditions" },
     ],
