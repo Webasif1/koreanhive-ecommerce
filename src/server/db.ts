@@ -34,6 +34,16 @@ export async function connectDb() {
     cached.promise = mongoose.connect(uri, {
       bufferCommands: false,
       maxPoolSize: 10,
+      // Mongoose waits 30s by default before giving up on finding a server.
+      // Behind Passenger that is not a slow page, it is an outage: each stuck
+      // request holds a worker, the small pool fills, and pages that never
+      // touch the database stop being served too. Eight seconds is far more
+      // than a healthy Atlas connection needs (typically under a second) and
+      // turns "the whole site is frozen" into "these pages error, the
+      // prerendered ones still work".
+      serverSelectionTimeoutMS: 8000,
+      connectTimeoutMS: 8000,
+      socketTimeoutMS: 20000,
     });
   }
 
