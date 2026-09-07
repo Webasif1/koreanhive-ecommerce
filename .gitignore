@@ -44,3 +44,7 @@ yarn-error.log*
 .vscode/*
 !.vscode/extensions.json
 .claude
+
+# QA reports and scratch bundles — kept local, not part of the repo
+docs/QA-*.md
+_to_delete/
