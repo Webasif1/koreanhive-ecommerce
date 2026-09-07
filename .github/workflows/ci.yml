@@ -266,6 +266,29 @@ jobs:
         run: |
           mkdir -p deploy/tmp
           echo "restarted for ${{ github.sha }} at $(date -u +%FT%TZ)" > deploy/tmp/restart.txt
+          # Two invocations on purpose. lftp's `mkdir -p` is NOT POSIX `mkdir
+          # -p`: it answers `550 File exists` when the directory is already
+          # there, and cmd:fail-exit turns that into a failed job. tmp/ exists
+          # on any cPanel Node app after the first deploy, so that is the
+          # normal case, not the edge case. The mkdir is best-effort, kept only
+          # for a first deploy into an empty directory; the put is the part
+          # that must succeed.
+          #
+          # Verified against a live FTPS server, all four cases:
+          #   tmp/ exists, old single-command form  -> 550, exit 1, no upload
+          #   tmp/ exists, this form                -> exit 0, trigger replaced
+          #   tmp/ absent, this form                -> exit 0, created + written
+          #   bad remote path                       -> exit 1, still fails loudly
+          lftp -c "
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:passive-mode true;
+            set ssl:verify-certificate no;
+            open -u \"$FTP_USERNAME\",\"$FTP_PASSWORD\" \"$FTP_SERVER\";
+            mkdir -f -p \"$REMOTE_DIR/tmp\";
+            bye
+          " || echo "tmp/ already exists — continuing."
+
           lftp -c "
             set ftp:ssl-force true;
             set ftp:ssl-protect-data true;
@@ -273,7 +296,6 @@ jobs:
             set ssl:verify-certificate no;
             set cmd:fail-exit true;
             open -u \"$FTP_USERNAME\",\"$FTP_PASSWORD\" \"$FTP_SERVER\";
-            mkdir -p \"$REMOTE_DIR/tmp\";
             put -O \"$REMOTE_DIR/tmp\" deploy/tmp/restart.txt;
             bye
           "
