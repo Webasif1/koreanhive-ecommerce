@@ -26,9 +26,9 @@ jobs:
     name: Lint, typecheck and test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -54,9 +54,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: quality
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -67,15 +67,56 @@ jobs:
       # Six routes are prerendered by `next build` and query MongoDB, so the
       # build genuinely needs a reachable database. Fail with a sentence that
       # says what to do rather than a stack trace from Mongoose.
+      #
+      # Reports every secret and variable the job can see, so a missing one is
+      # distinguishable from a mis-scoped one at a glance. Only presence and
+      # length are printed — never a value. GitHub masks secrets in logs, but
+      # this step is written so there is nothing to mask in the first place.
       - name: Check build secrets
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          VAR_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+          VAR_APP_PATH: ${{ vars.CPANEL_APP_PATH }}
         run: |
+          report() {
+            if [ -n "$2" ]; then
+              printf '  %-22s present (%s chars)\n' "$1" "${#2}"
+            else
+              printf '  %-22s MISSING\n' "$1"
+            fi
+          }
+          echo "Secrets visible to this job:"
+          report "MONGODB_URI"           "$MONGODB_URI"
+          report "AUTH_SECRET"           "$AUTH_SECRET"
+          report "FTP_SERVER"            "$FTP_SERVER"
+          report "FTP_USERNAME"          "$FTP_USERNAME"
+          report "FTP_PASSWORD"          "$FTP_PASSWORD"
+          echo "Variables visible to this job:"
+          report "NEXT_PUBLIC_SITE_URL"  "$VAR_SITE_URL"
+          report "CPANEL_APP_PATH"       "$VAR_APP_PATH"
+
           if [ -z "$MONGODB_URI" ]; then
-            echo "::error::MONGODB_URI is not set. Add it under Settings → Secrets and variables → Actions."
-            echo "The build prerenders six routes that query MongoDB, so it cannot run without one."
+            echo "::error::MONGODB_URI is empty in this job. The build prerenders six routes that query MongoDB, so it cannot run without one."
+            echo "If the list above shows every secret as MISSING, they are scoped somewhere this job cannot read:"
+            echo "  - they were added under Dependabot or Codespaces rather than Actions, or"
+            echo "  - they are Environment secrets on an environment this job does not declare, or"
+            echo "  - they were added to a different repository."
+            echo "Repository secrets live at Settings -> Secrets and variables -> Actions -> Secrets tab -> Repository secrets."
+            echo "If only MONGODB_URI is MISSING, the name does not match exactly - it is case-sensitive."
             exit 1
           fi
+
+          case "$MONGODB_URI" in
+            mongodb://*|mongodb+srv://*) ;;
+            *)
+              echo "::error::MONGODB_URI does not start with mongodb:// or mongodb+srv://. Paste the driver connection string from Atlas -> Connect -> Drivers, with <password> replaced."
+              exit 1
+              ;;
+          esac
 
       - name: Build
         env:
