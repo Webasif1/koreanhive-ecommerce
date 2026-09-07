@@ -206,32 +206,78 @@ jobs:
             exit 1
           fi
 
-      # Passenger restarts the app when this file's timestamp changes. With no
-      # SSH there is no other way to restart from CI — cPanel → Node.js →
-      # Restart does exactly the same thing by hand.
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      # Why not SamKirkland/FTP-Deploy-Action: it uploads strictly one file at
+      # a time. A Next.js standalone build with every product prerendered is
+      # ~9,500 files, and FTP costs a round trip per file — the first deploy
+      # measured 80 kB/s with 3m42s spent purely on "changing dirs", and a
+      # later one took over half an hour. The bottleneck is latency, not
+      # bandwidth, so the fix is concurrency: `mirror --parallel` opens several
+      # transfers at once and the round trips overlap.
+      #
+      # If the host answers "421 Too many connections", lower PARALLEL to 4.
+      # Shared cPanel plans commonly cap concurrent FTP sessions per IP at 8.
+      - name: Upload over FTPS
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          REMOTE_DIR: ${{ vars.CPANEL_APP_PATH }}
+          PARALLEL: "8"
+        run: |
+          echo "Uploading $(find deploy -type f ! -path 'deploy/tmp/*' | wc -l) files with $PARALLEL parallel transfers…"
+          lftp -c "
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:passive-mode true;
+            # Shared cPanel hosts present the server's own certificate, not one
+            # for ftp.<yourdomain>, so verification cannot succeed. The channel
+            # is still encrypted — the credential is never sent in clear — it
+            # is simply not authenticated. Everything being shipped here is a
+            # public website build.
+            set ssl:verify-certificate no;
+            set net:max-retries 3;
+            set net:reconnect-interval-base 5;
+            set net:timeout 20;
+            set mirror:parallel-transfer-count $PARALLEL;
+            set cmd:fail-exit true;
+            open -u \"$FTP_USERNAME\",\"$FTP_PASSWORD\" \"$FTP_SERVER\";
+            mirror --reverse --continue --no-perms --parallel=$PARALLEL \
+                   --exclude '(^|/)\.git(/|\$)' \
+                   --exclude '(^|/)node_modules/\.cache(/|\$)' \
+                   --exclude '(^|/)tmp(/|\$)' \
+                   ./deploy/ \"$REMOTE_DIR\";
+            bye
+          "
+
+      # Deliberately after the mirror, and on its own. Passenger restarts the
+      # app the moment this file's timestamp changes, so uploading it inside a
+      # parallel transfer could restart onto a half-written tree — the mirror
+      # excludes tmp/ for exactly this reason. With no SSH this is the only way
+      # to restart from CI; cPanel → Node.js → Restart does the same by hand.
       - name: Stamp the restart trigger
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          REMOTE_DIR: ${{ vars.CPANEL_APP_PATH }}
         run: |
           mkdir -p deploy/tmp
           echo "restarted for ${{ github.sha }} at $(date -u +%FT%TZ)" > deploy/tmp/restart.txt
-
-      # Incremental: the action keeps a state file on the server and uploads
-      # only what changed. The first deploy pushes the whole standalone tree
-      # and is slow; later ones are seconds.
-      - name: Upload over FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftps
-          local-dir: ./deploy/
-          server-dir: ${{ vars.CPANEL_APP_PATH }}
-          # never let a deploy wipe files it does not know about
-          dangerous-clean-slate: false
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/.cache/**
+          lftp -c "
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:passive-mode true;
+            set ssl:verify-certificate no;
+            set cmd:fail-exit true;
+            open -u \"$FTP_USERNAME\",\"$FTP_PASSWORD\" \"$FTP_SERVER\";
+            mkdir -p \"$REMOTE_DIR/tmp\";
+            put -O \"$REMOTE_DIR/tmp\" deploy/tmp/restart.txt;
+            bye
+          "
+          echo "Restart trigger stamped. Passenger will reload on the next request."
 
       - name: Confirm the app is answering
         run: |
