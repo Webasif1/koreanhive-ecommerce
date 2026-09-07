@@ -4,7 +4,7 @@ A working record of what this application is, what has been built, and what is
 still open. Written against the live code and database, not from memory — every
 figure below was read off the running system.
 
-_Last updated: 2026-09-06 · 55 commits_
+_Last updated: 2026-09-07 · post-QA remediation pass_
 
 ---
 
@@ -36,7 +36,7 @@ a modern stack. The commercial shape drives most of the technical decisions:
 | Brands | **77** |
 | Categories | **13** (12 from the sheet + a `Skincare` parent) |
 | Prerendered product pages | 279 |
-| Tests | **81 passing**, 18 suites |
+| Tests | **131 passing**, 29 suites |
 | Dependency vulnerabilities | **0** (`npm audit --omit=dev`) |
 | Orders placed | 3 (test orders) |
 
@@ -196,13 +196,17 @@ Verified by reading the code, not assumed:
   per function. Server Actions are public endpoints, so this does not rely on
   the proxy having run.
 - **Passwords** — scrypt, 16-byte random salt, `timingSafeEqual`.
-- **Login** — 5 attempts per 15 minutes, keyed on IP *and* email.
+- **Login** — 5 attempts per 15 minutes, keyed on IP *and* email. The IP half
+  needs `TRUSTED_PROXY_HOPS` set; the email half always applies and is what
+  bounds a brute force against a known account.
 - **Cookies** — `httpOnly`, `sameSite: lax`, `secure` in production.
 - **Shipping cost is derived on the server** from the district, which is itself
   validated against an allow-list. It was previously read from a hidden form
   field, which let a crafted request pay ৳60 instead of ৳120.
 - **Checkout** runs in a transaction with conditional stock decrements, so
-  concurrent orders cannot oversell.
+  concurrent orders cannot oversell. Each filled cart also mints a token that
+  is stored on the order under a unique index, so two tabs submitting at once
+  produce one order and the loser is shown it rather than charged twice.
 - **Search input is regex-escaped** — `.*` returns nothing, not the catalogue.
 - **Chat endpoint** is rate-limited, length-capped, stateless, and writes
   nothing.
@@ -220,39 +224,51 @@ Verified by reading the code, not assumed:
 
 ### Worth doing first
 
-**`notFound()` returns HTTP 200 across the whole app.** Storefront routes
-stream, so the status commits before the page body runs. The 404 *page* renders
-correctly; the status code is wrong. This is not theoretical — it has already
-concealed a dead header nav link and six dead concern tiles, and misled a
-verification pass. Nothing automated can catch a broken link while it persists.
+**Set `TRUSTED_PROXY_HOPS` before going live.** Rate limiting resolves the
+caller from `X-Forwarded-For` counted from the right. It defaults to **0 —
+trust nothing**, because with no proxy in front the "last hop" of a one-entry
+header is whatever the client wrote, and an unconfigured deployment would keep
+believing spoofed addresses. While it is 0, per-IP limits are disabled (the
+login's per-email limit still applies) and the server logs a warning once. Set
+it to 1 behind a single reverse proxy, 2 behind a CDN plus load balancer.
+
+**Configure the contact channels.** `/contact` renders only the channels set in
+the environment (`NEXT_PUBLIC_CONTACT_EMAIL`, `_PHONE`, `_WHATSAPP`). Nothing
+is published until they exist, so customers currently get the tracking page and
+the assistant and no direct route.
 
 ### Infrastructure
 
 - **No CI.** Nothing enforces lint, typecheck, tests or build before a deploy.
+  This is now the largest remaining gap: the fixes below are covered by tests,
+  but nothing stops the next change from undoing them.
 - **No error tracking or uptime monitoring.** Three `console.error` calls total.
 - **Backups unverified.** Atlas settings are not visible from the repo; on the
   free tier there are none. Orders are the only irreplaceable data.
 
 ### Performance and data
 
-- Four missing indexes on paths that run: `categoryId`, `brandId`, `price`,
-  `ratingCount` (each paired with `isActive`).
-- Admin lists are unbounded and unpaginated — `Product.find({})` has no limit
-  and no projection; orders are capped at 100, so order 101 is unreachable.
+- Indexes added for the paths that run: `categoryId`, `brandId`, `price`,
+  `ratingCount` and `comparePrice` (each paired with `isActive`), plus
+  `placedAt` on orders. **They exist in the schema but Mongoose only builds
+  them on connect — confirm they are present in Atlas after the first deploy.**
+- Admin lists are paginated (50 per page) and projected.
 
 ### Content
 
 - **Product descriptions render raw markdown** — `**bold**` shows its asterisks
-  on every product with a full description.
+  on every product with a full description. Still open.
 - **Four spec tiles are hardcoded on all 279 product pages**, including
   "Routine step: After toner, before moisturiser" shown on toners.
 - **66 products are drafts** awaiting images.
 - **Three routine combos are blocked** pending two products that do not exist in
   the catalogue (Dr. Althea 345 Relief Cream, Anua Niacinamide 10% + TXA 4%
   Serum) and their prices.
-- **Ratings are the sheet's own values**, not real customer reviews. The
-  `Review` model exists and is unused. Stars will look uniform until either real
-  figures are imported or the display is hidden.
+- **Ratings are the sheet's own values**, not real customer reviews. Stars and
+  the `AggregateRating` structured data are now hidden behind
+  `NEXT_PUBLIC_SHOW_RATINGS`, off by default — publishing unearned review markup
+  is a manual-action risk for the whole domain. Turn it on when the `Review`
+  model is actually in use.
 
 ### Untested
 
