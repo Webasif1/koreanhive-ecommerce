@@ -241,8 +241,21 @@ const productSchema = new Schema<ProductDoc>(
 
 productSchema.index({ isActive: 1, isFeatured: 1 });
 productSchema.index({ isActive: 1, createdAt: -1 });
-// the advisor's main query: active products targeting a given concern
+// the advisor's main query, and now the /concern/[slug] listings too
 productSchema.index({ isActive: 1, concerns: 1 });
+
+/**
+ * The four paths every listing page actually runs, none of which were indexed.
+ * Each is paired with isActive because no storefront query ever asks for a
+ * product without it, and the sort key is included so the index can serve the
+ * ordering as well as the match.
+ */
+productSchema.index({ isActive: 1, categoryId: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, brandId: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, price: 1 });
+productSchema.index({ isActive: 1, ratingCount: -1 });
+// /deals and the "On discount" facet
+productSchema.index({ isActive: 1, comparePrice: 1 });
 
 // ---------------------------------------------------------- commerce
 
@@ -308,6 +321,19 @@ const couponSchema = new Schema<CouponDoc>(
   { timestamps: true },
 );
 
+/** The single list every status write is validated against. Kept here rather
+ *  than imported from lib/order-status so the seed and admin CLI scripts,
+ *  which import this file from plain Node, do not pull in the app aliases. */
+export const ORDER_STATUSES = [
+  "PENDING",
+  "CONFIRMED",
+  "PROCESSING",
+  "SHIPPED",
+  "DELIVERED",
+  "CANCELLED",
+  "RETURNED",
+] as const;
+
 export type OrderStatus =
   | "PENDING"
   | "CONFIRMED"
@@ -353,7 +379,7 @@ export type OrderStatusHistorySub = {
 };
 
 const orderStatusHistorySchema = new Schema<OrderStatusHistorySub>({
-  status: { type: String, required: true },
+  status: { type: String, enum: ORDER_STATUSES, required: true },
   note: { type: String, default: null },
   createdBy: { type: String, default: null },
   createdAt: { type: Date, default: Date.now },
@@ -362,6 +388,8 @@ const orderStatusHistorySchema = new Schema<OrderStatusHistorySub>({
 export type OrderDoc = {
   _id: Types.ObjectId;
   orderNumber: string;
+  /** Idempotency key, one per filled cart. See server/cart-cookie.ts. */
+  checkoutToken?: string | null;
   userId?: Types.ObjectId | null;
   customerName: string;
   customerPhone: string;
@@ -382,6 +410,9 @@ export type OrderDoc = {
   paymentMethod: "COD" | "SSLCOMMERZ";
   paymentStatus: "UNPAID" | "PAID" | "REFUNDED" | "FAILED";
   placedAt: Date;
+  /** Set once, the first time this order returns stock. Guards against a
+   *  CANCELLED → PENDING → CANCELLED cycle crediting stock twice. */
+  restockedAt?: Date | null;
   items: OrderItemSub[];
   statusHistory: OrderStatusHistorySub[];
   createdAt: Date;
@@ -392,6 +423,18 @@ const orderSchema = new Schema<OrderDoc>(
   {
     /** human-facing, e.g. KH-260730-8FQ2 */
     orderNumber: { type: String, required: true, unique: true },
+    /**
+     * One filled cart writes at most one order. Sparse so the orders placed
+     * before this existed stay valid; unique so two concurrent submissions of
+     * the same cart cannot both succeed — the loser gets the winner's order
+     * rather than a second charge.
+     */
+    checkoutToken: {
+      type: String,
+      default: null,
+      unique: true,
+      sparse: true,
+    },
     // guest-first: stays null for guest checkout
     userId: { type: Schema.Types.ObjectId, ref: "User", default: null, index: true },
     customerName: { type: String, required: true },
@@ -415,10 +458,20 @@ const orderSchema = new Schema<OrderDoc>(
     discount: { type: Number, default: 0, min: 0 },
     shippingCharge: { type: Number, default: 0, min: 0 },
     total: money,
-    status: { type: String, default: "PENDING" },
-    paymentMethod: { type: String, default: "COD" },
-    paymentStatus: { type: String, default: "UNPAID" },
+    status: {
+      type: String,
+      enum: ORDER_STATUSES,
+      default: "PENDING",
+      required: true,
+    },
+    paymentMethod: { type: String, enum: ["COD", "SSLCOMMERZ"], default: "COD" },
+    paymentStatus: {
+      type: String,
+      enum: ["UNPAID", "PAID", "REFUNDED", "FAILED"],
+      default: "UNPAID",
+    },
     placedAt: { type: Date, default: Date.now },
+    restockedAt: { type: Date, default: null },
     items: { type: [orderItemSchema], default: [] },
     statusHistory: { type: [orderStatusHistorySchema], default: [] },
   },
@@ -426,6 +479,9 @@ const orderSchema = new Schema<OrderDoc>(
 );
 
 orderSchema.index({ status: 1, createdAt: -1 });
+// the admin list sorts on placedAt, not createdAt
+orderSchema.index({ status: 1, placedAt: -1 });
+orderSchema.index({ placedAt: -1 });
 
 // -------------------------------------------------- social & saved
 

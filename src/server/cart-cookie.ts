@@ -1,8 +1,12 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
 
 export const CART_COOKIE = "kh_cart";
+/** Identifies one filled cart across tabs. Becomes the order's idempotency
+ *  key at checkout — see placeOrderAction. */
+export const CART_TOKEN_COOKIE = "kh_cart_token";
 export const COUPON_COOKIE = "kh_coupon";
 export const LAST_ORDER_COOKIE = "kh_last_order";
 
@@ -62,6 +66,7 @@ export async function writeCartCookie(items: CartCookieItem[]) {
 
   if (items.length === 0) {
     store.delete(CART_COOKIE);
+    store.delete(CART_TOKEN_COOKIE);
     return;
   }
 
@@ -72,6 +77,31 @@ export async function writeCartCookie(items: CartCookieItem[]) {
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
   });
+
+  // minted alongside the first line in the cart, so every tab sharing this
+  // cookie jar submits the same key
+  if (!store.get(CART_TOKEN_COOKIE)) {
+    store.set(CART_TOKEN_COOKIE, randomUUID(), {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
+  }
+}
+
+/**
+ * The cart's idempotency key.
+ *
+ * Two tabs, a double-click, or a retried request all carry the same cookie, so
+ * the order write can be made conditional on it. Falls back to a fresh value
+ * when the cookie is missing — a caller with no cart token has no cart either,
+ * and the empty-cart check rejects it before this matters.
+ */
+export async function readCartToken() {
+  const store = await cookies();
+  return store.get(CART_TOKEN_COOKIE)?.value ?? null;
 }
 
 export async function readCouponCookie() {
@@ -107,6 +137,12 @@ export async function grantOrderAccess(orderNumber: string) {
     path: "/",
     maxAge: 60 * 60 * 24,
   });
+}
+
+/** The order this browser most recently placed, if any. */
+export async function readLastOrder() {
+  const store = await cookies();
+  return store.get(LAST_ORDER_COOKIE)?.value ?? null;
 }
 
 export async function hasOrderAccess(orderNumber: string) {

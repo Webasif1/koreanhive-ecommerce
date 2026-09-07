@@ -28,12 +28,24 @@ export type CheckoutZone = {
   maxDays: number;
 };
 
-function PlaceOrderButton({ total }: { total: number }) {
+/**
+ * The label quotes a total only once the delivery zone is known.
+ *
+ * Before a district is picked there is no shipping charge to include, so the
+ * button used to advertise a figure that could only go up — a small order
+ * outside Dhaka jumped by ৳120 at the last step. Quoting nothing is better
+ * than quoting a number we are about to change.
+ */
+function PlaceOrderButton({ total }: { total: number | null }) {
   const { pending } = useFormStatus();
 
   return (
     <Button type="submit" size="lg" className="w-full" disabled={pending}>
-      {pending ? "Placing order…" : `Place Order · ${formatBDT(total)}`}
+      {pending
+        ? "Placing order…"
+        : total === null
+          ? "Place Order · Cash on Delivery"
+          : `Place Order · ${formatBDT(total)}`}
     </Button>
   );
 }
@@ -280,7 +292,9 @@ export function CheckoutForm({
 
           <div className="flex justify-between border-t pt-2 font-display text-base font-semibold">
             <dt>Total</dt>
-            <dd className="tabular-nums">{formatBDT(total)}</dd>
+            <dd className="tabular-nums">
+              {zone ? formatBDT(total) : "Select district"}
+            </dd>
           </div>
         </dl>
 
@@ -291,7 +305,7 @@ export function CheckoutForm({
           </p>
         )}
 
-        <PlaceOrderButton total={total} />
+        <PlaceOrderButton total={zone ? total : null} />
 
         <p className="text-center text-xs text-muted-foreground">
           No account required. You will get an order number to track with.

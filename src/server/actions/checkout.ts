@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { redirect } from "next/navigation";
 import { isValidObjectId, Types } from "mongoose";
 
@@ -14,6 +15,8 @@ import { calcDiscount, calcShipping, type CouponRule } from "@/lib/pricing";
 import {
   grantOrderAccess,
   readCartCookie,
+  readCartToken,
+  readLastOrder,
   readCouponCookie,
   writeCartCookie,
   writeCouponCookie,
@@ -31,16 +34,46 @@ function orderNumber() {
     String(now.getDate()).padStart(2, "0"),
   ].join("");
 
+  // crypto, not Math.random: order numbers are handed out in public and
+  // should not be predictable from one another
+  const bytes = randomBytes(5);
   const random = Array.from(
-    { length: 4 },
-    () => ALPHABET[Math.floor(Math.random() * ALPHABET.length)],
+    { length: 5 },
+    (_, i) => ALPHABET[bytes[i] % ALPHABET.length],
   ).join("");
 
   return `KH-${stamp}-${random}`;
 }
 
+/**
+ * Trimmed and length-capped.
+ *
+ * Nothing here used to have an upper bound, and no string field in the schema
+ * carries `maxlength`, so an unauthenticated caller could push a multi-megabyte
+ * note into the one collection that cannot be regenerated. The caps are
+ * generous enough that no real address hits them.
+ */
+const MAX_LENGTHS: Record<string, number> = {
+  customerName: 120,
+  customerPhone: 20,
+  customerEmail: 160,
+  addressLine: 300,
+  area: 120,
+  district: 40,
+  postalCode: 10,
+  note: 500,
+};
+
 function field(formData: FormData, name: string) {
-  return String(formData.get(name) ?? "").trim();
+  const raw = String(formData.get(name) ?? "").trim();
+  const cap = MAX_LENGTHS[name];
+  return cap ? raw.slice(0, cap) : raw;
+}
+
+/** Mongo duplicate-key errors carry the offending index in `keyPattern`. */
+function duplicateKeyOn(error: unknown, field: string) {
+  const candidate = error as { code?: number; keyPattern?: Record<string, unknown> };
+  return candidate?.code === 11000 && Boolean(candidate.keyPattern?.[field]);
 }
 
 export async function placeOrderAction(
@@ -85,7 +118,18 @@ export async function placeOrderAction(
   }
 
   const cartItems = await readCartCookie();
+
   if (cartItems.length === 0) {
+    /**
+     * A second submission that lost the race gets here: the winner already
+     * committed and cleared the cart cookie, so this request finds nothing to
+     * order. "Your cart is empty" is technically true and completely baffling
+     * to someone who just pressed Place Order — show them the order that was
+     * actually created instead.
+     */
+    const lastOrder = await readLastOrder();
+    if (lastOrder) redirect(`/order/${lastOrder}`);
+
     return { ok: false, message: "Your cart is empty.", errors: {} };
   }
 
@@ -162,8 +206,38 @@ export async function placeOrderAction(
 
   const couponRow = couponCode ? await Coupon.findOne({ code: couponCode }) : null;
 
+  /**
+   * Idempotency.
+   *
+   * One filled cart mints one token (server/cart-cookie.ts) and every tab in
+   * the same browser submits it. Before this existed, two tabs submitting at
+   * once both read a full cart, both passed the stock check and both wrote an
+   * order — the cart cookie is only cleared *after* the transaction commits,
+   * so the window was the whole length of it. On cash on delivery that is two
+   * parcels dispatched and two courier fees for one intended purchase.
+   *
+   * The cheap check first: if this cart already produced an order, show that
+   * order rather than making another.
+   */
+  const cartToken = await readCartToken();
+
+  if (cartToken) {
+    const existing = await Order.findOne({ checkoutToken: cartToken })
+      .select("orderNumber")
+      .lean();
+
+    if (existing) {
+      await writeCartCookie([]);
+      await writeCouponCookie(null);
+      await grantOrderAccess(existing.orderNumber);
+      redirect(`/order/${existing.orderNumber}`);
+    }
+  }
+
   const session = await mongoose.startSession();
-  let createdNumber: string;
+  let createdNumber: string | null = null;
+  /** Set when a concurrent request won the race for this cart. */
+  let duplicateOf: string | null = null;
 
   try {
     createdNumber = await session.withTransaction(async () => {
@@ -247,6 +321,7 @@ export async function placeOrderAction(
         [
           {
             orderNumber: number,
+            checkoutToken: cartToken,
             customerName,
             customerPhone: normalizeBdPhone(customerPhone),
             customerEmail: customerEmail || null,
@@ -291,19 +366,61 @@ export async function placeOrderAction(
       };
     }
 
-    console.error("placeOrderAction failed", error);
+    // The other request for this cart committed first. Its order is the real
+    // one; hand this tab the same confirmation instead of a second order.
+    if (duplicateKeyOn(error, "checkoutToken") && cartToken) {
+      const winner = await Order.findOne({ checkoutToken: cartToken })
+        .select("orderNumber")
+        .lean();
+
+      if (winner) {
+        duplicateOf = winner.orderNumber;
+      } else {
+        console.error("placeOrderAction: duplicate token with no order", error);
+        return {
+          ok: false,
+          message: "Something went wrong placing your order. Please try again.",
+          errors: {},
+        };
+      }
+    } else if (duplicateKeyOn(error, "orderNumber")) {
+      // Five random characters over a 32-character alphabet makes this
+      // remote, and retrying is now safe: the cart token means a retry can
+      // only ever produce the one order.
+      console.error("placeOrderAction: order number collision", error);
+      return {
+        ok: false,
+        message: "That did not go through. Please press Place Order once more.",
+        errors: {},
+      };
+    } else {
+      console.error("placeOrderAction failed", error);
+      return {
+        ok: false,
+        message: "Something went wrong placing your order. Please try again.",
+        errors: {},
+      };
+    }
+  } finally {
+    await session.endSession();
+  }
+
+  const finalNumber = duplicateOf ?? createdNumber;
+
+  if (!finalNumber) {
+    // Unreachable: the transaction either returns a number or throws, and
+    // every throw path above returns. Belt and braces so a future edit cannot
+    // redirect to /order/null.
     return {
       ok: false,
       message: "Something went wrong placing your order. Please try again.",
       errors: {},
     };
-  } finally {
-    await session.endSession();
   }
 
   await writeCartCookie([]);
   await writeCouponCookie(null);
-  await grantOrderAccess(createdNumber);
+  await grantOrderAccess(finalNumber);
 
-  redirect(`/order/${createdNumber}`);
+  redirect(`/order/${finalNumber}`);
 }
