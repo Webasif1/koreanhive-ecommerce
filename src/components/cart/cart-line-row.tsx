@@ -12,6 +12,7 @@ import {
   updateCartQuantityAction,
 } from "@/server/actions/cart";
 import type { CartLine } from "@/server/queries/cart";
+import { notifyCartChanged } from "@/lib/cart-events";
 
 export function CartLineRow({ line }: { line: CartLine }) {
   const [isPending, startTransition] = useTransition();
@@ -30,7 +31,12 @@ export function CartLineRow({ line }: { line: CartLine }) {
       const result = await action(data);
 
       if (result.ok) {
-        if (successMessage) {
+        notifyCartChanged();
+        // the action may clamp to available stock and say so — that message
+        // matters more than the generic one this call asked for
+        if (result.message && result.message !== "Cart updated") {
+          toast.info(result.message, { description: line.name });
+        } else if (successMessage) {
           toast.success(successMessage, { description: line.name });
         }
       } else {
