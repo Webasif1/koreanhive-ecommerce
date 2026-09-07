@@ -2,6 +2,12 @@ import "server-only";
 
 import { headers } from "next/headers";
 
+import {
+  isUnknownCaller,
+  resolveClientIp,
+  trustedProxyHops,
+} from "@/lib/client-ip";
+
 type Bucket = { count: number; resetAt: number };
 
 /**
@@ -42,15 +48,57 @@ export function rateLimit(key: string, max: number, windowMs: number) {
   return true;
 }
 
-/** Caller IP, as seen through whatever proxy is in front of the app. Falls
- *  back to a constant so a request with no forwarding header is throttled as
- *  a group rather than escaping the limit entirely. */
-export async function callerIp() {
-  const headerList = await headers();
-
-  return (
-    headerList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    headerList.get("x-real-ip") ??
-    "unknown"
+/**
+ * Caller IP, resolved through the proxy chain.
+ *
+ * The logic lives in lib/client-ip.ts so it can be unit tested — see
+ * tests/client-ip.test.ts. Configure TRUSTED_PROXY_HOPS to the number of
+ * proxies in front of this app (1 by default).
+ */
+export function clientIpFromHeaders(headerList: Headers) {
+  return resolveClientIp(
+    headerList.get("x-forwarded-for"),
+    headerList.get("x-real-ip"),
+    trustedProxyHops(),
   );
+}
+
+export async function callerIp() {
+  return clientIpFromHeaders(await headers());
+}
+
+let warnedAboutProxy = false;
+
+/**
+ * Per-caller limit that degrades honestly.
+ *
+ * When TRUSTED_PROXY_HOPS is unset there is no trustworthy client address, so
+ * every caller resolves to the same "unknown" key. Applying a per-caller
+ * budget to that shared key would let one abuser lock out everybody — the
+ * admin login most damagingly — so an unidentified caller is *not* subject to
+ * the per-IP bucket. The identity-keyed limits that do not depend on an
+ * address (the login's per-email bucket) still apply, and they are what
+ * actually bounds a brute force.
+ *
+ * The trade is stated plainly rather than hidden: until the hop count is
+ * configured, per-IP limiting is off, and the log says so once.
+ */
+export function rateLimitByCaller(
+  prefix: string,
+  ip: string,
+  max: number,
+  windowMs: number,
+) {
+  if (isUnknownCaller(ip)) {
+    if (!warnedAboutProxy) {
+      warnedAboutProxy = true;
+      console.warn(
+        "[rate-limit] No trusted client address. Per-IP limits are disabled. " +
+          "Set TRUSTED_PROXY_HOPS to the number of proxies in front of this app.",
+      );
+    }
+    return true;
+  }
+
+  return rateLimit(`${prefix}:${ip}`, max, windowMs);
 }

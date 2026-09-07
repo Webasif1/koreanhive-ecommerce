@@ -1,33 +1,16 @@
 "use server";
 
-import { headers } from "next/headers";
-
 import { isValidBdPhone } from "@/lib/bd-districts";
 import type { TrackState } from "@/lib/track-state";
 import { findOrderForTracking } from "@/server/queries/order";
+import { callerIp, rateLimitByCaller } from "@/server/rate-limit";
 
 const WINDOW_MS = 60_000;
 const MAX_ATTEMPTS = 8;
 
-/** Per-instance throttle. It raises the cost of walking order numbers, but
- *  it is memory-local: a serverless fleet gives each instance its own
- *  budget. Move to a shared store when this matters. */
-const attempts = new Map<string, { count: number; resetAt: number }>();
-
-function rateLimit(key: string) {
-  const now = Date.now();
-  const entry = attempts.get(key);
-
-  if (!entry || entry.resetAt < now) {
-    attempts.set(key, { count: 1, resetAt: now + WINDOW_MS });
-    return true;
-  }
-
-  if (entry.count >= MAX_ATTEMPTS) return false;
-
-  entry.count += 1;
-  return true;
-}
+/** Per-instance throttle, now sharing server/rate-limit.ts rather than
+ *  keeping a private copy — this endpoint is the one that makes walking order
+ *  numbers expensive, so its IP resolution must be the hardened one. */
 
 export async function trackOrderAction(
   _prev: TrackState,
@@ -47,13 +30,9 @@ export async function trackOrderAction(
     return { error: "Enter a valid Bangladeshi mobile number.", order: null };
   }
 
-  const headerList = await headers();
-  const ip =
-    headerList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    headerList.get("x-real-ip") ??
-    "unknown";
+  const ip = await callerIp();
 
-  if (!rateLimit(ip)) {
+  if (!rateLimitByCaller("track", ip, MAX_ATTEMPTS, WINDOW_MS)) {
     return {
       error: "Too many attempts. Please wait a minute and try again.",
       order: null,

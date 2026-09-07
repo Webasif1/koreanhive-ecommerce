@@ -4,7 +4,7 @@ import { AuthError } from "next-auth";
 
 import { signIn, signOut } from "@/auth";
 import type { AdminFormState } from "@/lib/admin-state";
-import { callerIp, rateLimit } from "@/server/rate-limit";
+import { callerIp, rateLimit, rateLimitByCaller } from "@/server/rate-limit";
 
 const WINDOW_MS = 15 * 60_000;
 const MAX_ATTEMPTS = 5;
@@ -19,9 +19,14 @@ export async function loginAction(
   // Keyed on IP *and* email: the IP bucket stops one host grinding through
   // passwords, the email bucket stops a distributed attempt at a single known
   // account. A real admin never trips five failures in a quarter of an hour.
+  // The email bucket is the one that actually bounds a brute force against a
+  // known account, and it needs no client address, so it always applies. The
+  // IP bucket is skipped when the caller cannot be identified — otherwise
+  // every visitor shares one key and any stranger could lock the real admin
+  // out for fifteen minutes just by failing five sign-ins.
   const ip = await callerIp();
   const allowed =
-    rateLimit(`login:ip:${ip}`, MAX_ATTEMPTS, WINDOW_MS) &&
+    rateLimitByCaller("login:ip", ip, MAX_ATTEMPTS, WINDOW_MS) &&
     rateLimit(`login:email:${email.toLowerCase()}`, MAX_ATTEMPTS, WINDOW_MS);
 
   if (!allowed) {
