@@ -27,7 +27,7 @@ const trust = [
   { icon: Truck, label: "Delivered to all 64 districts" },
 ];
 
-export function SiteFooter() {
+export function SiteFooter({ deliveryLine }: { deliveryLine: string }) {
   return (
     <footer className="mt-20 bg-ink text-blush">
       <div className="container-page grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-4">
@@ -51,7 +51,7 @@ export function SiteFooter() {
             delivered across Bangladesh.
           </p>
           <p lang="bn" className="text-sm leading-relaxed text-light">
-            ৳২৫০০+ অর্ডারে সারা বাংলাদেশে ফ্রি ডেলিভারি।
+            {deliveryLine}।
           </p>
           <div className="flex gap-3 pt-1">
             <Link

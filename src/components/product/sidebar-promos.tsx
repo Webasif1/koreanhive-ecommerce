@@ -5,13 +5,23 @@ import Link from "next/link";
  * per the design system's voice rule — English for interface, Bangla for
  * offers, delivery and trust.
  */
-export function SidebarPromos({ brandCount }: { brandCount: number }) {
+export function SidebarPromos({
+  brandCount,
+  deliveryLine,
+  deliveryWindows,
+}: {
+  brandCount: number;
+  deliveryLine: string;
+  deliveryWindows: string;
+}) {
   return (
     <div className="mt-4 space-y-4">
       <div className="border border-border bg-white p-5">
         <h3 className="font-display text-base">Browse by Korean brand</h3>
         <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
-          {brandCount} brands, each with its own page and full product list.
+          {brandCount === 1
+            ? "1 brand, with its own page and full product list."
+            : `${brandCount} brands, each with its own page and full product list.`}
         </p>
         <Link
           href="/brands"
@@ -23,13 +33,13 @@ export function SidebarPromos({ brandCount }: { brandCount: number }) {
 
       <div className="border border-border bg-blush p-5">
         <p lang="bn" className="text-[13px] font-bold leading-relaxed">
-          ৳২৫০০+ অর্ডারে সারা বাংলাদেশে FREE DELIVERY
+          {deliveryLine}
         </p>
         <p
           lang="bn"
           className="mt-2 text-[12px] leading-relaxed text-muted-foreground"
         >
-          ঢাকায় ২৪ ঘণ্টা · ঢাকার বাইরে ২–৩ দিন · Cash on Delivery
+          {deliveryWindows} · Cash on Delivery
         </p>
       </div>
     </div>
