@@ -15,11 +15,13 @@ const FILTERS = ["ALL", ...ORDER_FLOW, "CANCELLED", "RETURNED"] as const;
 export default async function AdminOrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; page?: string }>;
 }) {
-  const { status } = await searchParams;
+  const { status, page } = await searchParams;
   const active = status ?? "ALL";
-  const orders = await getAdminOrders(active);
+  const current = Math.max(1, Number(page) || 1);
+  const { orders, total, totalPages } = await getAdminOrders(active, current);
+  const statusQuery = active === "ALL" ? "" : `&status=${active}`;
 
   return (
     <div className="space-y-6">
@@ -110,6 +112,35 @@ export default async function AdminOrdersPage({
           </table>
         </div>
       )}
-    </div>
+    
+      {totalPages > 1 && (
+        <nav
+          aria-label="Order pages"
+          className="flex items-center justify-between text-sm"
+        >
+          <span className="text-muted-foreground">
+            Page {current} of {totalPages} · {total} orders
+          </span>
+          <span className="flex gap-2">
+            {current > 1 && (
+              <Link
+                href={`/admin/orders?page=${current - 1}${statusQuery}`}
+                className="rounded-full border border-input px-3 py-1.5 text-xs font-medium hover:border-primary/50"
+              >
+                Previous
+              </Link>
+            )}
+            {current < totalPages && (
+              <Link
+                href={`/admin/orders?page=${current + 1}${statusQuery}`}
+                className="rounded-full border border-input px-3 py-1.5 text-xs font-medium hover:border-primary/50"
+              >
+                Next
+              </Link>
+            )}
+          </span>
+        </nav>
+      )}
+</div>
   );
 }

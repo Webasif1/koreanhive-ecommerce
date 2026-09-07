@@ -35,10 +35,37 @@ export async function saveProductAction(
   const price = intOrNull(formData.get("price"));
   const stock = intOrNull(formData.get("stock")) ?? 0;
 
+  const comparePrice = intOrNull(formData.get("comparePrice"));
+
   const errors: Record<string, string> = {};
   if (name.length < 2) errors.name = "Name is required.";
+  if (name.length > 200) errors.name = "Keep the name under 200 characters.";
   if (!slug) errors.slug = "Slug is required.";
   if (price === null || price < 0) errors.price = "Enter a valid price.";
+
+  /**
+   * Mongoose does not run schema validators on updateOne unless it is told
+   * to, so `min: 0` on stock and comparePrice never fired on an edit — a
+   * negative value went straight into the database. These checks are the real
+   * gate; `runValidators` below is the backstop.
+   *
+   * comparePrice must also sit *above* price, or the storefront renders a
+   * "saving" that is zero or negative and /deals lists a product that is not
+   * discounted.
+   */
+  if (stock < 0) errors.stock = "Stock cannot be negative.";
+  if (comparePrice !== null && comparePrice < 0) {
+    errors.comparePrice = "Compare price cannot be negative.";
+  }
+  if (
+    comparePrice !== null &&
+    comparePrice > 0 &&
+    price !== null &&
+    comparePrice <= price
+  ) {
+    errors.comparePrice =
+      "Compare price must be higher than the price, or left empty.";
+  }
 
   // slugs are the product URL, so a collision would silently break a page
   const clash = await Product.findOne({
@@ -62,7 +89,7 @@ export async function saveProductAction(
     name,
     slug,
     price: price!,
-    comparePrice: intOrNull(formData.get("comparePrice")),
+    comparePrice,
     stock,
     sku: String(formData.get("sku") ?? "").trim() || null,
     shortDescription:
@@ -86,7 +113,14 @@ export async function saveProductAction(
   };
 
   if (id) {
-    await Product.updateOne({ _id: id }, { $set: data });
+    if (!isValidObjectId(id)) {
+      return {
+        ok: false,
+        message: "That product could not be found.",
+        errors: {},
+      };
+    }
+    await Product.updateOne({ _id: id }, { $set: data }, { runValidators: true });
   } else {
     await Product.create(data);
   }

@@ -12,7 +12,8 @@ import {
   type CartCookieItem,
 } from "@/server/cart-cookie";
 import { connectDb } from "@/server/db";
-import { Coupon, Product } from "@/server/models";
+import { Product } from "@/server/models";
+import { getCart, resolveCouponForSubtotal } from "@/server/queries/cart";
 
 type AddInput = {
   productId: string;
@@ -114,12 +115,45 @@ export async function buyNowAction(formData: FormData) {
   redirect("/checkout");
 }
 
+/** Units actually available for a line, or null when it no longer exists. */
+async function availableStock(productId: string, variantId: string | null) {
+  if (!isValidObjectId(productId)) return null;
+  if (variantId && !isValidObjectId(variantId)) return null;
+
+  await connectDb();
+
+  const product = await Product.findOne({ _id: productId, isActive: true })
+    .select("stock variants")
+    .lean();
+
+  if (!product) return null;
+
+  if (variantId) {
+    const variant = product.variants.find((v) => v._id.toString() === variantId);
+    return variant ? variant.stock : null;
+  }
+
+  return product.stock;
+}
+
 export async function updateCartQuantityAction(
   formData: FormData,
 ): Promise<CartResult> {
   const productId = String(formData.get("productId") ?? "");
   const variantId = (formData.get("variantId") as string | null) || null;
-  const quantity = sanitizeQuantity(formData.get("quantity"));
+  const requested = sanitizeQuantity(formData.get("quantity"));
+
+  // Stock was never checked here, only at the moment the order was placed —
+  // so a shopper could carry a quantity through the whole address form and
+  // only be told "just went out of stock" on the last click. Clamp here, and
+  // say what happened rather than silently changing the number.
+  const stock = await availableStock(productId, variantId);
+
+  if (stock === null) {
+    return { ok: false, message: "That product is no longer available." };
+  }
+
+  const quantity = Math.max(1, Math.min(requested, stock));
 
   const items = await readCartCookie();
   const next = items.map((item) =>
@@ -131,6 +165,16 @@ export async function updateCartQuantityAction(
   await writeCartCookie(next);
   revalidatePath("/cart");
   revalidatePath("/checkout");
+
+  if (quantity < requested) {
+    return {
+      ok: true,
+      message:
+        stock < MAX_QUANTITY_PER_LINE
+          ? `Only ${stock} left in stock.`
+          : `${MAX_QUANTITY_PER_LINE} is the most you can order per item.`,
+    };
+  }
 
   return { ok: true, message: "Cart updated" };
 }
@@ -171,10 +215,20 @@ export async function applyCouponAction(
   }
 
   await connectDb();
-  const coupon = await Coupon.findOne({ code }).lean();
 
-  if (!coupon || !coupon.isActive) {
-    return { ok: false, message: `${code} is not a valid coupon code.` };
+  // The cart re-validates dates, usage limit and minimum subtotal when it
+  // renders; this only used to check isActive. An expired code therefore
+  // toasted "Coupon applied" and the cart then said "That coupon has expired"
+  // — and checkout silently dropped it, so the total moved. One validator,
+  // used by both, so the two can no longer disagree.
+  const cart = await getCart();
+  const { coupon, error } = await resolveCouponForSubtotal(code, cart.subtotal);
+
+  if (!coupon) {
+    return {
+      ok: false,
+      message: error ?? `${code} is not a valid coupon code.`,
+    };
   }
 
   await writeCouponCookie(code);
