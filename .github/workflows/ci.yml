@@ -33,10 +33,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      # `npm ci` on Linux, which is the point: the committed lockfile is
-      # generated on Windows and drops the Linux-only optional dependencies.
-      # If this step fails on a missing platform package, run `npm run
-      # lock:linux` locally and commit the regenerated lockfile.
+      # `npm ci` on Linux, which is the point: a lockfile written by a plain
+      # `npm install` on Windows drops the platform-gated optional packages.
+      # If this step fails with "Missing: <pkg> from lock file", run
+      # `npm run lock:fix` locally and commit the regenerated package-lock.json.
       - name: Install dependencies
         run: npm ci
 

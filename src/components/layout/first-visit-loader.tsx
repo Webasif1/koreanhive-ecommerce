@@ -75,10 +75,7 @@ const GATE_SCRIPT = `
 export function FirstVisitLoader() {
   return (
     <>
-      <script
-        // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: GATE_SCRIPT }}
-      />
+      <script dangerouslySetInnerHTML={{ __html: GATE_SCRIPT }} />
 
       {/* aria-hidden: a screen reader should hear the page, which is already
           in the DOM underneath, not this */}
