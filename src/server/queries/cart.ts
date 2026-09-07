@@ -25,6 +25,18 @@ export function lineKey(productId: string, variantId: string | null) {
   return variantId ? `${productId}:${variantId}` : productId;
 }
 
+/**
+ * The single coupon gate. Exported so applyCouponAction validates on exactly
+ * the same rules the cart renders with — see the comment there.
+ */
+export async function resolveCouponForSubtotal(
+  code: string | null,
+  subtotal: number,
+): Promise<{ coupon: CouponRule | null; error: string | null }> {
+  await connectDb();
+  return resolveCoupon(code, subtotal);
+}
+
 async function resolveCoupon(
   code: string | null,
   subtotal: number,

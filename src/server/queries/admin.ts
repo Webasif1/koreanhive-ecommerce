@@ -62,31 +62,54 @@ export async function getDashboardStats() {
   };
 }
 
-export async function getAdminOrders(status?: string) {
+export const ADMIN_PAGE_SIZE = 50;
+
+/**
+ * Paginated, and projected.
+ *
+ * The order list was capped at 100 with no way past it, so order 101 was
+ * simply unreachable from the admin — a shop that takes fifty orders a week
+ * loses sight of its own history in a month. The product list had no limit at
+ * all and pulled whole documents, descriptions and images included.
+ */
+export async function getAdminOrders(status?: string, page = 1) {
   await requireAdmin();
   await connectDb();
 
-  const orders = await Order.find(
-    status && status !== "ALL"
-      ? { status: status as OrderDoc["status"] }
-      : {},
-  )
-    .sort({ placedAt: -1 })
-    .limit(100)
-    .lean();
+  const filter =
+    status && status !== "ALL" ? { status: status as OrderDoc["status"] } : {};
 
-  return orders.map((order) => ({
-    id: order._id.toString(),
-    orderNumber: order.orderNumber,
-    customerName: order.customerName,
-    customerPhone: order.customerPhone,
-    district: order.district,
-    total: order.total,
-    status: order.status,
-    paymentStatus: order.paymentStatus,
-    placedAt: order.placedAt,
-    _count: { items: order.items.length },
-  }));
+  const current = Number.isInteger(page) && page > 0 ? page : 1;
+
+  const [orders, total] = await Promise.all([
+    Order.find(filter)
+      .select(
+        "orderNumber customerName customerPhone district total status paymentStatus placedAt items._id",
+      )
+      .sort({ placedAt: -1, _id: -1 })
+      .skip((current - 1) * ADMIN_PAGE_SIZE)
+      .limit(ADMIN_PAGE_SIZE)
+      .lean(),
+    Order.countDocuments(filter),
+  ]);
+
+  return {
+    orders: orders.map((order) => ({
+      id: order._id.toString(),
+      orderNumber: order.orderNumber,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
+      district: order.district,
+      total: order.total,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      placedAt: order.placedAt,
+      _count: { items: order.items.length },
+    })),
+    page: current,
+    total,
+    totalPages: Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE)),
+  };
 }
 
 export async function getAdminOrder(orderNumber: string) {
@@ -149,7 +172,11 @@ export async function getAdminProducts() {
   await connectDb();
 
   const [products, brands, categories] = await Promise.all([
-    Product.find({}).sort({ updatedAt: -1 }).lean(),
+    Product.find({})
+      .select("name slug price stock isActive isFeatured brandId categoryId images")
+      .sort({ updatedAt: -1 })
+      .limit(500)
+      .lean(),
     Brand.find({}).select("name").lean(),
     Category.find({}).select("name").lean(),
   ]);
