@@ -20,7 +20,10 @@
   --brand-rose-border: #eadde5;
   --brand-hairline: #f3e9ef;
   --brand-muted: #6e5f6b;
-  --brand-faint: #a98ba0;
+  /* Was #a98ba0 at 3.05:1. Used for struck-through compare prices, which are
+     price information, so AA applies. #82657a holds the mulberry cast at
+     5.13:1 on white. */
+  --brand-faint: #82657a;
   --brand-light: #b9a7b4;
   --brand-sale: #b03a4a;
   --brand-sale-bg: #fdf3f4;
@@ -28,7 +31,10 @@
   --brand-success: #2f7a4f;
   --brand-success-bg: #eaf4ee;
   --brand-success-border: #c9e2d3;
-  --brand-star: #c9a227;
+  /* Was #c9a227, which is 2.42:1 on white and 2.28:1 on the blush card — a
+     WCAG AA failure on content that carries meaning (a rating). #856a0f keeps
+     the gold and clears 4.5:1 against both grounds. */
+  --brand-star: #856a0f;
   --brand-chip-border: #e3c5d8;
 
   /* square corners are a rule of the system, not a preference */

@@ -1,8 +1,14 @@
+import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 /**
  * Design system: gold stars, then "4.9 (216)". Reviews are shown as a count,
  * never as a bare number.
+ *
+ * Renders nothing while siteConfig.showRatings is off. The figures on every
+ * product are the catalogue sheet's, not customers' — identical across the
+ * whole shop — and showing them as social proof is the fabricated proof this
+ * project rules out. One flag turns them back on the day real reviews land.
  */
 export function StarRating({
   value,
@@ -15,12 +21,14 @@ export function StarRating({
   className?: string;
   showCount?: boolean;
 }) {
+  if (!siteConfig.showRatings) return null;
+
   const rounded = Math.round(value);
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <span
-        className="text-[11px] tracking-[0.08em] text-star"
+        className="text-[12px] tracking-[0.08em] text-star"
         aria-hidden
       >
         {"★".repeat(rounded)}

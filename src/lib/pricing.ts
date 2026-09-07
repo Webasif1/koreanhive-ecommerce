@@ -69,3 +69,19 @@ export function calcTotals({
     total: subtotal - discount + shippingCharge,
   };
 }
+
+/**
+ * Whether a product is genuinely marked down.
+ *
+ * The catalogue's importer only rejects a compare price *below* the price, so
+ * `comparePrice === price` is common and legitimate. The database query used
+ * to test `comparePrice != null && > 0` and never compared the two, which put
+ * every published product on /deals under the heading "Marked down right now"
+ * and made the "On discount" facet match everything.
+ *
+ * server/queries/catalog.ts#saleScope is the Mongo expression of this rule and
+ * must stay in step with it.
+ */
+export function isOnSale(price: number, comparePrice: number | null) {
+  return comparePrice !== null && comparePrice > 0 && comparePrice > price;
+}
