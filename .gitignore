@@ -48,3 +48,7 @@ yarn-error.log*
 # QA reports and scratch bundles — kept local, not part of the repo
 docs/QA-*.md
 _to_delete/
+Claude outputs
+.env.example
+DEPLOY-CPANEL.md
+.claude
