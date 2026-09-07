@@ -141,10 +141,36 @@ jobs:
           echo "${{ github.sha }}" > deploy/BUILD_SHA
           du -sh deploy
 
+      # `next start` reads .next/BUILD_ID first and dies with "Could not find a
+      # production build in the './.next' directory" if it is absent, which on
+      # cPanel surfaces only as an Apache 503. Fail here, where the message is
+      # readable, rather than on the server.
+      - name: Verify the package is complete
+        run: |
+          missing=0
+          for path in .next/BUILD_ID .next/server .next/static server.js package.json; do
+            if [ -e "deploy/$path" ]; then
+              echo "  ok       $path"
+            else
+              echo "  MISSING  $path"
+              missing=1
+            fi
+          done
+          echo "deploy/ holds $(find deploy -type f | wc -l) files"
+          if [ "$missing" = "1" ]; then
+            echo "::error::The deploy package is incomplete. Do not ship it."
+            exit 1
+          fi
+
+      # include-hidden-files is NOT optional. Since v4.4 this action excludes
+      # every path beginning with a dot, and it does so silently — which drops
+      # the whole of .next and produces an artifact that looks fine, deploys
+      # fine, and then cannot start. See actions/upload-artifact#602.
       - uses: actions/upload-artifact@v4
         with:
           name: standalone-${{ github.sha }}
           path: deploy
+          include-hidden-files: true
           retention-days: 7
 
   deploy:
@@ -159,6 +185,26 @@ jobs:
         with:
           name: standalone-${{ github.sha }}
           path: deploy
+
+      # The same check again on the other side of the artifact round-trip: the
+      # upload is where .next went missing before, so prove it survived rather
+      # than spending 14 minutes uploading a package that cannot boot.
+      - name: Verify the downloaded package is complete
+        run: |
+          missing=0
+          for path in .next/BUILD_ID .next/server .next/static server.js package.json; do
+            if [ -e "deploy/$path" ]; then
+              echo "  ok       $path"
+            else
+              echo "  MISSING  $path"
+              missing=1
+            fi
+          done
+          echo "deploy/ holds $(find deploy -type f | wc -l) files"
+          if [ "$missing" = "1" ]; then
+            echo "::error::The artifact lost files in transit. Nothing was uploaded to the server."
+            exit 1
+          fi
 
       # Passenger restarts the app when this file's timestamp changes. With no
       # SSH there is no other way to restart from CI — cPanel → Node.js →

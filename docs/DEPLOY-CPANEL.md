@@ -142,6 +142,29 @@ the venv instead of the app. In **File Manager**, enable *Show Hidden Files*,
 open the application root, and if `node_modules` shows as a symlink, delete it
 before the first deploy. The upload creates a real directory in its place.
 
+### Step 2c — If the site returns 503 after a successful deploy
+
+Apache's 503 page means Passenger could not start the Node process. The reason
+is always in `stderr.log` in the application root — open it in File Manager
+(*Show Hidden Files* on) and read the last lines.
+
+Two causes have actually happened here:
+
+**`Could not find a production build in the './.next' directory`.** The `.next`
+folder never reached the server. `actions/upload-artifact` has excluded every
+path beginning with a dot since v4.4, silently, so the artifact contained
+`server.js`, `package.json`, `public/` and `node_modules/` but none of the
+build output. The workflow now passes `include-hidden-files: true` and verifies
+`.next/BUILD_ID`, `.next/server` and `.next/static` on both sides of the
+artifact round-trip, so a package that cannot boot fails in CI instead.
+
+**Auth.js or Mongoose throwing on import.** The environment variables are not
+set on the server. cPanel → Node.js → your app → *Environment variables* has to
+list `MONGODB_URI`, `AUTH_SECRET`, `NEXT_PUBLIC_SITE_URL` and
+`TRUSTED_PROXY_HOPS`; `NODE_ENV` comes from the Application mode dropdown.
+Paste values without surrounding quotes — the field is stored literally, and a
+quoted connection string fails to parse.
+
 ### Step 3 — Restarting after a deploy
 
 With no SSH, the restart happens by touching a file. Passenger watches
