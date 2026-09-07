@@ -42,6 +42,62 @@ const MEDICAL_TERMS = [
   "safe during",
 ];
 
+/**
+ * The same gate in Bangla script.
+ *
+ * The normaliser used to delete every non-ASCII character, so a Bangla
+ * message reached the classifier empty and always came back UNKNOWN. Now that
+ * Bangla is preserved and matched, a Bangla medical question — "একজিমার জন্য
+ * কোন ক্রিম ভালো?" — would otherwise route straight to the recommender and
+ * answer a medical question with product cards. The gate has to speak every
+ * language the matcher does.
+ *
+ * Matched as stems by substring rather than by token, because Bangla inflects
+ * with suffixes: একজিমা becomes একজিমার, and ব্রণ becomes ব্রণের.
+ */
+const BANGLA_MEDICAL_STEMS = [
+  "একজিমা",
+  "সোরিয়াসিস",
+  "ছত্রাক",
+  "ফাঙ্গাস",
+  "সংক্রমণ",
+  "অ্যালার্জি",
+  "এলার্জি",
+  "র‍্যাশ",
+  "ডাক্তার",
+  "চর্মরোগ",
+  "চর্ম বিশেষজ্ঞ",
+  "ওষুধ",
+  "ঔষধ",
+  "প্রেসক্রিপশন",
+  "গর্ভবতী",
+  "গর্ভাবস্থা",
+  "বুকের দুধ",
+  "ব্রেস্টফিডিং",
+  "ক্যান্সার",
+  "স্টেরয়েড",
+  "চিকিৎসা",
+  "নিরাময়",
+  "সারবে",
+  "সারাবে",
+  "সারানো",
+  "রোগ",
+];
+
+const BANGLA_CREDENTIAL_STEMS = [
+  "পিন",
+  "ওটিপি",
+  "পাসওয়ার্ড",
+  "কার্ড নম্বর",
+  "সিভিভি",
+  "গোপন নম্বর",
+];
+
+/** Bangla is agglutinative, so a stem is matched anywhere in the message. */
+function containsBanglaStem(text: string, stems: string[]) {
+  return stems.some((stem) => text.includes(stem));
+}
+
 const CREDENTIAL_TERMS = [
   "card number",
   "credit card",
@@ -69,11 +125,17 @@ export type SafetyVerdict = { intent: Intent; message: string } | null;
  * null to continue. A safety reply never carries product cards.
  */
 export function checkSafety(message: NormalizedMessage): SafetyVerdict {
-  if (CREDENTIAL_TERMS.some((term) => containsPhrase(message, term))) {
+  if (
+    CREDENTIAL_TERMS.some((term) => containsPhrase(message, term)) ||
+    containsBanglaStem(message.text, BANGLA_CREDENTIAL_STEMS)
+  ) {
     return { intent: "SAFETY_CREDENTIALS", message: CREDENTIALS_REPLY };
   }
 
-  if (MEDICAL_TERMS.some((term) => containsPhrase(message, term))) {
+  if (
+    MEDICAL_TERMS.some((term) => containsPhrase(message, term)) ||
+    containsBanglaStem(message.text, BANGLA_MEDICAL_STEMS)
+  ) {
     return { intent: "SAFETY_MEDICAL", message: MEDICAL_REPLY };
   }
 
