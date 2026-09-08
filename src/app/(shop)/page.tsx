@@ -41,6 +41,27 @@ const APPROACH = [
   },
 ];
 
+/* Five operational promises, from the design's trust strip. Every one is a
+   fact the business can stand behind — no rating, no review count, nothing
+   that needs a customer to have said it. */
+const TRUST = [
+  { title: "100% Authentic", sub: "Imported, batch-verified stock" },
+  { title: "Cash on Delivery", sub: "Pay when it reaches your hand" },
+  { title: "All 64 Districts", sub: "1–3 days anywhere in Bangladesh" },
+  { title: "7-Day Returns", sub: "Unopened items, full refund" },
+  { title: "Real Advice", sub: "WhatsApp a routine question" },
+] as const;
+
+/* The four-step routine. The argument the section makes is that a ten-step
+   routine is why people quit in week three, so the copy stays four steps
+   long — adding a fifth would undercut the point it is making. */
+const ROUTINE = [
+  { no: "01", name: "Cleanse", desc: "Low-pH gel or foam, twice daily" },
+  { no: "02", name: "Hydrate", desc: "Toner or essence while damp" },
+  { no: "03", name: "Treat", desc: "One serum for one concern" },
+  { no: "04", name: "Protect", desc: "SPF50+ every single morning" },
+] as const;
+
 /* Operational facts only. This list also led with "4.9★ across 3,400+
    reviews", a second copy of a rating no customer has ever left. */
 const WHY = [
@@ -180,6 +201,23 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* --------------------------------------------------- trust strip */}
+      {/* Sits directly under the hero because it answers the three things a
+          first-time buyer of imported skincare actually worries about —
+          is it real, do I pay now, will it reach me — before they scroll. */}
+      <section className="border-b border-border bg-blush/40">
+        <ul className="container-page grid grid-cols-2 gap-x-6 gap-y-5 py-7 sm:grid-cols-3 lg:grid-cols-5">
+          {TRUST.map((item) => (
+            <li key={item.title}>
+              <p className="text-[13px] font-bold leading-tight">{item.title}</p>
+              <p className="mt-1 text-[12px] leading-snug text-muted-foreground">
+                {item.sub}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       {/* ------------------------------------------------------- concerns */}
       <section className="container-page py-14">
         <p className="eyebrow">Shop by skin concern</p>
@@ -235,6 +273,38 @@ export default async function Home() {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* ------------------------------------------------- four-step routine */}
+      {/* The concrete half of the approach section above it: that one argues
+          fewer products, this one names which four and in what order. */}
+      <section className="container-page py-14">
+        <p className="eyebrow">Start here</p>
+        <h2 className="mt-3 max-w-[24ch] font-display text-[30px] leading-[1.18] tracking-[-0.01em] md:text-[38px]">
+          Four products, used consistently, beat ten used for three weeks.
+        </h2>
+        <p className="mt-4 max-w-[62ch] text-[15px] leading-relaxed text-muted-foreground">
+          Most people start Korean skincare with a ten-step routine they saw
+          online, and stop by week three. We do it the other way round: four
+          products matched to your skin and Bangladesh&apos;s weather. Add more
+          only when your skin asks for it.
+        </p>
+        <ol className="mt-9 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {ROUTINE.map((step) => (
+            <li key={step.no} className="border-t border-hairline pt-4">
+              <span className="font-display text-[26px] leading-none text-primary">
+                {step.no}
+              </span>
+              <h3 className="mt-3 text-sm font-bold">{step.name}</h3>
+              <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+                {step.desc}
+              </p>
+            </li>
+          ))}
+        </ol>
+        <Button asChild className="mt-9">
+          <Link href="/concerns">Build my routine</Link>
+        </Button>
       </section>
 
       {/* ---------------------------------------------------- bestsellers */}
