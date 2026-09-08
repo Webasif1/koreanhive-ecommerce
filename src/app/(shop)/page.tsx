@@ -7,7 +7,9 @@ import { ProductGrid } from "@/components/product/product-grid";
 import { JsonLd } from "@/components/seo/json-ld";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ReelTile } from "@/components/home/reel-tile";
 import { CONCERNS } from "@/data/concerns";
+import { REELS } from "@/data/reels";
 import { formatBDT } from "@/lib/format";
 import { faqJsonLd, type FaqEntry } from "@/lib/json-ld";
 import {
@@ -343,21 +345,11 @@ export default async function Home() {
           <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
             See it used before you buy it
           </h2>
-          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <Link
-                key={n}
-                href="/shop"
-                className="relative aspect-[9/16] overflow-hidden border border-border bg-blush"
-              >
-                <Image
-                  src={`/editorial/reel${n}.webp`}
-                  alt={`Korean Hive routine reel ${n}`}
-                  fill
-                  sizes="(min-width: 1024px) 20vw, 50vw"
-                  className="object-cover"
-                />
-              </Link>
+          {/* Real reels, loaded on click. The five tiles here were mock-up
+              frames reading "drop your reel here", each linking to /shop. */}
+          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
+            {REELS.map((reel) => (
+              <ReelTile key={reel.url} reel={reel} />
             ))}
           </div>
         </div>
