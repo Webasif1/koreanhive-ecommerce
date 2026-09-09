@@ -62,6 +62,37 @@ export function faqJsonLd(entries: FaqEntry[]) {
   };
 }
 
+type ArticleJsonLdInput = {
+  slug: string;
+  title: string;
+  description: string;
+  cover: string;
+  publishedAt: string;
+};
+
+/**
+ * A journal post.
+ *
+ * `inLanguage` is bn rather than the site's en-BD: the body is Bangla with
+ * English product names in it, and telling a crawler otherwise is the kind of
+ * small lie that costs a Bangla-query impression.
+ */
+export function articleJsonLd(post: ArticleJsonLdInput) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: post.title,
+    description: post.description,
+    image: absoluteUrl(post.cover),
+    inLanguage: "bn",
+    datePublished: post.publishedAt,
+    dateModified: post.publishedAt,
+    mainEntityOfPage: absoluteUrl(`/blog/${post.slug}`),
+    author: { "@id": absoluteUrl("/#organization") },
+    publisher: { "@id": absoluteUrl("/#organization") },
+  };
+}
+
 type ProductJsonLdInput = {
   name: string;
   slug: string;
