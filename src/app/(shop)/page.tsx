@@ -12,6 +12,7 @@ import { PostCard } from "@/components/blog/post-card";
 import { POSTS } from "@/data/blog";
 import { CONCERNS } from "@/data/concerns";
 import { REELS } from "@/data/reels";
+import { topBrandsByStock } from "@/lib/brands";
 import { formatBDT } from "@/lib/format";
 import { faqJsonLd, type FaqEntry } from "@/lib/json-ld";
 import {
@@ -119,6 +120,11 @@ export default async function Home() {
   // worse than either.
   const hasRealSales = sold.length >= MIN_REAL_SALES;
   const popular = hasRealSales ? sold : await getProducts({ take: 8 });
+
+  // All 71 brands used to render here, 15 rows of them on a phone. `brands`
+  // stays whole because its length is real copy in two places — the stat block
+  // and the section heading — while only these ten get a tile.
+  const featuredBrands = topBrandsByStock(brands, 10);
 
   return (
     <>
@@ -327,8 +333,8 @@ export default async function Home() {
           <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
             {brands.length} Korean brands, all authorised
           </h2>
-          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-            {brands.map((brand) => (
+          <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-5">
+            {featuredBrands.map((brand) => (
               <Link
                 key={brand.id}
                 href={`/brand/${brand.slug}`}
@@ -343,6 +349,12 @@ export default async function Home() {
                 </div>
               </Link>
             ))}
+          </div>
+
+          <div className="mt-8 flex justify-center">
+            <Button variant="outline" asChild>
+              <Link href="/brands">See all {brands.length} brands</Link>
+            </Button>
           </div>
         </div>
       </section>
