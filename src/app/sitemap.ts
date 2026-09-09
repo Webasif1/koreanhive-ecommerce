@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 
+import { POSTS } from "@/data/blog";
 import { CONCERNS } from "@/data/concerns";
 import { absoluteUrl } from "@/lib/site";
 import { getSitemapEntries } from "@/server/queries/catalog";
@@ -19,6 +20,8 @@ const STATIC_ROUTES: {
   { path: "/deals", priority: 0.8, changeFrequency: "daily" },
   { path: "/concerns", priority: 0.8, changeFrequency: "weekly" },
   { path: "/combos", priority: 0.7, changeFrequency: "weekly" },
+  // the journal was noindex and absent here while it had no articles
+  { path: "/blog", priority: 0.7, changeFrequency: "weekly" },
   { path: "/track", priority: 0.7, changeFrequency: "monthly" },
   { path: "/about", priority: 0.5, changeFrequency: "monthly" },
   { path: "/contact", priority: 0.5, changeFrequency: "monthly" },
@@ -49,6 +52,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: absoluteUrl(`/category/${category.slug}`),
       lastModified: category.updatedAt,
       changeFrequency: "weekly" as const,
+      priority: 0.7,
+    })),
+    ...POSTS.map((post) => ({
+      url: absoluteUrl(`/blog/${post.slug}`),
+      lastModified: new Date(post.publishedAt),
+      changeFrequency: "monthly" as const,
       priority: 0.7,
     })),
     ...CONCERNS.map((concern) => ({

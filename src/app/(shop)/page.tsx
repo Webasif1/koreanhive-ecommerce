@@ -8,6 +8,8 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReelTile } from "@/components/home/reel-tile";
+import { PostCard } from "@/components/blog/post-card";
+import { POSTS } from "@/data/blog";
 import { CONCERNS } from "@/data/concerns";
 import { REELS } from "@/data/reels";
 import { formatBDT } from "@/lib/format";
@@ -96,24 +98,6 @@ const FAQS: FaqEntry[] = [
     question: "Can I track my order without logging in?",
     answer:
       "Yes. Use your order number and the phone number you gave at checkout on the Track Order page.",
-  },
-];
-
-const JOURNAL = [
-  {
-    title: "A Korean routine that survives Bangladesh humidity",
-    tag: "ROUTINE",
-    image: "/editorial/lifestyle.webp",
-  },
-  {
-    title: "Niacinamide, explained without the jargon",
-    tag: "INGREDIENTS",
-    image: "/editorial/unboxing.webp",
-  },
-  {
-    title: "Double cleansing: what it is and who needs it",
-    tag: "BASICS",
-    image: "/editorial/reel1.webp",
   },
 ];
 
@@ -479,33 +463,24 @@ export default async function Home() {
       {/* -------------------------------------------------------- journal */}
       <section className="border-t border-border bg-white">
         <div className="container-page py-14">
-          <p className="eyebrow">The Hive Journal</p>
-          <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
-            Routines that survive Bangladesh weather
-          </h2>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="eyebrow">The Hive Journal</p>
+              <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
+                Routines that survive Bangladesh weather
+              </h2>
+            </div>
+            <Link
+              href="/blog"
+              className="text-sm font-semibold text-primary hover:underline"
+            >
+              Read the journal →
+            </Link>
+          </div>
+
           <div className="mt-6 grid gap-5 md:grid-cols-3">
-            {JOURNAL.map((post) => (
-              <Link
-                key={post.title}
-                href="/blog"
-                className="group border border-border bg-card"
-              >
-                <div className="relative aspect-[16/10] overflow-hidden bg-blush">
-                  <Image
-                    src={post.image}
-                    alt={post.title}
-                    fill
-                    sizes="(min-width: 768px) 33vw, 100vw"
-                    className="object-cover"
-                  />
-                </div>
-                <div className="p-5">
-                  <p className="eyebrow">{post.tag}</p>
-                  <h3 className="mt-2 font-display text-lg leading-snug group-hover:text-primary">
-                    {post.title}
-                  </h3>
-                </div>
-              </Link>
+            {POSTS.map((post) => (
+              <PostCard key={post.slug} post={post} showSummary={false} />
             ))}
           </div>
         </div>

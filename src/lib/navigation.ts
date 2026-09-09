@@ -45,6 +45,7 @@ export const footerNav: { title: string; items: NavItem[] }[] = [
     title: "Company",
     items: [
       { href: "/about", label: "About Korean Hive" },
+      { href: "/blog", label: "Beauty Journal" },
       { href: "/privacy", label: "Privacy Policy" },
       { href: "/terms", label: "Terms & Conditions" },
     ],
