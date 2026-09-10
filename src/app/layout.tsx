@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { Toaster } from "@/components/ui/toaster";
-import { hindSiliguri, manrope, prata } from "@/lib/fonts";
+import { hindSiliguri, poppins } from "@/lib/fonts";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
@@ -55,8 +55,7 @@ export default function RootLayout({
       </head>
       <body
         className={cn(
-          manrope.variable,
-          prata.variable,
+          poppins.variable,
           hindSiliguri.variable,
           "antialiased",
         )}

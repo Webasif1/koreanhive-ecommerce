@@ -145,9 +145,18 @@
   --color-star: var(--brand-star);
   --color-chip-border: var(--brand-chip-border);
 
-  --font-sans: var(--font-manrope), system-ui, sans-serif;
-  --font-display: var(--font-prata), Georgia, serif;
-  --font-bengali: var(--font-hind-siliguri), var(--font-manrope), sans-serif;
+  /* Hind Siliguri sits directly after Poppins in every stack, not at the
+     end. Font fallback resolves per glyph, so Latin comes from Poppins and
+     Bengali from Hind Siliguri — deterministically, on every platform. Put
+     "Segoe UI" ahead of it and Windows would answer Bengali with Nirmala UI
+     instead, and the Bangla would not match the Bangla on a phone. */
+  --font-sans:
+    var(--font-poppins), var(--font-hind-siliguri), "Segoe UI", Tahoma, Geneva,
+    Verdana, sans-serif;
+  --font-display:
+    var(--font-poppins), var(--font-hind-siliguri), "Segoe UI", Tahoma, Geneva,
+    Verdana, sans-serif;
+  --font-bengali: var(--font-hind-siliguri), var(--font-poppins), sans-serif;
 
   --radius-sm: 2px;
   --radius-md: 2px;
