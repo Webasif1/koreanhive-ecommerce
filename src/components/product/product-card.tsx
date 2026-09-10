@@ -89,21 +89,25 @@ export function ProductCard({
           </Link>
         )}
 
-        {/* Regular weight, not bold. Under Manrope a bold 14px title sat
-            about right; Poppins is geometric with a much larger x-height, so
-            the same declaration turned every card into a wall of heavy text
-            and the price — the thing a shopper is actually scanning for —
-            stopped winning. Weight now separates the two: the name reads,
-            the price shouts. line-clamp-2 keeps a long name from pushing the
-            buttons out of line across a row. */}
+        {/* Bold was wrong for Poppins — its larger x-height made a wall of
+            heavy text. But dropping to 13.5px/normal/ink-90 overshot: the
+            title and the benefit line below it ended up 1.5px and one colour
+            step apart, so a card read as one grey paragraph with no name in
+            it.
+
+            Separation now comes from three small steps at once rather than
+            one big one — 15px against 11.5px, medium against regular, full
+            ink against muted. Medium is one stop above regular and four
+            below the old bold, which is enough to name the product without
+            competing with the price. */}
         <Link href={`/product/${product.slug}`} className="mt-1.5">
-          <h3 className="line-clamp-2 text-[13.5px] font-normal leading-[1.45] text-foreground/90 hover:text-primary">
+          <h3 className="line-clamp-2 text-[15px] font-medium leading-snug text-foreground hover:text-primary">
             {product.name}
           </h3>
         </Link>
 
         {product.benefit && (
-          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+          <p className="mt-1.5 line-clamp-2 text-[11.5px] leading-relaxed text-muted-foreground">
             {product.benefit}
           </p>
         )}
