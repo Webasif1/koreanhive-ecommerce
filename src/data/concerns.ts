@@ -38,9 +38,11 @@ export type Concern = {
   metaDescription: string;
 };
 
-/** Served from ImageKit, like the product shots and the hero. The `&` in the
- *  acne filename is literal on purpose — percent-encoding it 404s. */
-const IMAGE_BASE = "https://ik.imagekit.io/koreanhive/Category";
+/** Served from ImageKit, like the product shots and the hero. Every file in
+ *  this folder has a space in its name, so the %20 is required — these are
+ *  written percent-encoded rather than raw. All six are 1448x1086 (4:3),
+ *  which is why the tiles render at aspect-[4/3] and crop nothing. */
+const IMAGE_BASE = "https://ik.imagekit.io/koreanhive/skin%20concern";
 
 export const CONCERNS: Concern[] = [
   {
@@ -49,7 +51,7 @@ export const CONCERNS: Concern[] = [
     copy: "Calm active spots without stripping",
     detail: "Calm active spots without stripping the barrier.",
     href: "/concern/acne-breakouts",
-    image: `${IMAGE_BASE}/acne&care.webp`,
+    image: `${IMAGE_BASE}/acne.webp`,
     taxonomy: ["acne", "large-pores"],
     metaDescription:
       "Korean skincare for acne and breakouts — cleansers, toners, serums and spot treatments that calm active spots without stripping your barrier. Cash on delivery across Bangladesh.",
@@ -60,7 +62,7 @@ export const CONCERNS: Concern[] = [
     copy: "Fade post-acne marks and uneven tone",
     detail: "Fade post-acne marks and uneven tone over 4–6 weeks.",
     href: "/concern/dark-spots",
-    image: `${IMAGE_BASE}/Darkspot.webp`,
+    image: `${IMAGE_BASE}/dark%20sport.webp`,
     taxonomy: ["dark-spots", "post-acne-marks", "dullness"],
     metaDescription:
       "Korean skincare for dark spots and post-acne marks — niacinamide, vitamin C and glutathione formulas that even out tone. Cash on delivery across Bangladesh.",
@@ -71,7 +73,7 @@ export const CONCERNS: Concern[] = [
     copy: "Layerable hydration that holds all day",
     detail: "Layerable hydration that holds through the day.",
     href: "/concern/dryness",
-    image: `${IMAGE_BASE}/Dryness-C.webp`,
+    image: `${IMAGE_BASE}/dryness.webp`,
     taxonomy: ["dryness", "dehydration"],
     metaDescription:
       "Korean skincare for dry and dehydrated skin — hyaluronic acid, ceramide and panthenol layers that hold hydration all day. Cash on delivery across Bangladesh.",
@@ -82,7 +84,7 @@ export const CONCERNS: Concern[] = [
     copy: "Control shine in Dhaka humidity",
     detail: "Control shine without the tight, squeaky feeling.",
     href: "/concern/oily-skin",
-    image: `${IMAGE_BASE}/oily-Skin.webp`,
+    image: `${IMAGE_BASE}/oily%20skin.webp`,
     taxonomy: ["oiliness", "large-pores"],
     metaDescription:
       "Korean skincare for oily skin and large pores — lightweight, non-stripping formulas built for Dhaka humidity. Cash on delivery across Bangladesh.",
@@ -93,7 +95,7 @@ export const CONCERNS: Concern[] = [
     copy: "Daily SPF that never leaves a cast",
     detail: "Daily SPF that never leaves a white cast.",
     href: "/concern/sun-protection",
-    image: `${IMAGE_BASE}/Sun_Protection.webp`,
+    image: `${IMAGE_BASE}/sun%20protection.webp`,
     taxonomy: ["sun-protection"],
     metaDescription:
       "Korean sunscreen for daily use — SPF50+ PA++++ formulas with no white cast, suited to Bangladesh sun. Cash on delivery nationwide.",
@@ -104,7 +106,7 @@ export const CONCERNS: Concern[] = [
     copy: "Short ingredient lists, no fragrance",
     detail: "Short ingredient lists, no fragrance, no sting.",
     href: "/concern/sensitive-skin",
-    image: `${IMAGE_BASE}/Sensitive-Skin.webp`,
+    image: `${IMAGE_BASE}/sensitive%20skin.webp`,
     taxonomy: ["sensitivity", "redness"],
     metaDescription:
       "Korean skincare for sensitive and easily irritated skin — centella, mugwort and fragrance-free barrier care. Cash on delivery across Bangladesh.",
