@@ -838,6 +838,33 @@ export function getProducts({
   return getProductsCached(sort, take);
 }
 
+/**
+ * Named products, returned in the order they were asked for.
+ *
+ * For hand-picked slots — the hero's routine strip — where the choice is
+ * editorial rather than a query. Anything unpublished, renamed or deleted
+ * simply does not come back, so a stale pick shortens the list instead of
+ * rendering a hole; the caller decides what to do with fewer than it wanted.
+ */
+const productsBySlugsCached = unstable_cache(
+  async (slugs: string[]) => {
+    const cards = await findCards({ isActive: true, slug: { $in: slugs } }, "newest");
+
+    // findCards sorts by its own key, so restore the requested order
+    const rank = new Map(slugs.map((slug, index) => [slug, index]));
+
+    return cards.sort(
+      (a, b) => (rank.get(a.slug) ?? 0) - (rank.get(b.slug) ?? 0),
+    );
+  },
+  ["products-by-slug"],
+  { revalidate: 3600, tags: ["products"] },
+);
+
+export function getProductsBySlugs(slugs: string[]) {
+  return slugs.length > 0 ? productsBySlugsCached(slugs) : Promise.resolve([]);
+}
+
 export async function getProductBySlug(slug: string) {
   await connectDb();
 
