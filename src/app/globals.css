@@ -182,6 +182,31 @@
   :lang(bn) {
     font-family: var(--font-bengali);
   }
+
+  /* Tailwind v4 dropped the v3 preflight rule that gave buttons a pointer,
+     leaving them on the browser default arrow. On a shop that reads as "this
+     is not clickable" over Add to Cart and Buy Now, so it goes back.
+
+     Base layer, so any deliberate exception still wins: cursor-zoom-in on the
+     gallery, cursor-wait on a filter mid-request, disabled:cursor-not-allowed
+     on the quantity steppers are all utilities, and utilities outrank base.
+     Anchors already point on their own. */
+  button,
+  summary,
+  [role="button"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"] {
+    cursor: pointer;
+  }
+
+  /* An arrow says nothing; not-allowed says "yes this is a button, no you
+     cannot press it yet" — which is the whole message a disabled Add to Cart
+     needs to carry. Only reaches buttons that still take pointer events. */
+  button:disabled,
+  input:disabled {
+    cursor: not-allowed;
+  }
 }
 
 @utility container-page {
