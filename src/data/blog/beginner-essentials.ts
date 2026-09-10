@@ -131,6 +131,7 @@ export const beginnerEssentials: Post = {
       picks: [
         {
           product: "COSRX Advanced Snail 96 Mucin Power Essence",
+          slug: "cosrx-advanced-snail-96-mucin-power-essence-100ml",
           note: "আমি জানি, “snail mucin” শুনে আপনার ভ্রু উঠে গেছে। শামুকের কিছু মুখে দেব? কিন্তু বিশ্বাস করুন, এটা Korean skincare এর single most recommended product worldwide। Millions of people এটা ব্যবহার করেন আর ভালোবাসেন।",
         },
       ],
@@ -196,8 +197,9 @@ export const beginnerEssentials: Post = {
       kind: "pick",
       picks: [
         {
-          product: "Beauty of Joseon Relief Sun (Rice + Probiotics) SPF 50+ PA++++",
-          note: "No white cast, সব skin tone এ invisible। Lightweight, non greasy। Humidity তে comfortable। Rice extract, brightening effect দেয়। Probiotic, skin barrier strengthen করে। Matte finish, oily skin friendly। এটা globally cult favorite sunscreen আর বাংলাদেশের climate এর জন্য যেন specially তৈরি করা!",
+          product: "Beauty of Joseon Relief Sun Aqua-Fresh (Rice + B5) SPF50+ PA++++",
+          slug: "beauty-of-joseon-relief-sun-aqua-fresh-rice-plus-b5-spf50-pa-50ml",
+          note: "No white cast, সব skin tone এ invisible। Lightweight, non greasy। Humidity তে comfortable। Rice extract, brightening effect দেয়। Vitamin B5, skin barrier strengthen করে। Matte finish, oily skin friendly। এটা globally cult favorite sunscreen আর বাংলাদেশের climate এর জন্য যেন specially তৈরি করা!",
         },
       ],
     },

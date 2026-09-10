@@ -163,7 +163,8 @@ export const acneProneSkin: Post = {
       kind: "pick",
       picks: [
         {
-          product: "Beauty of Joseon Relief Sun",
+          product: "Beauty of Joseon Relief Sun Aqua-Fresh (Rice + B5) SPF50+ PA++++",
+          slug: "beauty-of-joseon-relief-sun-aqua-fresh-rice-plus-b5-spf50-pa-50ml",
           note: "Rice extract base, matte finish, acne prone skin এ comfortable।",
         },
       ],
@@ -205,7 +206,8 @@ export const acneProneSkin: Post = {
       kind: "pick",
       picks: [
         {
-          product: "SKIN1004 Madagascar Centella Ampoule",
+          product: "SKIN1004 Madagascar Centella Tea-Trica Relief Ampoule",
+          slug: "skin1004-madagascar-centella-tea-trica-relief-ampoule-30ml",
           note: "Lightweight, fast absorbing, proven results।",
         },
       ],
