@@ -52,3 +52,7 @@ Claude outputs
 .env.example
 DEPLOY-CPANEL.md
 .claude
+
+# Scratch tarball used to ferry src/ and tests/ into a Linux checkout for
+# type-checking. Regenerated on demand; never a source of truth.
+src-sync.tgz
