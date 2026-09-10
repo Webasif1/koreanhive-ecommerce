@@ -2,14 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  Images,
-  LayoutDashboard,
-  LogOut,
-  Package,
-  ReceiptText,
-  TicketPercent,
-} from "lucide-react";
+import { Images, LayoutDashboard, LogOut, Package, ReceiptText, Star, TicketPercent } from "lucide-react";
 
 import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
@@ -26,6 +19,7 @@ const nav = [
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/coupons", label: "Coupons", icon: TicketPercent },
   { href: "/admin/banners", label: "Banners", icon: Images },
+  { href: "/admin/reviews", label: "Reviews", icon: Star },
 ];
 
 export default async function AdminLayout({

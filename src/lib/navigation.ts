@@ -36,6 +36,9 @@ export const footerNav: { title: string; items: NavItem[] }[] = [
     title: "Help",
     items: [
       { href: "/track", label: "Track Order" },
+      // sits under Help rather than Company: for most people the reason to
+      // open it is to leave one after a delivery, not to read about the shop
+      { href: "/reviews", label: "Customer Reviews" },
       { href: "/shipping", label: "Shipping & Delivery" },
       { href: "/returns", label: "Returns" },
       { href: "/contact", label: "Contact Us" },

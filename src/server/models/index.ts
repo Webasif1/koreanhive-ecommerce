@@ -485,11 +485,30 @@ orderSchema.index({ placedAt: -1 });
 
 // -------------------------------------------------- social & saved
 
+/**
+ * A customer review.
+ *
+ * The model existed but nothing read or wrote it. Two fields were missing
+ * before it could carry the storefront's claim:
+ *
+ *   orderId  the order this review came from. Reviews are only accepted for
+ *            a DELIVERED order that actually contains the product, so
+ *            "Verified purchase" on the card is a fact about the database
+ *            rather than a badge drawn in the design.
+ *   city     the district on that order, shown under the reviewer's name.
+ *            Taken from the order, not typed by the reviewer, so it cannot
+ *            be invented either.
+ *
+ * Nothing is public until isApproved. The default is false and only the
+ * admin moderation action sets it true.
+ */
 export type ReviewDoc = {
   _id: Types.ObjectId;
   productId: Types.ObjectId;
   userId?: Types.ObjectId | null;
+  orderId?: Types.ObjectId | null;
   authorName: string;
+  city?: string | null;
   phone?: string | null;
   rating: number;
   title?: string | null;
@@ -504,7 +523,10 @@ const reviewSchema = new Schema<ReviewDoc>(
     productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
     // guest reviews allowed
     userId: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    // the delivered order that earns the "Verified purchase" line
+    orderId: { type: Schema.Types.ObjectId, ref: "Order", default: null },
     authorName: { type: String, required: true },
+    city: { type: String, default: null },
     phone: { type: String, default: null },
     rating: { type: Number, required: true, min: 1, max: 5 },
     title: { type: String, default: null },
@@ -515,6 +537,13 @@ const reviewSchema = new Schema<ReviewDoc>(
 );
 
 reviewSchema.index({ productId: 1, isApproved: 1 });
+// the home page and /reviews both read "newest approved, across everything"
+reviewSchema.index({ isApproved: 1, createdAt: -1 });
+// one review per product per order — the guard the submit action leans on
+reviewSchema.index(
+  { orderId: 1, productId: 1 },
+  { unique: true, partialFilterExpression: { orderId: { $type: "objectId" } } },
+);
 
 export type WishlistItemDoc = {
   _id: Types.ObjectId;

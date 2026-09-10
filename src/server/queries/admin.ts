@@ -13,6 +13,7 @@ import {
   Order,
   type OrderDoc,
   Product,
+  Review,
 } from "@/server/models";
 
 export async function getDashboardStats() {
@@ -314,4 +315,65 @@ export async function getAdminBanners() {
     position: banner.position,
     isActive: banner.isActive,
   }));
+}
+
+export type AdminReview = {
+  id: string;
+  productName: string;
+  productSlug: string | null;
+  authorName: string;
+  city: string | null;
+  rating: number;
+  title: string | null;
+  body: string | null;
+  isApproved: boolean;
+  createdAt: string;
+};
+
+/**
+ * The moderation queue: everything pending first, then what is already live.
+ *
+ * Shows the reviewer's full name, unlike every storefront read — the person
+ * moderating is deciding whether to publish someone's words and should see who
+ * wrote them. The masking happens on the way out to the public pages.
+ */
+export async function getAdminReviews(): Promise<AdminReview[]> {
+  await connectDb();
+
+  const reviews = await Review.find()
+    .sort({ isApproved: 1, createdAt: -1 })
+    .limit(200)
+    .lean();
+
+  if (reviews.length === 0) return [];
+
+  const products = await Product.find({
+    _id: { $in: reviews.map((review) => review.productId) },
+  })
+    .select("name slug")
+    .lean();
+
+  const byId = new Map(
+    products.map((product) => [
+      product._id.toString(),
+      { name: product.name, slug: product.slug },
+    ]),
+  );
+
+  return reviews.map((review) => {
+    const product = byId.get(review.productId.toString());
+
+    return {
+      id: review._id.toString(),
+      productName: product?.name ?? "Product removed",
+      productSlug: product?.slug ?? null,
+      authorName: review.authorName,
+      city: review.city ?? null,
+      rating: review.rating,
+      title: review.title ?? null,
+      body: review.body ?? null,
+      isApproved: review.isApproved,
+      createdAt: review.createdAt.toISOString(),
+    };
+  });
 }
