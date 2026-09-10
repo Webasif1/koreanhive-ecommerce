@@ -11,6 +11,7 @@ import { ReelTile } from "@/components/home/reel-tile";
 import { PostCard } from "@/components/blog/post-card";
 import { POSTS } from "@/data/blog";
 import { CONCERNS } from "@/data/concerns";
+import { HERO_ROUTINE_SLUGS, stepForSlug } from "@/data/hero-routine";
 import { REELS } from "@/data/reels";
 import { topBrandsByStock } from "@/lib/brands";
 import { formatBDT } from "@/lib/format";
@@ -21,6 +22,7 @@ import {
   getBrands,
   getCombos,
   getProducts,
+  getProductsBySlugs,
 } from "@/server/queries/catalog";
 
 export const metadata: Metadata = {
@@ -107,11 +109,12 @@ const FAQS: FaqEntry[] = [
 const MIN_REAL_SALES = 4;
 
 export default async function Home() {
-  const [brands, banners, sold, combos] = await Promise.all([
+  const [brands, banners, sold, combos, routine] = await Promise.all([
     getBrands(),
     getActiveBanners(),
     getBestSellers(8),
     getCombos(),
+    getProductsBySlugs(HERO_ROUTINE_SLUGS),
   ]);
 
   // Ranked by units actually sold once there is enough trade to rank. Until
@@ -121,10 +124,12 @@ export default async function Home() {
   const hasRealSales = sold.length >= MIN_REAL_SALES;
   const popular = hasRealSales ? sold : await getProducts({ take: 8 });
 
-  // The hero photograph is a routine being applied, so the strip over it
-  // shows what that routine is made of. Whatever the best-seller slot is
-  // already ranking by, so it never contradicts the grid further down.
-  const shopTheShot = popular.slice(0, 3);
+  // The hero photograph is a routine being applied, so the strip over it shows
+  // what that routine is made of — three named flagships from src/data/
+  // hero-routine.ts. This used to be popular.slice(0, 3), which with no sales
+  // history meant the three newest imports: a body lotion and two minis.
+  // If a pick has been unpublished since, fall back rather than show a gap.
+  const shopTheShot = routine.length === 3 ? routine : popular.slice(0, 3);
 
   // All 71 brands used to render here, 15 rows of them on a phone. `brands`
   // stays whole because its length is real copy in two places — the stat block
@@ -203,24 +208,36 @@ export default async function Home() {
             {shopTheShot.length === 3 ? (
               <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
                 <div className="flex items-center gap-3 bg-white/95 p-3 shadow-[0_1px_4px_rgba(36,26,36,0.08)] backdrop-blur-[2px] sm:gap-4 sm:p-4">
-                  <ul className="flex shrink-0 gap-2">
+                  <ul className="flex shrink-0 gap-2 sm:gap-2.5">
                     {shopTheShot.map((product) => (
                       <li key={product.id}>
                         <Link
                           href={`/product/${product.slug}`}
-                          className="block size-14 overflow-hidden bg-blush sm:size-16"
+                          className="group block w-14 sm:w-16"
                           title={product.name}
                         >
-                          {product.images[0]?.url ? (
-                            <Image
-                              src={product.images[0].url}
-                              alt={product.images[0].alt ?? product.name}
-                              width={64}
-                              height={64}
-                              sizes="64px"
-                              className="size-full object-cover"
-                            />
-                          ) : null}
+                          {/* The packshots are square and shot on pure white,
+                              so on a white panel they read as one pale smudge
+                              — the border is what makes three separate
+                              products, not decoration. Blush shows only as
+                              letterboxing if a future image is not square;
+                              contain rather than cover so nothing is cropped
+                              through a bottle's cap. */}
+                          <span className="block aspect-square overflow-hidden border border-border bg-blush p-1 transition-colors group-hover:border-primary">
+                            {product.images[0]?.url ? (
+                              <Image
+                                src={product.images[0].url}
+                                alt={product.images[0].alt ?? product.name}
+                                width={64}
+                                height={64}
+                                sizes="64px"
+                                className="size-full object-contain"
+                              />
+                            ) : null}
+                          </span>
+                          <span className="mt-1 block text-center text-[9px] font-semibold uppercase tracking-[0.1em] text-muted-foreground group-hover:text-primary">
+                            {stepForSlug(product.slug) ?? product.brand?.name}
+                          </span>
                         </Link>
                       </li>
                     ))}

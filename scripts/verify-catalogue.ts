@@ -14,6 +14,7 @@ import "dotenv/config";
 
 import mongoose from "mongoose";
 
+import { HERO_ROUTINE_SLUGS } from "../src/data/hero-routine";
 import { ALLOWED_IMAGE_HOSTS } from "../src/lib/image-hosts";
 import { Brand, Category, Product } from "../src/server/models";
 
@@ -107,6 +108,20 @@ async function main() {
         comparePrice: { $ne: null },
         $expr: { $lt: ["$comparePrice", "$price"] },
       }),
+      fatal: true,
+    },
+    {
+      // the hero's routine strip names three products by slug; if one is
+      // unpublished or renamed the strip silently falls back to whatever is
+      // newest, which is what having a hand-picked strip is meant to avoid
+      label: "hero routine picks missing",
+      count:
+        HERO_ROUTINE_SLUGS.length -
+        (await Product.countDocuments({
+          isActive: true,
+          slug: { $in: HERO_ROUTINE_SLUGS },
+          "images.0": { $exists: true },
+        })),
       fatal: true,
     },
     {
