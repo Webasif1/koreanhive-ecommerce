@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 import type { Block } from "@/data/blog";
 
@@ -13,17 +14,34 @@ import type { Block } from "@/data/blog";
  * markup, and the product-description problem elsewhere in this codebase
  * (raw ** showing on the page) cannot happen to a journal post.
  */
-export function ArticleBody({ blocks }: { blocks: Block[] }) {
+export function ArticleBody({
+  blocks,
+  linkable,
+}: {
+  blocks: Block[];
+  /**
+   * Slugs the caller has confirmed resolve to an active product. A pick is
+   * only linked if its slug is in here, so an article can name something the
+   * shop has stopped selling without shipping a link to a 404.
+   */
+  linkable?: ReadonlySet<string>;
+}) {
   return (
     <div lang="bn" className="mt-8 space-y-5">
       {blocks.map((block, index) => (
-        <BlockView key={index} block={block} />
+        <BlockView key={index} block={block} linkable={linkable} />
       ))}
     </div>
   );
 }
 
-function BlockView({ block }: { block: Block }) {
+function BlockView({
+  block,
+  linkable,
+}: {
+  block: Block;
+  linkable?: ReadonlySet<string>;
+}) {
   switch (block.kind) {
     case "heading":
       return (
@@ -66,16 +84,54 @@ function BlockView({ block }: { block: Block }) {
         <aside className="border border-border bg-blush p-5">
           <p className="eyebrow">আমাদের Pick</p>
           <ul className="mt-3 space-y-3">
-            {block.picks.map((pick) => (
-              <li key={pick.product}>
+            {block.picks.map((pick) => {
+              const name = (
                 <p className="text-[15px] font-semibold leading-snug">
                   {pick.product}
                 </p>
+              );
+              const note = (
                 <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
                   {pick.note}
                 </p>
-              </li>
-            ))}
+              );
+
+              // Named but not stocked, or stocked and then delisted: the
+              // recommendation still stands, it just has nowhere to go.
+              if (!pick.slug || !linkable?.has(pick.slug)) {
+                return (
+                  <li key={pick.product}>
+                    {name}
+                    {note}
+                  </li>
+                );
+              }
+
+              return (
+                <li key={pick.product}>
+                  {/* One link around the whole entry rather than a linked name
+                      plus a linked call to action — two links to the same
+                      page read as two destinations to a screen reader. */}
+                  <Link
+                    href={`/product/${pick.slug}`}
+                    className="group block"
+                    lang="en"
+                  >
+                    <span className="block text-[15px] font-semibold leading-snug group-hover:text-primary">
+                      {pick.product}
+                    </span>
+                    <span className="mt-1 block text-[13px] leading-relaxed text-muted-foreground">
+                      {pick.note}
+                    </span>
+                    {/* The box has always looked like a callout, not a link.
+                        This is the part that says it is one. */}
+                    <span className="mt-2 block text-[12.5px] font-medium text-primary">
+                      Shop this product →
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </aside>
       );

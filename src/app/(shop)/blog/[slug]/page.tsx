@@ -8,8 +8,10 @@ import { PostCard } from "@/components/blog/post-card";
 import { JsonLd } from "@/components/seo/json-ld";
 import { Button } from "@/components/ui/button";
 import { findPost, POSTS } from "@/data/blog";
+import { pickSlugs } from "@/lib/blog-picks";
 import { articleJsonLd, breadcrumbJsonLd } from "@/lib/json-ld";
 import { withSiteSuffix } from "@/lib/site";
+import { getProductsBySlugs } from "@/server/queries/catalog";
 
 /**
  * A journal article.
@@ -66,6 +68,13 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
   const more = POSTS.filter((other) => other.slug !== post.slug);
 
+  // One query for every product the article recommends. getProductsBySlugs
+  // returns only what is active, so a delisted pick simply falls out of the
+  // set and renders as plain text — the article keeps its recommendation and
+  // loses only the link.
+  const stocked = await getProductsBySlugs(pickSlugs(post.body));
+  const linkable = new Set(stocked.map((product) => product.slug));
+
   return (
     <div className="container-page py-10 md:py-14">
       <JsonLd data={articleJsonLd(post)} />
@@ -103,7 +112,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           />
         </div>
 
-        <ArticleBody blocks={post.body} />
+        <ArticleBody blocks={post.body} linkable={linkable} />
 
         <div className="mt-12 flex flex-col items-start gap-4 border border-border bg-blush p-6">
           <p className="font-display text-lg">

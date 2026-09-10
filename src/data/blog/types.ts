@@ -30,10 +30,20 @@ export type Block =
   | { kind: "image"; src: string; alt: string }
   /**
    * "আমাদের Pick" — the products the article recommends by name. Held apart
-   * from prose so the recommendation is visible at a glance, and so these can
-   * later be resolved against the catalogue and linked.
+   * from prose so the recommendation is visible at a glance, and so each one
+   * can carry the catalogue slug it refers to.
+   *
+   * `slug` is optional on purpose. An article may recommend something the
+   * shop does not stock yet, and the honest rendering of that is the product
+   * name as plain text — not a link to a 404, and not a silent swap to
+   * whatever happens to be nearest in the catalogue. The renderer also drops
+   * the link if the slug no longer resolves to an active product, so
+   * delisting something cannot leave a dead link inside an article.
    */
-  | { kind: "pick"; picks: { product: string; note: string }[] }
+  | {
+      kind: "pick";
+      picks: { product: string; note: string; slug?: string }[];
+    }
   /** An aside the document labels: "ছোট্ট tip", "মনে রাখবেন", "Important". */
   | { kind: "note"; label: string; text: string }
   | {

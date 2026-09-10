@@ -72,6 +72,7 @@ export const beginnerEssentials: Post = {
       picks: [
         {
           product: "COSRX Low pH Good Morning Gel Cleanser",
+          slug: "cosrx-low-ph-good-morning-gel-cleanser-150ml",
           note: "Tea tree oil আছে (mild antibacterial), pH 5.0 থেকে 6.0 (skin friendly), gentle foam, সব skin type এ কাজ করে। এটা Korean skincare এর gateway product। বেশিরভাগ মানুষ এটা দিয়েই K beauty journey শুরু করেন!",
         },
       ],
@@ -103,6 +104,7 @@ export const beginnerEssentials: Post = {
       picks: [
         {
           product: "Anua Heartleaf 77% Soothing Toner",
+          slug: "anua-heartleaf-77-percent-soothing-toner-500ml",
           note: "Heartleaf extract, calming, anti inflammatory। সব skin type এ safe, sensitive skin সহ। Lightweight, watery texture। Bangladesh এর humidity তে perfect। Redness কমায়, pores soothe করে।",
         },
       ],

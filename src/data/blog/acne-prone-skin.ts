@@ -121,6 +121,7 @@ export const acneProneSkin: Post = {
       picks: [
         {
           product: "COSRX Low pH Good Morning Gel Cleanser",
+          slug: "cosrx-low-ph-good-morning-gel-cleanser-150ml",
           note: "Tea tree oil আছে, mild antibacterial action দেয়, pH skin friendly।",
         },
       ],
