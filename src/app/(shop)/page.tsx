@@ -34,20 +34,13 @@ export const metadata: Metadata = {
 
 export const revalidate = 3600;
 
-const APPROACH = [
-  {
-    title: "Imported, not repackaged",
-    copy: "Every batch arrives sealed from Korea with its original barcode intact.",
-  },
-  {
-    title: "Stored the way it should be",
-    copy: "Actives are kept cool and out of light, so what you get still works.",
-  },
-  {
-    title: "Routines, not shelves of product",
-    copy: "We stock fewer items and tell you where each one sits in a routine.",
-  },
-];
+/* The approach section's photograph. Shot in a Bangladeshi home rather than
+   bought from a stock library of Western models — the argument the section
+   makes is "matched to your skin and Bangladesh's weather", and a shopper in
+   Dhaka should be able to see herself in the picture that argument sits next
+   to. Portrait, 1122x1402, so it fills a tall column without cropping a face. */
+const APPROACH_IMAGE =
+  "https://ik.imagekit.io/koreanhive/skin%20concern/Healthy-looking.webp";
 
 /* Five operational promises, from the design's trust strip. Every one is a
    fact the business can stand behind — no rating, no review count, nothing
@@ -340,57 +333,69 @@ export default async function Home() {
       </section>
 
       {/* ------------------------------------------------------- approach */}
-      <section className="border-y border-border bg-white">
-        <div className="container-page grid gap-10 py-14 lg:grid-cols-[1fr_1.2fr]">
-          <div>
-            <p className="eyebrow">The Korean Hive approach</p>
-            <h2 className="mt-3 font-display text-[30px] leading-[1.18] tracking-[-0.01em] md:text-[40px]">
-              Healthy-looking skin isn&apos;t about using more products.
-            </h2>
+      {/* Was two stacked sections: one arguing "fewer products", the next
+          naming which four. They were the same argument told twice, and the
+          claim landed weakest exactly where it needed a face — a paragraph
+          about what skin needs, set in a column of grey text.
+
+          One band now: the argument, the four steps that make it concrete,
+          and the photograph, which finally has something to sit beside. The
+          picture bleeds to the card edge because a photograph with a margin
+          around it reads as an illustration of the text; one that runs to the
+          edge reads as the other half of it. */}
+      <section className="container-page py-14">
+        <div className="grid overflow-hidden border border-border bg-white lg:grid-cols-2">
+          {/* Photograph first in the markup, so on a phone the section opens
+              with the face rather than with 60 words of argument. On desktop
+              the order flips back to text-then-image, matching the reading
+              direction. */}
+          <div className="relative order-1 min-h-[380px] sm:min-h-[460px] lg:order-2 lg:min-h-[620px]">
+            <Image
+              src={APPROACH_IMAGE}
+              alt="A woman in Bangladesh applying moisturiser at home by a window"
+              fill
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="object-cover"
+            />
           </div>
-          <div className="grid gap-6 sm:grid-cols-3">
-            {APPROACH.map((item) => (
-              <div key={item.title} className="border-t border-hairline pt-4">
-                <h3 className="text-sm font-bold">{item.title}</h3>
-                <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
-                  {item.copy}
-                </p>
-              </div>
-            ))}
+
+          <div className="order-2 p-7 sm:p-10 lg:order-1 lg:p-14">
+            <p className="eyebrow">The Korean Hive approach</p>
+            <h2 className="mt-3 font-display text-[30px] leading-[1.15] tracking-[-0.01em] md:text-[40px]">
+              Healthy-looking skin isn&apos;t about using more products.
+              It&apos;s about using the right ones.
+            </h2>
+            <p className="mt-5 max-w-[52ch] text-[15px] leading-relaxed text-muted-foreground">
+              Most people in Bangladesh start Korean skincare with a ten-step
+              routine they saw online, and stop three weeks later. We do it the
+              other way round: four products matched to your skin type and
+              Bangladesh&apos;s weather, used consistently. Add more only when
+              your skin asks for it.
+            </p>
+
+            {/* Four, and the copy above says why four. A fifth step would
+                undercut the sentence it sits beneath. */}
+            <ol className="mt-9 grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-4">
+              {ROUTINE.map((step) => (
+                <li key={step.no} className="border-t-2 border-primary pt-3">
+                  <span className="text-[11px] font-semibold tracking-[0.08em] text-primary">
+                    {step.no}
+                  </span>
+                  <h3 className="mt-1.5 text-[15px] font-semibold leading-snug">
+                    {step.name}
+                  </h3>
+                  <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted-foreground">
+                    {step.desc}
+                  </p>
+                </li>
+              ))}
+            </ol>
+
+            <Button asChild className="mt-9">
+              <Link href="/concerns">Build my 4-step routine</Link>
+            </Button>
           </div>
         </div>
-      </section>
-
-      {/* ------------------------------------------------- four-step routine */}
-      {/* The concrete half of the approach section above it: that one argues
-          fewer products, this one names which four and in what order. */}
-      <section className="container-page py-14">
-        <p className="eyebrow">Start here</p>
-        <h2 className="mt-3 max-w-[24ch] font-display text-[30px] leading-[1.18] tracking-[-0.01em] md:text-[38px]">
-          Four products, used consistently, beat ten used for three weeks.
-        </h2>
-        <p className="mt-4 max-w-[62ch] text-[15px] leading-relaxed text-muted-foreground">
-          Most people start Korean skincare with a ten-step routine they saw
-          online, and stop by week three. We do it the other way round: four
-          products matched to your skin and Bangladesh&apos;s weather. Add more
-          only when your skin asks for it.
-        </p>
-        <ol className="mt-9 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {ROUTINE.map((step) => (
-            <li key={step.no} className="border-t border-hairline pt-4">
-              <span className="font-display text-[26px] leading-none text-primary">
-                {step.no}
-              </span>
-              <h3 className="mt-3 text-sm font-bold">{step.name}</h3>
-              <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
-                {step.desc}
-              </p>
-            </li>
-          ))}
-        </ol>
-        <Button asChild className="mt-9">
-          <Link href="/concerns">Build my routine</Link>
-        </Button>
       </section>
 
       {/* ---------------------------------------------------- bestsellers */}
