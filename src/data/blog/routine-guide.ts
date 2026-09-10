@@ -82,6 +82,7 @@ export const routineGuide: Post = {
       picks: [
         {
           product: "COSRX Low pH Good Morning Gel Cleanser",
+          slug: "cosrx-low-ph-good-morning-gel-cleanser-150ml",
           note: "Tea tree আছে, gentle, সব skin type এ কাজ করে।",
         },
       ],
@@ -106,6 +107,7 @@ export const routineGuide: Post = {
       picks: [
         {
           product: "Anua Heartleaf 77% Soothing Toner",
+          slug: "anua-heartleaf-77-percent-soothing-toner-500ml",
           note: "Lightweight, calming, সব skin type এ safe।",
         },
       ],
