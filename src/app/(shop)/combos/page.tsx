@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatBDT } from "@/lib/format";
+import { productImage } from "@/lib/product-image";
 import { getCombos } from "@/server/queries/catalog";
 
 export const metadata: Metadata = {
@@ -74,7 +75,7 @@ export default async function CombosPage() {
                         <span className="relative size-10 shrink-0 border border-border bg-blush">
                           {product.imageUrl && (
                             <Image
-                              src={product.imageUrl}
+                              src={productImage(product.imageUrl)}
                               alt={product.name}
                               fill
                               sizes="40px"

@@ -7,6 +7,7 @@ import { WishlistButton } from "@/components/product/wishlist-button";
 import { Badge } from "@/components/ui/badge";
 import { ProductPlaceholder } from "@/components/ui/product-placeholder";
 import { discountPercent, formatBDT } from "@/lib/format";
+import { productImage } from "@/lib/product-image";
 import type { ProductCardData } from "@/server/queries/catalog";
 
 /**
@@ -41,23 +42,17 @@ export function ProductCard({
           <div className="relative aspect-square overflow-hidden bg-white">
             {image ? (
               <Image
-                src={image.url}
+                src={productImage(image.url)}
                 alt={image.alt ?? product.name}
                 fill
                 priority={priority}
                 sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-                // contain, not cover: the catalogue's photos are not a
-                // consistent aspect ratio, and cover crops each one to fill
-                // the square — a tall bottle got zoomed until it overflowed
-                // the tile while a wide jar sat small. Contain fits the whole
-                // product and keeps every card at the same visual scale.
-                //
-                // No padding and no scale. Every catalogue image is a 1200x1200
-                // square and the tile is aspect-square, so contain fits each one
-                // exactly edge to edge — there is no letterboxing to reclaim. A
-                // scale here only pushed the tightly-framed products past the
-                // tile and clipped them. How large a product looks is decided by
-                // how much of its own frame it fills, which is the photography.
+                // contain, not cover: cover crops to fill the square, which
+                // takes the cap off a tall bottle. Contain fits the whole
+                // product, and productImage() above has already made every
+                // photo the same square with the product at the same scale
+                // inside it — so there is no letterboxing left for contain to
+                // add, and no padding to reclaim here.
                 className="object-contain"
               />
             ) : (

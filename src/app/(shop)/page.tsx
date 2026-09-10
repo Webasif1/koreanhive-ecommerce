@@ -15,6 +15,7 @@ import { HERO_ROUTINE_SLUGS, stepForSlug } from "@/data/hero-routine";
 import { REELS } from "@/data/reels";
 import { topBrandsByStock } from "@/lib/brands";
 import { countConcernProducts } from "@/lib/concern-count";
+import { productImage } from "@/lib/product-image";
 import { formatBDT } from "@/lib/format";
 import { faqJsonLd, type FaqEntry } from "@/lib/json-ld";
 import {
@@ -223,14 +224,14 @@ export default async function Home() {
                           {/* The packshots are square and shot on pure white,
                               so on a white panel they read as one pale smudge
                               — the border is what makes three separate
-                              products, not decoration. Blush shows only as
-                              letterboxing if a future image is not square;
-                              contain rather than cover so nothing is cropped
-                              through a bottle's cap. */}
-                          <span className="block aspect-square overflow-hidden border border-border bg-blush p-1 transition-colors group-hover:border-primary">
+                              products, not decoration. The tile is white
+                              rather than blush because productImage() pads
+                              each photo onto white, and a tinted tile would
+                              show that pad as a square. */}
+                          <span className="block aspect-square overflow-hidden border border-border bg-white p-1 transition-colors group-hover:border-primary">
                             {product.images[0]?.url ? (
                               <Image
-                                src={product.images[0].url}
+                                src={productImage(product.images[0].url)}
                                 alt={product.images[0].alt ?? product.name}
                                 width={64}
                                 height={64}

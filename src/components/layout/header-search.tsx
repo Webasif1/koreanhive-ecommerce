@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { formatBDT } from "@/lib/format";
+import { productImage } from "@/lib/product-image";
 import { cn } from "@/lib/utils";
 import type { SearchSuggestion } from "@/server/queries/catalog";
 
@@ -201,10 +202,10 @@ export function HeaderSearchInput() {
                 index === active ? "bg-blush" : "bg-white",
               )}
             >
-              <span className="relative size-9 shrink-0 border border-border bg-blush">
+              <span className="relative size-9 shrink-0 border border-border bg-white">
                 {product.imageUrl && (
                   <Image
-                    src={product.imageUrl}
+                    src={productImage(product.imageUrl)}
                     alt=""
                     fill
                     sizes="36px"

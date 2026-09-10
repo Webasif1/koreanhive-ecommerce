@@ -5,6 +5,7 @@ import Image from "next/image";
 
 import { ProductPlaceholder } from "@/components/ui/product-placeholder";
 import { cn } from "@/lib/utils";
+import { productImage } from "@/lib/product-image";
 
 type GalleryImage = {
   id: string;
@@ -61,7 +62,7 @@ export function ProductGallery({
       >
         <Image
           key={active.id}
-          src={active.url}
+          src={productImage(active.url)}
           alt={active.alt ?? productName}
           fill
           priority
@@ -93,7 +94,7 @@ export function ProductGallery({
               )}
             >
               <Image
-                src={image.url}
+                src={productImage(image.url)}
                 alt=""
                 fill
                 sizes="64px"
