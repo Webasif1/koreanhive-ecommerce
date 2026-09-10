@@ -115,8 +115,12 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         <ArticleBody blocks={post.body} linkable={linkable} />
 
         <div className="mt-12 flex flex-col items-start gap-4 border border-border bg-blush p-6">
+          {/* Was "Everything named above is in the shop", which four of the
+              ten products these articles recommend make untrue. The picks now
+              link to the ones we actually stock, so the promise can be about
+              the shop instead of about the article. */}
           <p className="font-display text-lg">
-            Everything named above is in the shop
+            Shop authentic Korean skincare
           </p>
           <p className="text-[13px] leading-relaxed text-muted-foreground">
             100% authentic Korean skincare, cash on delivery, delivered to all

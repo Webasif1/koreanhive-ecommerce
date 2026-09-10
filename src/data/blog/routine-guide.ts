@@ -195,7 +195,8 @@ export const routineGuide: Post = {
       kind: "pick",
       picks: [
         {
-          product: "Beauty of Joseon Relief Sun (Rice + Probiotics) SPF 50+",
+          product: "Beauty of Joseon Relief Sun Aqua-Fresh (Rice + B5) SPF50+ PA++++",
+          slug: "beauty-of-joseon-relief-sun-aqua-fresh-rice-plus-b5-spf50-pa-50ml",
           note: "No white cast, matte finish, oily skin friendly।",
         },
       ],
