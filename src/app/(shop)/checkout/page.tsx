@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { formatBDT } from "@/lib/format";
+import { productImage } from "@/lib/product-image";
 import { getDeliveryZones } from "@/server/queries/catalog";
 import { getCart } from "@/server/queries/cart";
 
@@ -38,7 +39,7 @@ export default async function CheckoutPage() {
             >
               {line.imageUrl && (
                 <Image
-                  src={line.imageUrl}
+                  src={productImage(line.imageUrl)}
                   alt={line.name}
                   fill
                   sizes="48px"

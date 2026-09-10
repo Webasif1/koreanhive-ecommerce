@@ -5,6 +5,7 @@ import { Banknote, MapPin, Truck } from "lucide-react";
 import { OrderTimeline } from "@/components/track/order-timeline";
 import { Badge } from "@/components/ui/badge";
 import { formatBDT, formatDateTime, formatDeliveryWindow } from "@/lib/format";
+import { productImage } from "@/lib/product-image";
 import { isTerminalDetour, ORDER_STATUS_LABEL } from "@/lib/order-status";
 import type { TrackedOrder as TrackedOrderData } from "@/server/queries/order";
 
@@ -66,7 +67,7 @@ export function TrackedOrder({ order }: { order: TrackedOrderData }) {
                   >
                     {item.imageUrl && (
                       <Image
-                        src={item.imageUrl}
+                        src={productImage(item.imageUrl)}
                         alt={item.productName}
                         fill
                         sizes="48px"

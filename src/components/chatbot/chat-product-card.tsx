@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { formatBDT } from "@/lib/format";
+import { productImage } from "@/lib/product-image";
 import type { ChatProductCard as ChatProductCardData } from "@/lib/chatbot/types";
 
 /**
@@ -18,10 +19,10 @@ export function ChatProductCard({ product }: { product: ChatProductCardData }) {
       href={`/product/${product.slug}`}
       className="flex gap-3 border border-border bg-white p-2.5 transition-colors hover:border-primary"
     >
-      <span className="relative size-16 shrink-0 border border-hairline bg-blush">
+      <span className="relative size-16 shrink-0 border border-hairline bg-white">
         {product.imageUrl && (
           <Image
-            src={product.imageUrl}
+            src={productImage(product.imageUrl)}
             alt=""
             fill
             sizes="64px"

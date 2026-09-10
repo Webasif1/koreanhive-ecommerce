@@ -46,8 +46,15 @@ export default function imagekitLoader({ src, width, quality }: LoaderArgs) {
   // what next/image callers expect.
   const transforms = [`w-${width}`, `q-${quality ?? 80}`, "c-at_max"];
 
+  // Chained with ":", not ",". ImageKit reads a comma as "another parameter in
+  // the same step" and a colon as "a new step applied to the previous result".
+  // Callers now arrive with a transformation of their own — productImage()
+  // trims and re-pads every packshot — and appending to that step would put
+  // this width in the same breath as its width, where the last one silently
+  // wins. A new step resizes what the first step produced, which is what a
+  // next/image caller means by `width`.
   const existing = url.searchParams.get("tr");
-  const tr = existing ? `${existing},${transforms.join(",")}` : transforms.join(",");
+  const tr = existing ? `${existing}:${transforms.join(",")}` : transforms.join(",");
 
   // Built by hand rather than through URLSearchParams, which percent-encodes
   // the separating commas. ImageKit accepts %2C, but its own documented form

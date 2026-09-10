@@ -7,6 +7,7 @@ import { Minus, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { formatBDT } from "@/lib/format";
+import { productImage } from "@/lib/product-image";
 import {
   removeCartLineAction,
   updateCartQuantityAction,
@@ -53,7 +54,7 @@ export function CartLineRow({ line }: { line: CartLine }) {
       >
         {line.imageUrl && (
           <Image
-            src={line.imageUrl}
+            src={productImage(line.imageUrl)}
             alt={line.name}
             fill
             sizes="80px"

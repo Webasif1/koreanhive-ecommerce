@@ -12,6 +12,7 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { Badge } from "@/components/ui/badge";
 import { discountPercent, formatBDT, formatDeliveryWindow } from "@/lib/format";
 import { breadcrumbJsonLd, productJsonLd } from "@/lib/json-ld";
+import { productImage } from "@/lib/product-image";
 import { absoluteUrl, withSiteSuffix } from "@/lib/site";
 import {
   getDeliveryZones,
@@ -260,7 +261,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                     <div className="relative size-[54px] bg-blush">
                       {item.images[0] && (
                         <Image
-                          src={item.images[0].url}
+                          src={productImage(item.images[0].url)}
                           alt={item.name}
                           fill
                           sizes="54px"
