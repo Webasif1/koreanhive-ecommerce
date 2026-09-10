@@ -4,6 +4,8 @@ import Link from "next/link";
 
 import { HeroBanners } from "@/components/layout/hero-banners";
 import { ProductGrid } from "@/components/product/product-grid";
+import { ReviewCard } from "@/components/review/review-card";
+import { ReviewSummaryPanel } from "@/components/review/review-summary";
 import { JsonLd } from "@/components/seo/json-ld";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +29,7 @@ import {
   getProducts,
   getProductsBySlugs,
 } from "@/server/queries/catalog";
+import { getRecentReviews, getSiteReviewSummary } from "@/server/queries/reviews";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -105,15 +108,25 @@ const FAQS: FaqEntry[] = [
 const MIN_REAL_SALES = 4;
 
 export default async function Home() {
-  const [brands, banners, sold, combos, routine, concernProductIds] =
-    await Promise.all([
-      getBrands(),
-      getActiveBanners(),
-      getBestSellers(8),
-      getCombos(),
-      getProductsBySlugs(HERO_ROUTINE_SLUGS),
-      getConcernTaxonomyCounts(),
-    ]);
+  const [
+    brands,
+    banners,
+    sold,
+    combos,
+    routine,
+    concernProductIds,
+    reviewSummary,
+    reviews,
+  ] = await Promise.all([
+    getBrands(),
+    getActiveBanners(),
+    getBestSellers(8),
+    getCombos(),
+    getProductsBySlugs(HERO_ROUTINE_SLUGS),
+    getConcernTaxonomyCounts(),
+    getSiteReviewSummary(),
+    getRecentReviews(4),
+  ]);
 
   // Ranked by units actually sold once there is enough trade to rank. Until
   // then the same slot shows new arrivals under a heading that says so —
@@ -397,6 +410,29 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      {/* -------------------------------------------------------- reviews */}
+      {/* The whole block is conditional. With no approved reviews there is no
+          score to state and no card to fill, and the honest version of that is
+          a section that is not there — not a 0.0 over five empty bars, and not
+          invented customers, which is what this feature was built to replace.
+          It appears by itself the day the first review is approved. */}
+      {reviews.length > 0 && (
+        <section className="border-y border-border bg-white">
+          <div className="container-page grid gap-8 py-14 lg:grid-cols-[320px_1fr]">
+            <ReviewSummaryPanel
+              summary={reviewSummary}
+              heading="Why women love Korean Hive"
+              className="h-fit border border-border bg-card p-6"
+            />
+            <ul className="grid gap-4 sm:grid-cols-2">
+              {reviews.map((review) => (
+                <ReviewCard key={review.id} review={review} />
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
 
       {/* ---------------------------------------------------- bestsellers */}
       <section id="bestsellers" className="container-page py-14">

@@ -6,6 +6,8 @@ import { notFound } from "next/navigation";
 import { ProductActions } from "@/components/cart/product-actions";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductGrid } from "@/components/product/product-grid";
+import { ReviewCard } from "@/components/review/review-card";
+import { ReviewSummaryPanel } from "@/components/review/review-summary";
 import { StarRating } from "@/components/product/star-rating";
 import { WishlistButton } from "@/components/product/wishlist-button";
 import { JsonLd } from "@/components/seo/json-ld";
@@ -20,6 +22,7 @@ import {
   getRelatedProducts,
   getSitemapEntries,
 } from "@/server/queries/catalog";
+import { getProductReviews } from "@/server/queries/reviews";
 
 type ProductPageProps = {
   params: Promise<{ slug: string }>;
@@ -89,12 +92,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   if (!product) notFound();
 
-  const [related, zones] = await Promise.all([
+  const [related, zones, productReviews] = await Promise.all([
     getRelatedProducts({
       productId: product.id,
       categoryId: product.categoryId,
     }),
     getDeliveryZones(),
+    getProductReviews(product.id),
   ]);
 
   const variantPrices = product.variants.map((v) => v.price ?? product.price);
@@ -248,7 +252,25 @@ export default async function ProductPage({ params }: ProductPageProps) {
             />
           </div>
 
-          {related.length > 0 && (
+          {/* Reviews for this product only. Absent until one is approved — an
+          empty "Reviews (0)" heading on every page in a 279-product catalogue
+          advertises that nobody has bought anything. */}
+      {productReviews.reviews.length > 0 && (
+        <section className="mt-16 grid gap-8 lg:grid-cols-[300px_1fr]">
+          <ReviewSummaryPanel
+            summary={productReviews.summary}
+            heading="What buyers say"
+            className="h-fit border border-border bg-card p-6"
+          />
+          <ul className="grid gap-4 sm:grid-cols-2">
+            {productReviews.reviews.slice(0, 6).map((review) => (
+              <ReviewCard key={review.id} review={review} />
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {related.length > 0 && (
             <div className="mt-4 border border-border bg-white p-6">
               <p className="eyebrow">Complete the routine</p>
               <div className="mt-3.5 flex flex-col gap-2.5">
