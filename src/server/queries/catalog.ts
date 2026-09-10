@@ -6,6 +6,12 @@ import { truncateBenefit } from "@/lib/format";
 import type { QueryFilter, Types } from "mongoose";
 
 import { PER_PAGE } from "@/lib/listing-params";
+import {
+  buildListingFacetPipeline,
+  type ListingFacetRows,
+  readFacetCount,
+  saleScope as rawSaleScope,
+} from "@/lib/listing-facets";
 import { connectDb } from "@/server/db";
 import {
   Banner,
@@ -262,11 +268,10 @@ async function findPage(
  * effect was that /deals advertised the entire catalogue as "marked down" and
  * the "On discount" facet matched everything.
  */
+/** Re-exported from lib/listing-facets.ts, where the pipeline that uses it
+ *  can be tested without a database. */
 export function saleScope(): ProductFilter {
-  return {
-    comparePrice: { $ne: null, $gt: 0 },
-    $expr: { $gt: ["$comparePrice", "$price"] },
-  };
+  return rawSaleScope() as ProductFilter;
 }
 
 /**
@@ -277,6 +282,78 @@ export function saleScope(): ProductFilter {
  * *other* active filter applied, so the numbers next to a checkbox tell you
  * what you would actually get by ticking it.
  */
+/**
+ * How many active brands actually have products, site-wide.
+ *
+ * Deliberately ignores `base` and every filter — it is the number in the
+ * sidebar's "71 brands" line, which does not change as a shopper narrows the
+ * page. It was being recomputed on every request as an eleventh query.
+ */
+const listingBrandDirectoryCount = unstable_cache(
+  async () => {
+    await connectDb();
+    const rows = await Product.aggregate<{ _id: unknown }>([
+      { $match: { isActive: true, brandId: { $ne: null } } },
+      { $group: { _id: "$brandId" } },
+    ]);
+
+    return rows.length;
+  },
+  ["listing-brand-directory-count"],
+  { revalidate: 3600, tags: ["catalogue"] },
+);
+
+/**
+ * The three lookups every listing needs before it can build a filter.
+ *
+ * Cached for an hour under the tags the admin already revalidates, because
+ * they answer "what brands exist", not "what did this shopper ask for". They
+ * were three of the sixteen round trips a category page made, and two of them
+ * blocked everything after them.
+ */
+const listingBrands = unstable_cache(
+  async () => {
+    await connectDb();
+    return Brand.find({ isActive: true })
+      .select("name slug")
+      .sort({ name: 1 })
+      .lean();
+  },
+  ["listing-brands"],
+  { revalidate: 3600, tags: ["catalogue"] },
+);
+
+const listingCategories = unstable_cache(
+  async () => {
+    await connectDb();
+    // Every active category, flat or nested. This used to require a parent, on
+    // the assumption of a Skincare > Cleansers tree; the real catalogue is one
+    // flat level, so that filter matched nothing and the Category facet
+    // vanished from every listing sidebar. Counts already drop empty options,
+    // so a parent that holds no products of its own still does not show up.
+    return Category.find({ isActive: true })
+      .select("name slug")
+      .sort({ position: 1 })
+      .lean();
+  },
+  ["listing-categories"],
+  { revalidate: 3600, tags: ["catalogue"] },
+);
+
+/** A product is "in a combo" exactly when some active bundle lists its slug. */
+const listingComboSlugs = unstable_cache(
+  async () => {
+    await connectDb();
+    const activeCombos = await Combo.find({ isActive: true })
+      .select("productSlugs")
+      .lean();
+
+    return [...new Set(activeCombos.flatMap((combo) => combo.productSlugs))];
+  },
+  ["listing-combo-slugs"],
+  { revalidate: 3600, tags: ["catalogue"] },
+);
+
 export async function getCatalogListing({
   scope = {},
   filters = {},
@@ -292,17 +369,14 @@ export async function getCatalogListing({
 }): Promise<CatalogListing> {
   await connectDb();
 
-  const [allBrands, allCategories] = await Promise.all([
-    Brand.find({ isActive: true }).select("name slug").sort({ name: 1 }).lean(),
-    // Every active category, flat or nested. This used to require a parent, on
-    // the assumption of a Skincare > Cleansers tree; the real catalogue is one
-    // flat level, so that filter matched nothing and the Category facet
-    // vanished from every listing sidebar. Counts already drop empty options,
-    // so a parent that holds no products of its own still does not show up.
-    Category.find({ isActive: true })
-      .select("name slug")
-      .sort({ position: 1 })
-      .lean(),
+  // Brands, categories and combo membership are the same on every listing in
+  // the shop and change when someone edits the catalogue, not when a shopper
+  // ticks a box. Fetching them per request cost three round trips to Atlas on
+  // every page view, two of them in their own sequential wave.
+  const [allBrands, allCategories, comboSlugs] = await Promise.all([
+    listingBrands(),
+    listingCategories(),
+    listingComboSlugs(),
   ]);
 
   const brandIdBySlug = new Map(allBrands.map((b) => [b.slug, b._id]));
@@ -320,15 +394,6 @@ export async function getCatalogListing({
   });
 
   const base: ProductFilter = { isActive: true, ...scope };
-
-  // membership comes from the combos themselves, so a product is "in a combo"
-  // exactly when some active bundle lists it
-  const activeCombos = await Combo.find({ isActive: true })
-    .select("productSlugs")
-    .lean();
-  const comboSlugs = [
-    ...new Set(activeCombos.flatMap((combo) => combo.productSlugs)),
-  ];
 
   const priceClause = () => {
     const range: Record<string, number> = {};
@@ -362,70 +427,52 @@ export async function getCatalogListing({
     ...clauses.price,
   };
 
-  /** Everything except the named dimension, so a facet never zeroes itself. */
-  const without = (skip: keyof typeof clauses) =>
-    Object.entries(clauses).reduce<ProductFilter>(
-      (acc, [key, clause]) =>
-        key === skip ? acc : { ...acc, ...(clause as object) },
-      { ...base },
-    );
-
-  const brandFacetFilter = without("brand");
-  const categoryFacetFilter = without("category");
-
-  const [
-    docs,
-    total,
-    scopeTotal,
-    brandCounts,
-    categoryCounts,
-    onSaleCount,
-    inStockCount,
-    inComboCount,
-    rating45Count,
-    rating40Count,
-    priceRange,
-    brandDirectoryRows,
-  ] = await Promise.all([
+  /**
+   * One round trip for all ten facet figures instead of ten.
+   *
+   * This was the page's real cost. Every number was cheap on its own — the
+   * catalogue is under three hundred products — but each was a separate trip
+   * to Atlas, and with maxPoolSize at 10 the last two queued behind the rest.
+   * $facet runs every sub-pipeline over the same `base` match in one command,
+   * so the whole sidebar now costs what a single count used to.
+   *
+   * The pipeline itself is built in lib/listing-facets.ts so it can be run
+   * against fixtures in a test — a wrong sub-pipeline still returns numbers,
+   * just the wrong ones, and nothing about that fails loudly.
+   */
+  const [docs, facetRows, brandDirectoryCount] = await Promise.all([
     findPage(fullFilter, sort, (page - 1) * perPage, perPage),
-    Product.countDocuments(fullFilter),
-    Product.countDocuments(base),
-    Product.aggregate<{ _id: unknown; count: number }>([
-      { $match: brandFacetFilter },
-      { $group: { _id: "$brandId", count: { $sum: 1 } } },
-    ]),
-    Product.aggregate<{ _id: unknown; count: number }>([
-      { $match: categoryFacetFilter },
-      { $group: { _id: "$categoryId", count: { $sum: 1 } } },
-    ]),
-    Product.countDocuments({ ...without("onSale"), ...saleScope() }),
-    Product.countDocuments({ ...without("inStock"), stock: { $gt: 0 } }),
-    Product.countDocuments({
-      ...without("inCombo"),
-      slug: { $in: comboSlugs },
-    }),
-    Product.countDocuments({
-      ...without("rating"),
-      ratingAvg: { $gte: 4.5 },
-    }),
-    Product.countDocuments({
-      ...without("rating"),
-      ratingAvg: { $gte: 4.0 },
-    }),
-    // bounds ignore the current price selection, so dragging the slider
-    // cannot shrink the track out from under the handles
-    Product.aggregate<{ min: number; max: number }>([
-      { $match: without("price") },
-      { $group: { _id: null, min: { $min: "$price" }, max: { $max: "$price" } } },
-    ]),
-    // site-wide, deliberately ignoring `base` and every filter
-    Product.aggregate<{ _id: unknown }>([
-      { $match: { isActive: true, brandId: { $ne: null } } },
-      { $group: { _id: "$brandId" } },
-    ]),
+    Product.aggregate<ListingFacetRows>(
+      buildListingFacetPipeline({
+        base: base as Record<string, unknown>,
+        clauses,
+        comboSlugs,
+      }),
+    ),
+    listingBrandDirectoryCount(),
   ]);
 
-  const brandMap = await brandMapFor(docs);
+  const facet = facetRows[0];
+
+  const total = readFacetCount(facet?.total);
+  const scopeTotal = readFacetCount(facet?.scopeTotal);
+  const brandCounts = facet?.brands ?? [];
+  const categoryCounts = facet?.categories ?? [];
+  const onSaleCount = readFacetCount(facet?.onSale);
+  const inStockCount = readFacetCount(facet?.inStock);
+  const inComboCount = readFacetCount(facet?.inCombo);
+  const rating45Count = readFacetCount(facet?.rating45);
+  const rating40Count = readFacetCount(facet?.rating40);
+  const priceRange = facet?.priceRange ?? [];
+
+  // Built from allBrands, which is already in memory and already covers every
+  // active brand. brandMapFor() was a second query for a strict subset of it.
+  const brandMap = new Map(
+    allBrands.map((brand) => [
+      brand._id.toString(),
+      { name: brand.name, slug: brand.slug },
+    ]),
+  );
   const products = docs.map((p) => toCard(p, brandMap));
 
   const brandCountBy = new Map(
@@ -442,7 +489,7 @@ export async function getCatalogListing({
     page,
     perPage,
     totalPages: Math.max(1, Math.ceil(total / perPage)),
-    brandDirectoryCount: brandDirectoryRows.length,
+    brandDirectoryCount,
     facets: {
       // a facet with nothing behind it is noise, so empty options are dropped
       brands: allBrands
