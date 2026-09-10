@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { HeroBanners } from "@/components/layout/hero-banners";
 import { ProductGrid } from "@/components/product/product-grid";
+import { FaqAccordion } from "@/components/home/faq-accordion";
 import { ReviewCard } from "@/components/review/review-card";
 import { ReviewSummaryPanel } from "@/components/review/review-summary";
 import { JsonLd } from "@/components/seo/json-ld";
@@ -13,13 +14,14 @@ import { ReelTile } from "@/components/home/reel-tile";
 import { PostCard } from "@/components/blog/post-card";
 import { POSTS } from "@/data/blog";
 import { CONCERNS } from "@/data/concerns";
+import { FAQS } from "@/data/faqs";
 import { HERO_ROUTINE_SLUGS, stepForSlug } from "@/data/hero-routine";
 import { REELS } from "@/data/reels";
 import { topBrandsByStock } from "@/lib/brands";
 import { countConcernProducts } from "@/lib/concern-count";
 import { productImage } from "@/lib/product-image";
 import { formatBDT } from "@/lib/format";
-import { faqJsonLd, type FaqEntry } from "@/lib/json-ld";
+import { faqJsonLd } from "@/lib/json-ld";
 import {
   getActiveBanners,
   getBestSellers,
@@ -75,33 +77,6 @@ const WHY = [
   { stat: "0৳", label: "paid upfront — cash on delivery" },
 ];
 
-const FAQS: FaqEntry[] = [
-  {
-    question: "Are your products authentic?",
-    answer:
-      "Yes. Everything is imported from Korea and arrives sealed with its original batch code. We do not sell replicas or grey-market stock.",
-  },
-  {
-    question: "Do I need an account to order?",
-    answer:
-      "No. Korean Hive is guest checkout by default — your name, phone number and address are enough.",
-  },
-  {
-    question: "How do I pay?",
-    answer:
-      "Cash on delivery. You pay the courier when the parcel reaches you, so nothing leaves your pocket before the products arrive.",
-  },
-  {
-    question: "How long does delivery take?",
-    answer:
-      "Inside Dhaka is 1–2 working days. Outside Dhaka is 2–4 working days, to all 64 districts.",
-  },
-  {
-    question: "Can I track my order without logging in?",
-    answer:
-      "Yes. Use your order number and the phone number you gave at checkout on the Track Order page.",
-  },
-];
 
 /** Below this, the order history is too thin for "best seller" to mean
  *  anything, so the section says what it is actually showing instead. */
@@ -610,21 +585,31 @@ export default async function Home() {
       </section>
 
       {/* ------------------------------------------------------------ faq */}
+      {/* Two columns rather than a flat grid of open answers. Eleven questions
+          laid out flat is a wall of small grey text that nobody reads; folded
+          up, the list of questions is scannable and the heading has something
+          to sit beside. */}
       <section className="container-page py-14">
-        <p className="eyebrow">Common questions</p>
-        <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
-          Korean skincare, explained simply
-        </h2>
-        <dl className="mt-6 grid gap-6 md:grid-cols-2">
-          {FAQS.map((faq) => (
-            <div key={faq.question} className="border-t border-hairline pt-4">
-              <dt className="text-sm font-bold">{faq.question}</dt>
-              <dd className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
-                {faq.answer}
-              </dd>
-            </div>
-          ))}
-        </dl>
+        <div className="grid gap-8 lg:grid-cols-[360px_1fr] lg:gap-14">
+          <div className="lg:sticky lg:top-24 lg:self-start">
+            <p className="eyebrow">Common questions</p>
+            <h2 className="mt-3 font-display text-[30px] leading-[1.15] tracking-[-0.01em] md:text-[38px]">
+              Korean skincare, explained simply
+            </h2>
+            <p className="mt-4 max-w-[38ch] text-[15px] leading-relaxed text-muted-foreground">
+              Short answer first, then the detail. The same questions our team
+              gets on WhatsApp every day.
+            </p>
+            <Link
+              href="/blog"
+              className="mt-5 inline-block border-b border-chip-border pb-1 text-sm font-semibold text-primary"
+            >
+              Read the full skincare guides
+            </Link>
+          </div>
+
+          <FaqAccordion items={FAQS} />
+        </div>
       </section>
 
       {/* -------------------------------------------------------- journal */}
