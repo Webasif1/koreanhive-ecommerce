@@ -423,36 +423,54 @@ export default async function Home() {
       </section>
 
       {/* --------------------------------------------------------- brands */}
-      <section className="border-y border-border bg-white">
-        <div className="container-page py-14">
-          <p className="eyebrow">Shop by Korean brand</p>
-          <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
-            {brands.length} Korean brands, all authorised
-          </h2>
-          <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-5">
-            {featuredBrands.map((brand) => (
+      {/* Cream ground and no rule, so the white cards are what separates this
+          band from the page rather than a border drawn around it. */}
+      <section className="container-page py-14">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="eyebrow">Shop by Korean brand</p>
+            <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
+              {brands.length} Korean brands, all authorised
+            </h2>
+          </div>
+          {/* The way out of this section sits beside the heading, not under
+              the grid. Ten of 71 brands are shown, so someone who does not
+              see their brand needs the escape hatch before they have finished
+              reading the tiles — not after scrolling past all of them. */}
+          <Link
+            href="/brands"
+            className="border-b border-chip-border pb-1 text-sm font-semibold text-primary"
+          >
+            Explore all brands →
+          </Link>
+        </div>
+        <ul className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-5">
+          {featuredBrands.map((brand) => (
+            <li key={brand.id}>
+              {/* Left-aligned, not centred. A centred name and count read as a
+                  label on a plaque; ranged left they read as the start of a
+                  list the shopper can scan straight down. */}
               <Link
-                key={brand.id}
                 href={`/brand/${brand.slug}`}
-                className="group border border-border bg-card p-5 text-center"
+                className="group block h-full border border-border bg-card p-5"
               >
-                <div className="font-display text-lg group-hover:text-primary">
+                <span className="block text-[15px] font-semibold leading-snug text-foreground group-hover:text-primary">
                   {brand.name}
-                </div>
-                <div className="mt-1 text-[11.5px] text-muted-foreground">
+                </span>
+                <span className="mt-1 block text-[12.5px] text-muted-foreground">
                   {brand._count.products}{" "}
                   {brand._count.products === 1 ? "product" : "products"}
-                </div>
+                </span>
+                {/* The whole tile is the link; this only says so. Without it
+                    a bordered box holding two lines of text does not read as
+                    something to click. */}
+                <span className="mt-3.5 block text-[12.5px] font-medium text-primary">
+                  Shop brand →
+                </span>
               </Link>
-            ))}
-          </div>
-
-          <div className="mt-8 flex justify-center">
-            <Button variant="outline" asChild>
-              <Link href="/brands">See all {brands.length} brands</Link>
-            </Button>
-          </div>
-        </div>
+            </li>
+          ))}
+        </ul>
       </section>
 
       {/* --------------------------------------------------------- combos
