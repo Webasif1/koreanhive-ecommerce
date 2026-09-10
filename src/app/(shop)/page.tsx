@@ -121,6 +121,11 @@ export default async function Home() {
   const hasRealSales = sold.length >= MIN_REAL_SALES;
   const popular = hasRealSales ? sold : await getProducts({ take: 8 });
 
+  // The hero photograph is a routine being applied, so the strip over it
+  // shows what that routine is made of. Whatever the best-seller slot is
+  // already ranking by, so it never contradicts the grid further down.
+  const shopTheShot = popular.slice(0, 3);
+
   // All 71 brands used to render here, 15 rows of them on a phone. `brands`
   // stays whole because its length is real copy in two places — the stat block
   // and the section heading — while only these ten get a tile.
@@ -178,15 +183,55 @@ export default async function Home() {
             {/* Served from ImageKit rather than public/, like the 279 product
                 shots — the host is already allow-listed, so next/image
                 optimises it the same way and the asset can be swapped without
-                a deploy. */}
+                a deploy. The source is 1122x1402 (4:5); object-cover crops to
+                whatever the column gives it, and object-top keeps her face in
+                frame when the viewport is short. */}
             <Image
-              src="https://ik.imagekit.io/koreanhive/Hero-image/hero-image2.png"
-              alt="A woman with clear, glowing skin after a Korean skincare routine"
+              src="https://ik.imagekit.io/koreanhive/Hero-image/hero%20section%20image%20before%20and%20after.png"
+              alt="A woman applying Korean skincare at her mirror, shown before and after a routine"
               fill
               priority
               sizes="(min-width: 1024px) 50vw, 100vw"
-              className="object-cover"
+              className="object-cover object-top"
             />
+
+            {/* Shop-the-shot strip, from the design. Real catalogue rows, not
+                decoration: each thumbnail is a link to the product page, so
+                the photograph becomes a way into the shop rather than
+                something to scroll past. Hidden when the catalogue has fewer
+                than three products to show. */}
+            {shopTheShot.length === 3 ? (
+              <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+                <div className="flex items-center gap-3 bg-white/95 p-3 shadow-[0_1px_4px_rgba(36,26,36,0.08)] backdrop-blur-[2px] sm:gap-4 sm:p-4">
+                  <ul className="flex shrink-0 gap-2">
+                    {shopTheShot.map((product) => (
+                      <li key={product.id}>
+                        <Link
+                          href={`/product/${product.slug}`}
+                          className="block size-14 overflow-hidden bg-blush sm:size-16"
+                          title={product.name}
+                        >
+                          {product.images[0]?.url ? (
+                            <Image
+                              src={product.images[0].url}
+                              alt={product.images[0].alt ?? product.name}
+                              width={64}
+                              height={64}
+                              sizes="64px"
+                              className="size-full object-cover"
+                            />
+                          ) : null}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="eyebrow leading-[1.35] text-primary">
+                    Shop the routine
+                    <br className="hidden sm:inline" /> in this shot
+                  </p>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </section>
