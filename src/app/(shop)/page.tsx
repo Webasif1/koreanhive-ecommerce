@@ -14,6 +14,7 @@ import { CONCERNS } from "@/data/concerns";
 import { HERO_ROUTINE_SLUGS, stepForSlug } from "@/data/hero-routine";
 import { REELS } from "@/data/reels";
 import { topBrandsByStock } from "@/lib/brands";
+import { countConcernProducts } from "@/lib/concern-count";
 import { formatBDT } from "@/lib/format";
 import { faqJsonLd, type FaqEntry } from "@/lib/json-ld";
 import {
@@ -21,6 +22,7 @@ import {
   getBestSellers,
   getBrands,
   getCombos,
+  getConcernTaxonomyCounts,
   getProducts,
   getProductsBySlugs,
 } from "@/server/queries/catalog";
@@ -109,13 +111,15 @@ const FAQS: FaqEntry[] = [
 const MIN_REAL_SALES = 4;
 
 export default async function Home() {
-  const [brands, banners, sold, combos, routine] = await Promise.all([
-    getBrands(),
-    getActiveBanners(),
-    getBestSellers(8),
-    getCombos(),
-    getProductsBySlugs(HERO_ROUTINE_SLUGS),
-  ]);
+  const [brands, banners, sold, combos, routine, concernProductIds] =
+    await Promise.all([
+      getBrands(),
+      getActiveBanners(),
+      getBestSellers(8),
+      getCombos(),
+      getProductsBySlugs(HERO_ROUTINE_SLUGS),
+      getConcernTaxonomyCounts(),
+    ]);
 
   // Ranked by units actually sold once there is enough trade to rank. Until
   // then the same slot shows new arrivals under a heading that says so —
@@ -271,38 +275,67 @@ export default async function Home() {
       </section>
 
       {/* ------------------------------------------------------- concerns */}
+      {/* One row of six rather than a 3x2 grid of captioned cards. The old
+          tiles carried a line of copy each ("Calm active spots without
+          stripping"), which read well but made the section two screens tall on
+          a phone and pushed the best sellers below the fold. A concern tile
+          only has to answer "is my problem here, and is there stock behind
+          it" — the picture and a count do that in a third of the height. */}
       <section className="container-page py-14">
-        <p className="eyebrow">Shop by skin concern</p>
-        <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
-          Find what your skin is asking for
-        </h2>
-        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
-          {CONCERNS.map((concern) => (
-            <Link
-              key={concern.label}
-              href={concern.href}
-              className="group border border-border bg-card"
-            >
-              <div className="relative aspect-[4/3] overflow-hidden bg-blush">
-                <Image
-                  src={concern.image}
-                  alt={concern.label}
-                  fill
-                  sizes="(min-width: 1024px) 33vw, 50vw"
-                  className="object-cover"
-                />
-              </div>
-              <div className="p-4">
-                <h3 className="text-sm font-bold group-hover:text-primary">
-                  {concern.label}
-                </h3>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {concern.copy}
-                </p>
-              </div>
-            </Link>
-          ))}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="eyebrow">Shop by skin concern</p>
+            <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
+              Find what your skin is asking for
+            </h2>
+          </div>
+          <Link
+            href="/concerns"
+            className="border-b border-chip-border pb-1 text-sm font-semibold text-primary"
+          >
+            All concerns
+          </Link>
         </div>
+        <ul className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          {CONCERNS.map((concern) => {
+            const count = countConcernProducts(
+              concernProductIds,
+              concern.taxonomy,
+            );
+
+            return (
+              <li key={concern.slug}>
+                <Link
+                  href={concern.href}
+                  className="group block border border-border bg-card"
+                >
+                  <div className="relative aspect-[4/3] overflow-hidden bg-blush">
+                    <Image
+                      src={concern.image}
+                      alt={concern.label}
+                      fill
+                      sizes="(min-width: 1024px) 17vw, (min-width: 640px) 33vw, 50vw"
+                      className="object-cover"
+                    />
+                  </div>
+                  <div className="px-3 py-3">
+                    <h3 className="text-[13.5px] font-semibold leading-snug group-hover:text-primary">
+                      {concern.label}
+                    </h3>
+                    {/* A real count, deduplicated across the concern's
+                        taxonomy values. Omitted entirely at zero rather than
+                        printed as "0 products", which reads as a dead end. */}
+                    {count > 0 ? (
+                      <p className="mt-1 text-[11.5px] text-muted-foreground">
+                        {count} {count === 1 ? "product" : "products"}
+                      </p>
+                    ) : null}
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       </section>
 
       {/* ------------------------------------------------------- approach */}

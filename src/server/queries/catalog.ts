@@ -1212,6 +1212,41 @@ export async function getBrands() {
     .filter((brand) => brand._count.products > 0);
 }
 
+/**
+ * Active product count per concern, for the tiles on the home page.
+ *
+ * One aggregation, not six. A concern matches on `concerns[]` containing any
+ * of its taxonomy values, so the naive version is a countDocuments per tile —
+ * six round trips to render one row. Unwinding the array and grouping does it
+ * in a single pass over the same `{ isActive: 1, concerns: 1 }` index the
+ * concern listings already use.
+ *
+ * Returns counts keyed by *taxonomy* value. Mapping those onto concern slugs
+ * is the caller's job because the relation is many-to-one — "Acne &
+ * breakouts" covers both `acne` and `large-pores`, and a product carrying
+ * both must count once, which a per-value sum here cannot know. Callers use
+ * countConcernProducts below rather than adding the numbers themselves.
+ */
+async function concernTaxonomyCounts() {
+  await connectDb();
+
+  const rows = await Product.aggregate<{ _id: string; ids: unknown[] }>([
+    { $match: { isActive: true, concerns: { $type: "array", $ne: [] } } },
+    { $unwind: "$concerns" },
+    { $group: { _id: "$concerns", ids: { $addToSet: "$_id" } } },
+  ]);
+
+  return Object.fromEntries(
+    rows.map((row) => [row._id, row.ids.map((id) => String(id))]),
+  );
+}
+
+export const getConcernTaxonomyCounts = unstable_cache(
+  concernTaxonomyCounts,
+  ["concern-taxonomy-counts"],
+  { revalidate: 3600, tags: ["catalogue"] },
+);
+
 async function deliveryZones() {
   await connectDb();
 
