@@ -148,13 +148,13 @@ export function productJsonLd(product: ProductJsonLdInput) {
       ? { "@type": "Brand", name: product.brandName }
       : undefined,
     offers,
-    // Only emit a rating when there is a real review behind it — an invented
-    // aggregateRating is a structured-data penalty. The counts currently on
-    // products come from the catalogue sheet rather than from customers, so
-    // this stays off behind siteConfig.showRatings until the Review model is
-    // actually in use.
+    // Only emit a rating when real ratings are behind it — an invented
+    // aggregateRating is a structured-data penalty. ratingAvg/ratingCount are
+    // written only from approved customer reviews (src/server/ratings.ts), and
+    // catalogue:verify fails if they ever disagree, so a count above zero here
+    // means delivered customers rated it.
     aggregateRating:
-      siteConfig.showRatings && product.ratingCount > 0
+      product.ratingCount > 0
         ? {
             "@type": "AggregateRating",
             ratingValue: product.ratingAvg,

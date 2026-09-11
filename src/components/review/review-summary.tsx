@@ -35,8 +35,11 @@ export function ReviewSummaryPanel({
       <Stars value={summary.average} className="mt-3 block text-[15px]" />
 
       <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
+        {/* "ratings", not "reviews": the count includes buyers who left stars
+            without writing anything, so "23 reviews" above a list of eight
+            written ones would overstate what is there to read */}
         Based on {summary.count}{" "}
-        {summary.count === 1 ? "verified review" : "verified reviews"}
+        {summary.count === 1 ? "verified rating" : "verified ratings"}
         {productCount ? ` across ${productCount} products` : ""}
       </p>
 
@@ -47,7 +50,7 @@ export function ReviewSummaryPanel({
               {row.stars}★
             </span>
             {/* aria-hidden on the bar: the row already reads as "5 stars,
-                3 reviews, 60%" from the text either side of it, and a
+                3 ratings, 60%" from the text either side of it, and a
                 progressbar role here would announce it a second time. */}
             <span
               aria-hidden

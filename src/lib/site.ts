@@ -16,20 +16,6 @@ export const siteConfig = {
    * that are configured — an unset value shows nothing rather than a dead
    * address a customer would write to and never hear back from.
    */
-  /**
-   * Star ratings and review counts.
-   *
-   * The figures on every product come from the catalogue sheet, not from
-   * customers — the Review model exists and is unused, so all 279 products
-   * read the same 5.0 (10). Publishing that as visible social proof, and as
-   * AggregateRating structured data, is exactly the fabricated proof this
-   * project's own conventions rule out, and Google treats unearned review
-   * markup as a manual-action risk for the whole domain.
-   *
-   * Off until real reviews exist. Flip NEXT_PUBLIC_SHOW_RATINGS to "true" the
-   * day they do.
-   */
-  showRatings: process.env.NEXT_PUBLIC_SHOW_RATINGS === "true",
   contact: {
     email: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? null,
     phone: process.env.NEXT_PUBLIC_CONTACT_PHONE ?? null,

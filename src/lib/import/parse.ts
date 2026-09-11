@@ -7,7 +7,6 @@ import {
   parseBoolean,
   parseCount,
   parseMoney,
-  parseRating,
   parseStockStatus,
   type CanonicalColumn,
 } from "@/lib/import/columns";
@@ -212,16 +211,6 @@ function readRow(
     } else {
       fields.stock = status;
     }
-  }
-
-  for (const [column, parse] of [
-    ["ratingAvg", parseRating],
-    ["ratingCount", parseCount],
-  ] as const) {
-    if (!has(column)) continue;
-    const parsed = parse(get(column));
-    if (parsed === null) errors.push(`${column} is not a number: "${get(column)}"`);
-    else fields[column] = parsed;
   }
 
   if (has("concerns")) {

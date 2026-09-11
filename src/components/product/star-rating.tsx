@@ -1,14 +1,18 @@
-import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 /**
  * Design system: gold stars, then "4.9 (216)". Reviews are shown as a count,
  * never as a bare number.
  *
- * Renders nothing while siteConfig.showRatings is off. The figures on every
- * product are the catalogue sheet's, not customers' — identical across the
- * whole shop — and showing them as social proof is the fabricated proof this
- * project rules out. One flag turns them back on the day real reviews land.
+ * The figures are a product's approved customer ratings, written only by
+ * recomputeProductRating in src/server/ratings.ts. They used to be the
+ * catalogue sheet's placeholder — identical on every product — and this
+ * component sat behind a feature flag because of it. The flag went when the
+ * data became real; `catalogue:verify` now fails if a product's rating is not
+ * backed by its reviews.
+ *
+ * Renders nothing without a count, so an unrated product shows no stars
+ * rather than five empty ones, which would read as a bad score.
  */
 export function StarRating({
   value,
@@ -21,7 +25,7 @@ export function StarRating({
   className?: string;
   showCount?: boolean;
 }) {
-  if (!siteConfig.showRatings) return null;
+  if (count !== undefined && count <= 0) return null;
 
   const rounded = Math.round(value);
 
@@ -34,9 +38,13 @@ export function StarRating({
         {"★".repeat(rounded)}
         <span className="text-hairline">{"★".repeat(5 - rounded)}</span>
       </span>
-      <span className="sr-only">{value} out of 5</span>
+      <span className="sr-only">
+        {value} out of 5
+        {count !== undefined &&
+          `, from ${count} ${count === 1 ? "rating" : "ratings"}`}
+      </span>
       {showCount && (
-        <span className="text-[11.5px] text-muted-foreground">
+        <span className="text-[11.5px] text-muted-foreground" aria-hidden>
           {value.toFixed(1)}
           {count !== undefined && ` (${count})`}
         </span>

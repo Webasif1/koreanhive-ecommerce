@@ -63,6 +63,50 @@ export function summariseReviews(ratings: number[]): ReviewSummary {
   };
 }
 
+export type ReviewSubmission =
+  | { ok: false; field: "body"; tooShort: boolean }
+  | {
+      ok: true;
+      /** Stars with no words — publishes immediately. */
+      ratingOnly: boolean;
+      title: string | null;
+      body: string | null;
+      isApproved: boolean;
+    };
+
+/**
+ * What a submission becomes: a rating that publishes, a review that waits, or
+ * an error.
+ *
+ * The rule this exists to pin: **words never skip moderation.** Stars alone
+ * are approved at once because there is nothing in them to check. Anything a
+ * customer typed — including a headline sent without a review under it — is
+ * either held for a person or dropped, never published unread.
+ *
+ * Text is optional, but a few characters is neither a rating nor a review, so
+ * a body under `min` is refused rather than silently discarded.
+ */
+export function classifySubmission(
+  rawTitle: string,
+  rawBody: string,
+  { min, max }: { min: number; max: number },
+): ReviewSubmission {
+  const title = rawTitle.trim();
+  const body = rawBody.trim();
+
+  if (body.length > max) return { ok: false, field: "body", tooShort: false };
+  if (body.length > 0 && body.length < min) {
+    return { ok: false, field: "body", tooShort: true };
+  }
+
+  if (body.length === 0) {
+    // the headline is dropped, not published: it is still words
+    return { ok: true, ratingOnly: true, title: null, body: null, isApproved: true };
+  }
+
+  return { ok: true, ratingOnly: false, title: title || null, body, isApproved: false };
+}
+
 /**
  * "Tahmina Rahman" → "Tahmina R."
  *

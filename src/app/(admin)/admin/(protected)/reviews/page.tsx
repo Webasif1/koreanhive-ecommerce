@@ -30,8 +30,11 @@ export default async function AdminReviewsPage() {
           Reviews
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Nothing appears on the shop until you approve it. Every review here
-          came from a delivered order — the form will not accept one otherwise.
+          Written reviews appear on the shop only once you approve them. A
+          rating with no words is published straight away — there is nothing
+          in it to check — and you can still unpublish or delete it here. Every
+          entry came from a delivered order; the form will not accept one
+          otherwise.
         </p>
       </div>
 
@@ -76,9 +79,13 @@ export default async function AdminReviewsPage() {
               {review.title && (
                 <p className="mt-3 text-sm font-semibold">{review.title}</p>
               )}
-              {review.body && (
+              {review.body ? (
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {review.body}
+                </p>
+              ) : (
+                <p className="mt-2 text-xs uppercase tracking-[0.08em] text-muted-foreground">
+                  Rating only
                 </p>
               )}
 

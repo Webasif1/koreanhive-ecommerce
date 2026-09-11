@@ -16,7 +16,7 @@ import mongoose from "mongoose";
 
 import { HERO_ROUTINE_SLUGS } from "../src/data/hero-routine";
 import { ALLOWED_IMAGE_HOSTS } from "../src/lib/image-hosts";
-import { Brand, Category, Product } from "../src/server/models";
+import { Brand, Category, Product, Review } from "../src/server/models";
 
 type Check = { label: string; count: number; fatal: boolean };
 
@@ -70,6 +70,35 @@ async function main() {
     { $match: { n: { $gt: 1 } } },
   ]);
 
+  // A product's stars must be exactly its approved reviews. Anything else is a
+  // rating nobody gave — the sheet placeholder coming back through some other
+  // path, a skipped ratings:rebuild, or code writing ratingCount directly.
+  const unbackedRatings = await Product.aggregate<{ _id: unknown }>([
+    {
+      $lookup: {
+        from: Review.collection.name,
+        let: { id: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$productId", "$$id"] },
+              isApproved: true,
+            },
+          },
+          { $count: "n" },
+        ],
+        as: "approved",
+      },
+    },
+    {
+      $project: {
+        ratingCount: { $ifNull: ["$ratingCount", 0] },
+        approved: { $ifNull: [{ $first: "$approved.n" }, 0] },
+      },
+    },
+    { $match: { $expr: { $ne: ["$ratingCount", "$approved"] } } },
+  ]);
+
   const checks: Check[] = [
     {
       label: "duplicate slugs",
@@ -108,6 +137,11 @@ async function main() {
         comparePrice: { $ne: null },
         $expr: { $lt: ["$comparePrice", "$price"] },
       }),
+      fatal: true,
+    },
+    {
+      label: "rating not backed by reviews",
+      count: unbackedRatings.length,
       fatal: true,
     },
     {

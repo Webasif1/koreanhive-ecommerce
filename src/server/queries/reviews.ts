@@ -35,6 +35,14 @@ export type PublicReview = {
  */
 const PUBLIC = { isApproved: true } as const;
 
+/**
+ * Approved *and* written. A customer can leave stars without words; those
+ * count in every summary and in the product's rating, but a card with a name,
+ * a city and no review under it reads as a broken one. Card lists use this;
+ * summaries use PUBLIC.
+ */
+const PUBLIC_WRITTEN = { ...PUBLIC, body: { $nin: [null, ""] } } as const;
+
 async function siteReviewSummary(): Promise<ReviewSummary> {
   await connectDb();
 
@@ -55,7 +63,7 @@ export const getSiteReviewSummary = unstable_cache(
 async function recentReviews(take: number): Promise<PublicReview[]> {
   await connectDb();
 
-  const reviews = await Review.find(PUBLIC)
+  const reviews = await Review.find(PUBLIC_WRITTEN)
     .sort({ createdAt: -1, _id: -1 })
     .limit(take)
     .lean();
@@ -109,8 +117,10 @@ async function productReviews(productId: string) {
     .lean();
 
   return {
+    // every approved rating counts toward the score…
     summary: summariseReviews(reviews.map((review) => review.rating)),
-    reviews: reviews.map((review) => ({
+    // …but only the ones with words become cards
+    reviews: reviews.filter((review) => review.body).map((review) => ({
       id: review._id.toString(),
       authorName: displayAuthorName(review.authorName),
       city: review.city ?? null,
