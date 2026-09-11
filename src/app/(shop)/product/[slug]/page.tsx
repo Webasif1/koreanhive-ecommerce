@@ -187,7 +187,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
           <ProductGallery images={product.images} productName={product.name} />
           <div className="pointer-events-none absolute left-3.5 top-3.5 z-10 flex flex-col items-start gap-2">
             {off !== null && <Badge variant="sale">−{off}%</Badge>}
-            {product.ratingCount > 50 && <Badge variant="ink">BEST SELLER</Badge>}
+            {/* There was a BEST SELLER badge here on ratingCount > 50. A count
+                of ratings is not a count of sales, and now that the count is
+                real it would have become a false claim. The home page ranks
+                best sellers from actual orders. */}
           </div>
         </div>
 
@@ -212,12 +215,16 @@ export default async function ProductPage({ params }: ProductPageProps) {
           )}
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
+            {/* stars only once a delivered customer has rated it — and the
+                divider with them, or an unrated product opens on a stray "|" */}
             {product.ratingCount > 0 && (
-              <StarRating value={product.ratingAvg} count={product.ratingCount} />
+              <>
+                <StarRating value={product.ratingAvg} count={product.ratingCount} />
+                <span className="text-border" aria-hidden>
+                  |
+                </span>
+              </>
             )}
-            <span className="text-border" aria-hidden>
-              |
-            </span>
             <span
               className={
                 inStock

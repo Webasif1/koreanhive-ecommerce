@@ -266,11 +266,12 @@ the assistant and no direct route.
 - **Three routine combos are blocked** pending two products that do not exist in
   the catalogue (Dr. Althea 345 Relief Cream, Anua Niacinamide 10% + TXA 4%
   Serum) and their prices.
-- **Ratings are the sheet's own values**, not real customer reviews. Stars and
-  the `AggregateRating` structured data are now hidden behind
-  `NEXT_PUBLIC_SHOW_RATINGS`, off by default — publishing unearned review markup
-  is a manual-action risk for the whole domain. Turn it on when the `Review`
-  model is actually in use.
+- **No product has a rating yet.** Stars and `AggregateRating` come only from
+  approved ratings by delivered customers (`src/server/ratings.ts`); the
+  sheet's placeholder values were cleared and the importer no longer reads
+  them. Stars appear on a product once a buyer rates it — via the link on
+  `/track` for a delivered order, or the WhatsApp ask on the admin order page.
+  `catalogue:verify` fails if a product's rating is not backed by its reviews.
 
 ### Untested
 

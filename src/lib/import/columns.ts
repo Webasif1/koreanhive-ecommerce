@@ -29,8 +29,11 @@ export const CANONICAL_COLUMNS = [
   "variants",
   "imageAlt",
   "stockStatus",
-  "ratingAvg",
-  "ratingCount",
+  // No ratingAvg / ratingCount. The sheet's Rating and Review Count columns
+  // held the same placeholder for every product, and a rating is something a
+  // customer gives, not something a spreadsheet can. They are now unknown
+  // columns and ignored like any other; src/server/ratings.ts is the only
+  // writer of a product's rating.
   "size",
   "concerns",
 ] as const;
@@ -83,10 +86,6 @@ const ALIASES: Record<string, CanonicalColumn> = {
   "User Guidance": "howToUse",
   "Image Alt Text": "imageAlt",
   "Stock Status": "stockStatus",
-  "Review Count": "ratingCount",
-  rating: "ratingAvg",
-  ratingaverage: "ratingAvg",
-  reviews: "ratingCount",
   "Size / Volume": "size",
   volume: "size",
   "Skin Concerns Targeted": "concerns",
@@ -189,14 +188,6 @@ export function parseStockStatus(value: string): number | null {
   if (IN_STOCK.has(folded)) return NOMINAL_IN_STOCK;
   if (OUT_OF_STOCK.has(folded)) return 0;
   return null;
-}
-
-/** 0–5, one decimal place. Anything outside that is a data error, not a
- *  rating to clamp silently. */
-export function parseRating(value: string): number | null {
-  const parsed = Number(value.trim());
-  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 5) return null;
-  return Math.round(parsed * 10) / 10;
 }
 
 export function parseCount(value: string): number | null {

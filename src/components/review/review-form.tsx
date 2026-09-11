@@ -87,6 +87,9 @@ function ProductReviewForm({
     submitReviewAction,
     emptyReviewFormState,
   );
+  // whether anything has been written decides what the button promises:
+  // stars alone publish at once, words go to moderation
+  const [hasText, setHasText] = useState(false);
 
   return (
     <li className="border border-border bg-card p-5">
@@ -110,7 +113,7 @@ function ProductReviewForm({
       {item.reviewed || state.ok ? (
         <p className="mt-4 text-[13.5px] leading-relaxed text-muted-foreground">
           {state.message ??
-            "You have reviewed this product. Thank you — it appears once approved."}
+            "You have already rated this product on this order. Thank you."}
         </p>
       ) : (
         <form action={formAction} className="mt-4 space-y-4">
@@ -141,16 +144,23 @@ function ProductReviewForm({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor={`body-${item.productId}`}>Your review</Label>
+            <Label htmlFor={`body-${item.productId}`}>
+              Your review <span className="text-muted-foreground">(optional)</span>
+            </Label>
             <textarea
               id={`body-${item.productId}`}
               name="body"
               rows={4}
               maxLength={MAX_REVIEW_BODY}
-              required
+              onChange={(event) => setHasText(event.target.value.trim().length > 0)}
               className="w-full border border-border bg-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               placeholder="How did it work for you? How long have you used it?"
             />
+            <p className="text-xs text-muted-foreground">
+              {hasText
+                ? "Written reviews are checked before they appear."
+                : "Leave this empty to send just your stars — they go live straight away."}
+            </p>
             {state.errors.body && (
               <p className="text-xs text-sale">{state.errors.body}</p>
             )}
@@ -160,7 +170,10 @@ function ProductReviewForm({
             <p className="text-[13px] text-sale">{state.message}</p>
           )}
 
-          <Submit label="Send review" pendingLabel="Sending…" />
+          <Submit
+            label={hasText ? "Send review" : "Send rating"}
+            pendingLabel="Sending…"
+          />
         </form>
       )}
     </li>
@@ -175,7 +188,13 @@ function ProductReviewForm({
  * delivered. The pair is kept in component state so each product form can send
  * them back for re-verification.
  */
-export function ReviewForm() {
+export function ReviewForm({
+  defaultOrderNumber,
+}: {
+  /** From /reviews?order= — the rating link after delivery prefills it. The
+   *  phone is never passed this way, so a forwarded link exposes nothing. */
+  defaultOrderNumber?: string;
+}) {
   const [state, formAction] = useActionState(
     findReviewableAction,
     emptyReviewableState,
@@ -201,6 +220,7 @@ export function ReviewForm() {
             id="orderNumber"
             name="orderNumber"
             placeholder="KH-260730-QJNJ"
+            defaultValue={defaultOrderNumber}
             autoComplete="off"
             required
             className="uppercase"
@@ -216,6 +236,8 @@ export function ReviewForm() {
             inputMode="numeric"
             placeholder="01XXXXXXXXX"
             autoComplete="tel"
+            // the number came from a link, so the phone is the one thing left
+            autoFocus={Boolean(defaultOrderNumber)}
             required
           />
           <p className="text-xs text-muted-foreground">

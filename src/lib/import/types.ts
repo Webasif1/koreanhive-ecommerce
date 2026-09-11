@@ -43,8 +43,6 @@ export type ProductFields = {
   variants: VariantInput[];
   brandId: string | null;
   categoryId: string | null;
-  ratingAvg: number;
-  ratingCount: number;
   /** Taxonomy concerns, mapped from the sheet's own phrasing. */
   concerns: string[];
 };

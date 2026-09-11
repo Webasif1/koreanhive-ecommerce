@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  classifySubmission,
   displayAuthorName,
   EMPTY_REVIEW_SUMMARY,
   summariseReviews,
@@ -109,5 +110,79 @@ describe("displayAuthorName", () => {
 
   it("does not leak the full surname anywhere in the result", () => {
     assert.ok(!displayAuthorName("Nusrat Jahan").includes("Jahan"));
+  });
+});
+
+/**
+ * Stars alone publish at once; words wait for a person. The failure this
+ * guards against is customer text reaching a public page unread — so every
+ * case where something was typed must come back unapproved or be refused.
+ */
+describe("classifySubmission", () => {
+  const limits = { min: 15, max: 1000 };
+
+  it("publishes stars with no words straight away", () => {
+    assert.deepEqual(classifySubmission("", "", limits), {
+      ok: true,
+      ratingOnly: true,
+      title: null,
+      body: null,
+      isApproved: true,
+    });
+  });
+
+  it("treats whitespace as no words", () => {
+    const result = classifySubmission("  ", "\n\t  ", limits);
+    assert.equal(result.ok && result.ratingOnly, true);
+  });
+
+  it("holds a written review for moderation", () => {
+    const result = classifySubmission(
+      "Worked for my oily skin",
+      "Used it for three weeks and my T-zone is calmer.",
+      limits,
+    );
+
+    assert.deepEqual(result, {
+      ok: true,
+      ratingOnly: false,
+      title: "Worked for my oily skin",
+      body: "Used it for three weeks and my T-zone is calmer.",
+      isApproved: false,
+    });
+  });
+
+  it("drops a headline sent without a review rather than publishing it unread", () => {
+    const result = classifySubmission("Scam product do not buy", "", limits);
+
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+    assert.equal(result.isApproved, true);
+    assert.equal(result.title, null, "a headline is words and must not skip moderation");
+    assert.equal(result.body, null);
+  });
+
+  it("never approves anything that carries text", () => {
+    for (const body of ["x".repeat(15), "x".repeat(400), "x".repeat(1000)]) {
+      const result = classifySubmission("title", body, limits);
+      assert.equal(result.ok, true);
+      if (result.ok) assert.equal(result.isApproved, false);
+    }
+  });
+
+  it("refuses a few characters instead of silently turning them into a rating", () => {
+    assert.deepEqual(classifySubmission("", "good", limits), {
+      ok: false,
+      field: "body",
+      tooShort: true,
+    });
+  });
+
+  it("refuses a review over the limit", () => {
+    assert.deepEqual(classifySubmission("", "x".repeat(1001), limits), {
+      ok: false,
+      field: "body",
+      tooShort: false,
+    });
   });
 });

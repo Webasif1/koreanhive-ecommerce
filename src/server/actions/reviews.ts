@@ -10,9 +10,11 @@ import {
   type ReviewableState,
   type ReviewFormState,
 } from "@/lib/review-state";
+import { classifySubmission } from "@/lib/reviews";
 import { connectDb } from "@/server/db";
 import { Review } from "@/server/models";
 import { getReviewableItems } from "@/server/queries/reviews";
+import { recomputeProductRating } from "@/server/ratings";
 import { callerIp, rateLimitByCaller } from "@/server/rate-limit";
 
 const WINDOW_MS = 60_000;
@@ -59,7 +61,10 @@ export async function findReviewableAction(
 }
 
 /**
- * Write a review, pending moderation.
+ * Write a rating, with or without a written review.
+ *
+ * Stars alone publish immediately and update the product's rating; a written
+ * review is held for moderation.
  *
  * The order is re-checked here rather than trusted from the form. The client
  * sends an orderId, and a hidden field is the easiest thing in the world to
@@ -75,8 +80,14 @@ export async function submitReviewAction(
   const phone = String(formData.get("phone") ?? "").trim();
   const productId = String(formData.get("productId") ?? "").trim();
   const rating = Number(formData.get("rating"));
-  const title = String(formData.get("title") ?? "").trim();
-  const body = String(formData.get("body") ?? "").trim();
+
+  // Words are optional — stars alone are a rating — and never skip moderation.
+  // The rule lives in classifySubmission so it is tested without a database.
+  const submission = classifySubmission(
+    String(formData.get("title") ?? ""),
+    String(formData.get("body") ?? ""),
+    { min: MIN_REVIEW_BODY, max: MAX_REVIEW_BODY },
+  );
 
   const errors: Record<string, string> = {};
 
@@ -84,15 +95,13 @@ export async function submitReviewAction(
     errors.rating = "Choose a rating from 1 to 5 stars.";
   }
 
-  if (body.length < MIN_REVIEW_BODY) {
-    errors.body = `Please write at least ${MIN_REVIEW_BODY} characters.`;
+  if (!submission.ok) {
+    errors.body = submission.tooShort
+      ? `Please write at least ${MIN_REVIEW_BODY} characters, or leave it empty to send just your rating.`
+      : `Please keep it under ${MAX_REVIEW_BODY} characters.`;
   }
 
-  if (body.length > MAX_REVIEW_BODY) {
-    errors.body = `Please keep it under ${MAX_REVIEW_BODY} characters.`;
-  }
-
-  if (Object.keys(errors).length > 0) {
+  if (!submission.ok || Object.keys(errors).length > 0) {
     return { ok: false, message: "Please fix the highlighted fields.", errors };
   }
 
@@ -141,6 +150,13 @@ export async function submitReviewAction(
 
   await connectDb();
 
+  // A rating with no words is published at once; a written review waits for
+  // a person. Moderation exists to check what a customer wrote before it goes
+  // on a public page, and a star count has nothing in it to check — while the
+  // delivered-order check above and the unique (orderId, productId) index
+  // already make it a real buyer's, once.
+  const { ratingOnly, title, body, isApproved } = submission;
+
   try {
     await Review.create({
       productId,
@@ -149,9 +165,9 @@ export async function submitReviewAction(
       // from the order, never from the form — see the model's note
       city: order.city,
       rating,
-      title: title || null,
+      title,
       body,
-      isApproved: false,
+      isApproved,
     });
   } catch {
     // the unique (orderId, productId) index is the real guard; the check
@@ -163,13 +179,20 @@ export async function submitReviewAction(
     };
   }
 
-  // nothing public changed yet — it is pending — but the admin queue counts
+  if (ratingOnly) {
+    await recomputeProductRating(productId);
+    revalidateTag("products", "max");
+  }
+
+  // for a written review nothing public changed yet — it is pending — but the
+  // admin queue counts
   revalidateTag("reviews", "max");
 
   return {
     ok: true,
-    message:
-      "Thank you. Your review has been sent for checking and will appear once approved.",
+    message: ratingOnly
+      ? "Thank you — your rating is live on the product."
+      : "Thank you. Your review has been sent for checking and will appear once approved.",
     errors: {},
   };
 }

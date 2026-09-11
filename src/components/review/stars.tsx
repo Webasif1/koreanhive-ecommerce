@@ -1,12 +1,10 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Five stars, filled to `value`.
+ * Five stars, filled to `value`, with no count beside them.
  *
- * Separate from components/product/star-rating.tsx, which hides itself behind
- * siteConfig.showRatings because the numbers on a product came from the import
- * sheet rather than from customers. A review carries its own rating, left by
- * a verified buyer, so there is nothing here to suppress.
+ * For a single review's rating and the summary panel. Product cards and pages
+ * use components/product/star-rating.tsx, which adds the "4.6 (23)" count.
  */
 export function Stars({
   value,
