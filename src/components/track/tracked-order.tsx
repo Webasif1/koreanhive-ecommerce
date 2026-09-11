@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatBDT, formatDateTime, formatDeliveryWindow } from "@/lib/format";
 import { productImage } from "@/lib/product-image";
 import { isTerminalDetour, ORDER_STATUS_LABEL } from "@/lib/order-status";
+import { ratingRequestPath } from "@/lib/rating-request";
 import type { TrackedOrder as TrackedOrderData } from "@/server/queries/order";
 
 export function TrackedOrder({ order }: { order: TrackedOrderData }) {
@@ -25,6 +26,29 @@ export function TrackedOrder({ order }: { order: TrackedOrderData }) {
           {ORDER_STATUS_LABEL[order.status]}
         </Badge>
       </header>
+
+      {/* Ratings open on delivery and not before, so this is where to ask.
+          The link carries the order number only; the phone is typed again on
+          the rating form, so a forwarded link reveals nothing. */}
+      {order.status === "DELIVERED" && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-blush p-5">
+          <div>
+            <p className="font-display text-lg font-semibold">
+              How did you find your order?
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Rate what you bought — stars alone are enough, and they help the
+              next shopper choose.
+            </p>
+          </div>
+          <Link
+            href={ratingRequestPath(order.orderNumber)}
+            className="inline-flex h-11 items-center bg-primary px-6 text-sm font-bold text-primary-foreground hover:bg-mulberry-hover"
+          >
+            Rate what you bought →
+          </Link>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="rounded-xl border bg-card p-5">

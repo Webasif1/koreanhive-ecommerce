@@ -14,8 +14,16 @@ export const metadata: Metadata = {
 
 export const revalidate = 300;
 
-export default async function ReviewsPage() {
-  const [summary, reviews] = await Promise.all([
+export default async function ReviewsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ order?: string }>;
+}) {
+  // The rating link on /track and in the WhatsApp message staff send after
+  // delivery carries the order number, so the customer only types their phone.
+  // Same rule as /track: the phone is never in the URL.
+  const [{ order }, summary, reviews] = await Promise.all([
+    searchParams,
     getSiteReviewSummary(),
     getRecentReviews(60),
   ]);
@@ -55,17 +63,21 @@ export default async function ReviewsPage() {
         </p>
       )}
 
-      <section className="mt-16 border-t border-border pt-10">
-        <p className="eyebrow">Leave a review</p>
+      <section
+        id="rate"
+        className="mt-16 border-t border-border pt-10"
+      >
+        <p className="eyebrow">Rate your order</p>
         <h2 className="mt-3 font-display text-[26px] tracking-[-0.01em]">
           Received your order? Tell the next shopper.
         </h2>
         <p className="mt-3 max-w-[60ch] text-[15px] leading-relaxed text-muted-foreground">
           Enter your order number and the phone number you used at checkout. No
-          account, no login — the same two details as order tracking.
+          account, no login — the same two details as order tracking. Stars
+          alone are enough; writing a review is up to you.
         </p>
 
-        <ReviewForm />
+        <ReviewForm defaultOrderNumber={order} />
       </section>
     </div>
   );
