@@ -10,6 +10,8 @@ import {
   ORDER_STATUS_LABEL,
   type OrderStatusValue,
 } from "@/lib/order-status";
+import { ratingRequestPath, whatsappRatingLink } from "@/lib/rating-request";
+import { absoluteUrl } from "@/lib/site";
 import {
   updateOrderStatusAction,
   updatePaymentStatusAction,
@@ -35,6 +37,13 @@ export default async function AdminOrderDetailPage({
   const order = await getAdminOrder(orderNumber);
 
   if (!order) notFound();
+
+  const ratingUrl = absoluteUrl(ratingRequestPath(order.orderNumber));
+  const ratingWhatsapp = whatsappRatingLink({
+    phone: order.customerPhone,
+    customerName: order.customerName,
+    url: ratingUrl,
+  });
 
   return (
     <div className="space-y-6">
@@ -123,6 +132,38 @@ export default async function AdminOrderDetailPage({
         </div>
 
         <aside className="space-y-6">
+          {/* Ratings can only come from a delivered order, and the best time
+              to ask is right after delivery. Staff send this themselves —
+              nothing goes out automatically — and the link carries the order
+              number but never the phone. */}
+          {order.status === "DELIVERED" && (
+            <section className="rounded-xl border border-primary/30 bg-blush p-5">
+              <h2 className="font-display font-semibold">Ask for a rating</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Delivered — a good moment to ask. The customer opens the link,
+                types the phone number they ordered with, and taps stars.
+              </p>
+
+              {ratingWhatsapp ? (
+                <Button asChild className="mt-3 w-full">
+                  <a href={ratingWhatsapp} target="_blank" rel="noopener noreferrer">
+                    Send on WhatsApp
+                  </a>
+                </Button>
+              ) : (
+                <p className="mt-3 text-xs text-sale">
+                  The phone on this order is not a valid Bangladeshi mobile, so
+                  WhatsApp cannot open. Use the link below.
+                </p>
+              )}
+
+              <p className="mt-3 text-xs font-semibold">Link, for SMS</p>
+              <p className="mt-1 select-all break-all rounded border bg-white px-2 py-1.5 font-mono text-[11px]">
+                {ratingUrl}
+              </p>
+            </section>
+          )}
+
           <section className="rounded-xl border bg-card p-5">
             <h2 className="font-display font-semibold">Update status</h2>
             <form action={updateOrderStatusAction} className="mt-3 space-y-3">
