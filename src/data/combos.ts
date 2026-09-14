@@ -33,6 +33,15 @@ export type ComboStep = {
   slug: string;
   /** What this step is doing, in a few words. */
   role: string;
+  /**
+   * The product in two or three words, for the home page strip.
+   *
+   * Not the catalogue name — "Cosrx Advanced Snail 92 All In One Cream Tube
+   * 50g" four times over is a paragraph, and the home page card needs a line
+   * a shopper can read at a glance: "Low-pH cleanser · Snail essence · Barrier
+   * cream · Centella SPF50+".
+   */
+  short: string;
 };
 
 export type ComboSeed = {
@@ -99,10 +108,10 @@ export const COMBOS: ComboSeed[] = [
     imageUrl: `${IMAGE}/glass%20skin%20combo.webp`,
     imageAlt: "Glass Skin Starter combo — a softer, hydrated-looking finish",
     steps: [
-      { slug: "cosrx-low-ph-good-morning-gel-cleanser-150ml", role: "Cleanses without stripping" },
-      { slug: "cosrx-advanced-snail-96-mucin-power-essence-mini-30ml", role: "The hydration workhorse" },
-      { slug: "cosrx-advanced-snail-92-all-in-one-cream-tube-50g", role: "Seals everything in" },
-      { slug: "iunik-centella-calming-daily-sunscreen-60ml", role: "Protects the result daily" },
+      { slug: "cosrx-low-ph-good-morning-gel-cleanser-150ml", role: "Cleanses without stripping", short: "Low-pH cleanser" },
+      { slug: "cosrx-advanced-snail-96-mucin-power-essence-mini-30ml", role: "The hydration workhorse", short: "Snail essence" },
+      { slug: "cosrx-advanced-snail-92-all-in-one-cream-tube-50g", role: "Seals everything in", short: "Barrier cream" },
+      { slug: "iunik-centella-calming-daily-sunscreen-60ml", role: "Protects the result daily", short: "Centella SPF50+" },
     ],
     price: 3990,
     position: 0,
@@ -121,9 +130,9 @@ export const COMBOS: ComboSeed[] = [
     imageUrl: `${IMAGE}/Breakout%20basic.webp`,
     imageAlt: "Breakout Basics combo — keep your routine manageable",
     steps: [
-      { slug: "cosrx-salicylic-acid-daily-gentle-cleanser-150ml", role: "Clears oil and sweat" },
-      { slug: "cosrx-advanced-snail-92-all-in-one-cream-tube-50g", role: "Hydration without heaviness" },
-      { slug: "iunik-centella-calming-daily-sunscreen-60ml", role: "Daily protection" },
+      { slug: "cosrx-salicylic-acid-daily-gentle-cleanser-150ml", role: "Clears oil and sweat", short: "Salicylic cleanser" },
+      { slug: "cosrx-advanced-snail-92-all-in-one-cream-tube-50g", role: "Hydration without heaviness", short: "Barrier cream" },
+      { slug: "iunik-centella-calming-daily-sunscreen-60ml", role: "Daily protection", short: "Centella SPF50+" },
     ],
     price: 3290,
     position: 1,
@@ -145,9 +154,9 @@ export const COMBOS: ComboSeed[] = [
       // NOT IN CATALOGUE at the stated size. The shop stocks "COSRX Low pH
       // Good Morning Gel 50ml" — filed as a moisturizer, not the cleanser —
       // so this stays on the document's product until that is resolved.
-      { slug: "cosrx-low-ph-good-morning-gel-cleanser-50ml", role: "Morning and night" },
-      { slug: "cosrx-advanced-snail-92-all-in-one-cream-tube-50g", role: "Suits every skin type" },
-      { slug: "iunik-centella-calming-daily-sunscreen-60ml", role: "The step that matters most" },
+      { slug: "cosrx-low-ph-good-morning-gel-cleanser-50ml", role: "Morning and night", short: "Low-pH cleanser mini" },
+      { slug: "cosrx-advanced-snail-92-all-in-one-cream-tube-50g", role: "Suits every skin type", short: "Barrier cream" },
+      { slug: "iunik-centella-calming-daily-sunscreen-60ml", role: "The step that matters most", short: "Centella SPF50+" },
     ],
     price: 2890,
     position: 2,
@@ -166,12 +175,12 @@ export const COMBOS: ComboSeed[] = [
     imageUrl: `${IMAGE}/post%20acne.webp`,
     imageAlt: "Post-Acne Marks combo — give uneven tone consistent care",
     steps: [
-      { slug: "cosrx-low-ph-good-morning-gel-cleanser-150ml", role: "Cleanses without stripping" },
+      { slug: "cosrx-low-ph-good-morning-gel-cleanser-150ml", role: "Cleanses without stripping", short: "Low-pH cleanser" },
       // NOT IN CATALOGUE — the shop has a Tone Brightening Tone-Up *Sunscreen*,
       // which is a different product doing a different job.
-      { slug: "skin1004-madagascar-centella-tone-brightening-capsule-ampoule-30ml", role: "Fades marks over 4–6 weeks" },
-      { slug: "cosrx-advanced-snail-92-all-in-one-cream-tube-50g", role: "Keeps the barrier comfortable" },
-      { slug: "iunik-centella-calming-daily-sunscreen-60ml", role: "Protects the result daily" },
+      { slug: "skin1004-madagascar-centella-tone-brightening-capsule-ampoule-30ml", role: "Fades marks over 4–6 weeks", short: "Brightening ampoule" },
+      { slug: "cosrx-advanced-snail-92-all-in-one-cream-tube-50g", role: "Keeps the barrier comfortable", short: "Barrier cream" },
+      { slug: "iunik-centella-calming-daily-sunscreen-60ml", role: "Protects the result daily", short: "Centella SPF50+" },
     ],
     price: 4190,
     position: 3,
@@ -190,11 +199,11 @@ export const COMBOS: ComboSeed[] = [
     imageUrl: `${IMAGE}/oily%20skin%20daily.webp`,
     imageAlt: "Oily Skin Daily combo — light layers for everyday comfort",
     steps: [
-      { slug: "cosrx-low-ph-good-morning-gel-cleanser-150ml", role: "Cleanses without stripping" },
+      { slug: "cosrx-low-ph-good-morning-gel-cleanser-150ml", role: "Cleanses without stripping", short: "Low-pH cleanser" },
       // NOT IN CATALOGUE — the only Isntree product stocked is the Chestnut
       // AHA Clear Essence, which is an exfoliating essence, not a gel cream.
-      { slug: "isntree-hyaluronic-acid-aqua-gel-cream-100ml", role: "Light hydration, no weight" },
-      { slug: "iunik-centella-calming-daily-sunscreen-60ml", role: "Daily protection" },
+      { slug: "isntree-hyaluronic-acid-aqua-gel-cream-100ml", role: "Light hydration, no weight", short: "Aqua gel cream" },
+      { slug: "iunik-centella-calming-daily-sunscreen-60ml", role: "Daily protection", short: "Centella SPF50+" },
     ],
     price: 3990,
     position: 4,
@@ -216,12 +225,12 @@ export const COMBOS: ComboSeed[] = [
       // NOT IN CATALOGUE — the shop stocks Beauty of Joseon's Green Plum
       // *Toner*, not a Green Plum cleanser. Five of these ten combos open
       // with this product.
-      { slug: "beauty-of-joseon-green-plum-cleanser-100ml", role: "Non-foaming, no tightness" },
+      { slug: "beauty-of-joseon-green-plum-cleanser-100ml", role: "Non-foaming, no tightness", short: "Green plum cleanser" },
       // NOT IN CATALOGUE as a cream — the shop has AtoBarrier 365 *Lotion*
       // in 30ml and 150ml, which is a lighter texture at a different price.
-      { slug: "aestura-atobarrier-365-cream-30ml", role: "Rebuilds the skin barrier" },
+      { slug: "aestura-atobarrier-365-cream-30ml", role: "Rebuilds the skin barrier", short: "Ceramide cream" },
       // NOT IN CATALOGUE
-      { slug: "isntree-hyaluronic-acid-watery-sun-gel-50ml", role: "Protection that does not dry" },
+      { slug: "isntree-hyaluronic-acid-watery-sun-gel-50ml", role: "Protection that does not dry", short: "Watery sun gel" },
     ],
     price: 3690,
     position: 5,
@@ -241,9 +250,9 @@ export const COMBOS: ComboSeed[] = [
     imageAlt: "Everyday Sun Care combo — make protection part of your morning",
     steps: [
       // NOT IN CATALOGUE — see Dry Skin Comfort
-      { slug: "beauty-of-joseon-green-plum-cleanser-100ml", role: "Gentle daily cleanse" },
-      { slug: "cosrx-advanced-snail-92-all-in-one-cream-tube-50g", role: "Moisture in one step" },
-      { slug: "beauty-of-joseon-relief-sun-aqua-fresh-rice-plus-b5-spf50-pa-50ml", role: "The habit that matters most" },
+      { slug: "beauty-of-joseon-green-plum-cleanser-100ml", role: "Gentle daily cleanse", short: "Green plum cleanser" },
+      { slug: "cosrx-advanced-snail-92-all-in-one-cream-tube-50g", role: "Moisture in one step", short: "Barrier cream" },
+      { slug: "beauty-of-joseon-relief-sun-aqua-fresh-rice-plus-b5-spf50-pa-50ml", role: "The habit that matters most", short: "Relief Sun SPF50+" },
     ],
     price: 3690,
     position: 6,
@@ -263,11 +272,11 @@ export const COMBOS: ComboSeed[] = [
     imageAlt: "Sensitive Skin Comfort combo — a little less, thoughtfully chosen",
     steps: [
       // NOT IN CATALOGUE — see Dry Skin Comfort
-      { slug: "beauty-of-joseon-green-plum-cleanser-100ml", role: "Non-foaming, no tightness" },
+      { slug: "beauty-of-joseon-green-plum-cleanser-100ml", role: "Non-foaming, no tightness", short: "Green plum cleanser" },
       // NOT IN CATALOGUE as a cream — see Dry Skin Comfort
-      { slug: "aestura-atobarrier-365-cream-30ml", role: "Barrier support" },
+      { slug: "aestura-atobarrier-365-cream-30ml", role: "Barrier support", short: "Ceramide cream" },
       // NOT IN CATALOGUE at 50ml — the shop stocks the 15ml.
-      { slug: "skin1004-madagascar-centella-hyalu-cica-water-fit-sun-serum-50ml", role: "Light, fragrance-free SPF" },
+      { slug: "skin1004-madagascar-centella-hyalu-cica-water-fit-sun-serum-50ml", role: "Light, fragrance-free SPF", short: "Water-fit sun serum" },
     ],
     price: 3590,
     position: 7,
@@ -287,10 +296,10 @@ export const COMBOS: ComboSeed[] = [
     imageAlt: "Beginner Korean Skincare combo — your first three steps",
     steps: [
       // NOT IN CATALOGUE — see Dry Skin Comfort
-      { slug: "beauty-of-joseon-green-plum-cleanser-100ml", role: "Morning and night" },
-      { slug: "cosrx-advanced-snail-92-all-in-one-cream-tube-50g", role: "Suits every skin type" },
+      { slug: "beauty-of-joseon-green-plum-cleanser-100ml", role: "Morning and night", short: "Green plum cleanser" },
+      { slug: "cosrx-advanced-snail-92-all-in-one-cream-tube-50g", role: "Suits every skin type", short: "Barrier cream" },
       // NOT IN CATALOGUE at 50ml — see Sensitive Skin Comfort
-      { slug: "skin1004-madagascar-centella-hyalu-cica-water-fit-sun-serum-50ml", role: "The step that matters most" },
+      { slug: "skin1004-madagascar-centella-hyalu-cica-water-fit-sun-serum-50ml", role: "The step that matters most", short: "Water-fit sun serum" },
     ],
     price: 3590,
     position: 8,
@@ -311,13 +320,24 @@ export const COMBOS: ComboSeed[] = [
     imageAlt: "Anti-Ageing Night Routine combo — a thoughtful step into retinol",
     steps: [
       // NOT IN CATALOGUE — see Dry Skin Comfort
-      { slug: "beauty-of-joseon-green-plum-cleanser-100ml", role: "Melts the day off" },
+      { slug: "beauty-of-joseon-green-plum-cleanser-100ml", role: "Melts the day off", short: "Green plum cleanser" },
       // NOT IN CATALOGUE
-      { slug: "cosrx-the-retinol-0-1-cream-20ml", role: "Two nights a week to start" },
+      { slug: "cosrx-the-retinol-0-1-cream-20ml", role: "Two nights a week to start", short: "Retinol 0.1 cream" },
       // NOT IN CATALOGUE as a cream — see Dry Skin Comfort
-      { slug: "aestura-atobarrier-365-cream-30ml", role: "Recovery while you sleep" },
+      { slug: "aestura-atobarrier-365-cream-30ml", role: "Recovery while you sleep", short: "Ceramide cream" },
     ],
     price: 3990,
     position: 9,
   },
 ];
+
+/**
+ * The editorial seed for a combo, by slug.
+ *
+ * The database holds what a shopper buys — name, price, members. This holds
+ * what the client's content document says about it: step roles, the
+ * suitability note, the routine order, the badge and the image. Anything
+ * rendering a combo needs both, so the lookup lives beside the data rather
+ * than being rebuilt in each page.
+ */
+export const COMBO_BY_SLUG = new Map(COMBOS.map((combo) => [combo.slug, combo]));

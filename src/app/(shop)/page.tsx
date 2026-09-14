@@ -8,11 +8,12 @@ import { FaqAccordion } from "@/components/home/faq-accordion";
 import { ReviewCard } from "@/components/review/review-card";
 import { ReviewSummaryPanel } from "@/components/review/review-summary";
 import { JsonLd } from "@/components/seo/json-ld";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReelTile } from "@/components/home/reel-tile";
 import { PostCard } from "@/components/blog/post-card";
+import { ComboStripCard } from "@/components/combo/combo-strip-card";
 import { POSTS } from "@/data/blog";
+import { COMBO_BY_SLUG } from "@/data/combos";
 import { CONCERNS } from "@/data/concerns";
 import { FAQS } from "@/data/faqs";
 import { HERO_ROUTINE_SLUGS, stepForSlug } from "@/data/hero-routine";
@@ -20,7 +21,6 @@ import { REELS } from "@/data/reels";
 import { topBrandsByStock } from "@/lib/brands";
 import { countConcernProducts } from "@/lib/concern-count";
 import { productImage } from "@/lib/product-image";
-import { formatBDT } from "@/lib/format";
 import { faqJsonLd } from "@/lib/json-ld";
 import {
   getActiveBanners,
@@ -493,44 +493,40 @@ export default async function Home() {
           Real bundles, or nothing at all. This block used to hard-code three
           invented combos — "The Acne Reset", "Glass Skin Starter", "Everyday
           Sun Kit" — with invented savings on the badges, none of which existed
-          in the database or anywhere else. */}
+          in the database or anywhere else.
+
+          Three of them here, the rest behind the button: the home page is a
+          shelf, and ten routine cards in a row is a catalogue. */}
       {combos.length > 0 && (
         <section className="container-page py-14">
-          <p className="eyebrow">Combo offers</p>
-          <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
-            Full routines, one price
-          </h2>
-          <div className="mt-6 grid gap-5 md:grid-cols-3">
-            {combos.map((combo) => {
-              const saving = combo.comparePrice
-                ? combo.comparePrice - combo.price
-                : 0;
-
-              return (
-                <Link
-                  key={combo.id}
-                  href="/combos"
-                  className="group flex flex-col border border-border bg-card p-6"
-                >
-                  {saving > 0 && (
-                    <Badge variant="saleSoft" className="self-start">
-                      Save {formatBDT(saving)}
-                    </Badge>
-                  )}
-                  <h3 className="mt-4 font-display text-xl group-hover:text-primary">
-                    {combo.name}
-                  </h3>
-                  <p className="mt-2 text-[13px] text-muted-foreground">
-                    {combo.products.map((product) => product.name).join(" · ")}
-                  </p>
-                  <div className="flex-1" />
-                  <span className="mt-5 border-b border-chip-border pb-1 text-sm font-semibold text-primary">
-                    See the combo
-                  </span>
-                </Link>
-              );
-            })}
+          <div className="flex flex-wrap items-end justify-between gap-5">
+            <div>
+              <p className="eyebrow">Combo offers</p>
+              <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
+                Full routines, one price
+              </h2>
+              <p className="mt-3 max-w-[54ch] text-[14px] leading-relaxed text-muted-foreground">
+                Curated by step order, not by discount. Every combo works as a
+                complete morning-and-night routine.
+              </p>
+            </div>
+            <Link
+              href="/combos"
+              className="bg-ink px-6 py-3.5 text-[13px] font-semibold text-white hover:bg-ink/90"
+            >
+              See all {combos.length} combo{combos.length === 1 ? "" : "s"}
+            </Link>
           </div>
+
+          <ul className="mt-8 grid gap-5 md:grid-cols-3">
+            {combos.slice(0, 3).map((combo) => (
+              <ComboStripCard
+                key={combo.id}
+                combo={combo}
+                seed={COMBO_BY_SLUG.get(combo.slug)}
+              />
+            ))}
+          </ul>
         </section>
       )}
 

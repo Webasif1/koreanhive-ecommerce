@@ -36,8 +36,8 @@ const combo = (over: Partial<ComboSeed> = {}): ComboSeed => ({
   imageUrl: "https://ik.imagekit.io/koreanhive/combo/test.webp",
   imageAlt: "Test combo",
   steps: [
-    { slug: "a", role: "first" },
-    { slug: "b", role: "second" },
+    { slug: "a", role: "first", short: "Step" },
+    { slug: "b", role: "second", short: "Step" },
   ],
   price: 1500,
   position: 0,
@@ -98,8 +98,8 @@ describe("combo publication", () => {
       combo({
         price: null,
         steps: [
-          { slug: "a", role: "first" },
-          { slug: "gone", role: "second" },
+          { slug: "a", role: "first", short: "Step" },
+          { slug: "gone", role: "second", short: "Step" },
         ],
       }),
       catalog({ a: draft(1000) }),
@@ -142,6 +142,21 @@ describe("the configured combos", () => {
     for (const entry of COMBOS) {
       for (const step of entry.steps) {
         assert.ok(step.role.trim().length > 0, `${entry.slug}: ${step.slug}`);
+      }
+    }
+  });
+
+  it("keeps the home-page short labels short", () => {
+    // The home card joins these with "·" on one or two lines. A catalogue
+    // name in here ("Cosrx Advanced Snail 92 All In One Cream Tube 50g")
+    // turns that line into a paragraph and breaks the card's rhythm.
+    for (const entry of COMBOS) {
+      for (const step of entry.steps) {
+        assert.ok(step.short.trim().length > 0, `${entry.slug}: ${step.slug}`);
+        assert.ok(
+          step.short.length <= 24,
+          `${entry.slug}: "${step.short}" is too long for the strip`,
+        );
       }
     }
   });

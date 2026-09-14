@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { ComboCard } from "@/components/combo/combo-card";
 import type { FaqItem } from "@/components/home/faq-accordion";
-import { COMBOS } from "@/data/combos";
+import { COMBO_BY_SLUG } from "@/data/combos";
 import { siteConfig } from "@/lib/site";
 import { getCombos, getDeliveryZones } from "@/server/queries/catalog";
 
@@ -16,14 +16,6 @@ export const metadata: Metadata = {
 };
 
 export const revalidate = 3600;
-
-/**
- * Editorial detail that lives in src/data/combos.ts rather than the database:
- * step roles, the suitability note, the routine order, the badge and the
- * image. The Combo collection holds what a shopper buys — name, price,
- * members — and this holds what the client's content document says about it.
- */
-const SEED_BY_SLUG = new Map(COMBOS.map((combo) => [combo.slug, combo]));
 
 const HERO_IMAGE =
   "https://ik.imagekit.io/koreanhive/combo/glass%20skin%20combo.webp";
@@ -78,7 +70,7 @@ export default async function CombosPage() {
   const tags = [
     ...new Set(
       combos.flatMap((combo) => {
-        const seed = SEED_BY_SLUG.get(combo.slug);
+        const seed = COMBO_BY_SLUG.get(combo.slug);
         return seed ? [seed.tag] : [];
       }),
     ),
@@ -184,7 +176,7 @@ export default async function CombosPage() {
                 <ComboCard
                   key={combo.id}
                   combo={combo}
-                  seed={SEED_BY_SLUG.get(combo.slug)}
+                  seed={COMBO_BY_SLUG.get(combo.slug)}
                   freeDeliveryEverywhereAbove={freeDeliveryEverywhereAbove}
                 />
               ))}
@@ -202,7 +194,7 @@ export default async function CombosPage() {
               </h2>
               <dl className="mt-5 grid gap-5 sm:grid-cols-2">
                 {combos.map((combo) => {
-                  const seed = SEED_BY_SLUG.get(combo.slug);
+                  const seed = COMBO_BY_SLUG.get(combo.slug);
                   if (!seed) return null;
 
                   return (
