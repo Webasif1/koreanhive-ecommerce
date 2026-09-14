@@ -68,30 +68,42 @@ export function ComboCard({
         : "In stock · ships today";
 
   return (
-    <li className="grid overflow-hidden border border-border bg-card lg:grid-cols-[340px_minmax(0,1fr)_300px]">
+    // Tablet gets two columns — poster beside the routine, price underneath —
+    // because a whole square poster at full tablet width is 770px tall.
+    <li className="grid overflow-hidden border border-border bg-card md:grid-cols-[300px_minmax(0,1fr)] lg:grid-cols-[340px_minmax(0,1fr)_300px]">
       {/* --------------------------------------------------------- picture */}
-      <div className="relative min-h-[260px] bg-blush lg:min-h-full">
-        {seed?.imageUrl && (
-          <Image
-            src={seed.imageUrl}
-            alt={seed.imageAlt}
-            fill
-            sizes="(min-width: 1024px) 33vw, 100vw"
-            className="object-cover"
-          />
-        )}
-        <div className="absolute left-4 top-4 flex flex-col items-start gap-2">
-          {saving > 0 && <Badge variant="sale">SAVE {formatBDT(saving)}</Badge>}
-          {seed?.badge && (
-            <Badge variant="ink" size="sm">
-              {seed.badge}
-            </Badge>
+      {/* The combo images are square posters with the name, price and routine
+          printed on them. Filling a tall column with object-cover cut that
+          text off the sides on desktop and off the top on a phone, and the
+          badges sat on top of the poster's own headline. So the poster keeps
+          its square, whole, and the badges move beneath it into the space the
+          column has left over. */}
+      <div className="flex flex-col bg-white">
+        <div className="relative aspect-square w-full bg-blush">
+          {seed?.imageUrl && (
+            <Image
+              src={seed.imageUrl}
+              alt={seed.imageAlt}
+              fill
+              sizes="(min-width: 1024px) 340px, (min-width: 768px) 300px, 100vw"
+              className="object-contain"
+            />
           )}
         </div>
+        {(saving > 0 || seed?.badge) && (
+          <div className="flex flex-wrap items-center gap-2 px-4 py-3">
+            {saving > 0 && <Badge variant="sale">SAVE {formatBDT(saving)}</Badge>}
+            {seed?.badge && (
+              <Badge variant="ink" size="sm">
+                {seed.badge}
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ------------------------------------------------------ the routine */}
-      <div className="border-t border-border p-6 lg:border-l lg:border-t-0">
+      <div className="border-t border-border p-6 md:border-l md:border-t-0">
         {combo.concern && <p className="eyebrow">{combo.concern}</p>}
         <h2 className="mt-2 font-display text-[26px] leading-[1.15] tracking-[-0.01em]">
           {combo.name}
@@ -153,7 +165,7 @@ export function ComboCard({
       </div>
 
       {/* -------------------------------------------------------- the price */}
-      <div className="flex flex-col border-t border-border bg-cream/60 p-6 lg:border-l lg:border-t-0 lg:p-7">
+      <div className="flex flex-col border-t border-border bg-cream/60 p-6 md:col-span-2 lg:col-span-1 lg:border-l lg:border-t-0 lg:p-7">
         {combo.comparePrice && (
           <div className="flex items-baseline justify-between text-[12.5px] text-muted-foreground">
             <span>Bought separately</span>

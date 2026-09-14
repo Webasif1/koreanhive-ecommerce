@@ -130,14 +130,18 @@ export default async function CombosPage() {
             </ul>
           </div>
 
-          <div className="relative order-first min-h-[240px] bg-blush lg:order-last lg:min-h-full">
+          {/* A square poster with its name and price printed on it, so it is
+              shown whole: a cover crop into a short phone strip or a tall
+              desktop column cut the logo off the top and the price off the
+              side. */}
+          <div className="relative order-first aspect-square w-full bg-blush lg:order-last lg:self-center">
             <Image
               src={HERO_IMAGE}
               alt="A Korean skincare routine laid out as one set"
               fill
               priority
               sizes="(min-width: 1024px) 45vw, 100vw"
-              className="object-cover"
+              className="object-contain"
             />
           </div>
         </div>
