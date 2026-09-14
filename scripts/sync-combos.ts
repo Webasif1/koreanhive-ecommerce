@@ -15,7 +15,7 @@ import "dotenv/config";
 
 import mongoose from "mongoose";
 
-import { COMBOS, type ComboSeed } from "../src/data/combos";
+import { COMBOS, comboProductSlugs, type ComboSeed } from "../src/data/combos";
 import { planCombo } from "../src/lib/combos";
 import { Combo, Product } from "../src/server/models";
 
@@ -27,7 +27,7 @@ async function main() {
 
   await mongoose.connect(uri);
 
-  const slugs = [...new Set(COMBOS.flatMap((combo) => combo.productSlugs))];
+  const slugs = [...new Set(COMBOS.flatMap(comboProductSlugs))];
 
   const products = await Product.find({ slug: { $in: slugs } })
     .select("slug name price isActive")
@@ -58,7 +58,8 @@ async function main() {
           name: combo.name,
           concern: combo.concern,
           description: combo.description,
-          productSlugs: combo.productSlugs,
+          productSlugs: comboProductSlugs(combo),
+          imageUrl: combo.imageUrl,
           price: plan.price,
           comparePrice: plan.comparePrice,
           position: combo.position,

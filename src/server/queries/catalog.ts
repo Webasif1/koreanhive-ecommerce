@@ -649,7 +649,7 @@ export async function getCombos() {
   const slugs = [...new Set(combos.flatMap((c) => c.productSlugs))];
 
   const products = await Product.find({ slug: { $in: slugs }, isActive: true })
-    .select("name slug price images")
+    .select("name slug price images stock")
     .lean();
 
   const bySlug = new Map(products.map((p) => [p.slug, p]));
@@ -660,6 +660,7 @@ export async function getCombos() {
     slug: combo.slug,
     description: combo.description ?? null,
     concern: combo.concern ?? null,
+    imageUrl: combo.imageUrl ?? null,
     price: combo.price,
     comparePrice: combo.comparePrice ?? null,
     // a member whose product was removed simply drops out
@@ -673,9 +674,12 @@ export async function getCombos() {
 
       return [
         {
+          // the cart needs the id; the card needs everything else
+          id: product._id.toString(),
           name: product.name,
           slug: product.slug,
           price: product.price,
+          stock: product.stock,
           imageUrl: image?.url ?? null,
         },
       ];

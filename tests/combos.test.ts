@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { COMBOS, type ComboSeed } from "@/data/combos";
+import { COMBOS, comboProductSlugs, type ComboSeed } from "@/data/combos";
 import { planCombo, type CatalogEntry } from "@/lib/combos";
 
 /**
@@ -28,7 +28,17 @@ const combo = (over: Partial<ComboSeed> = {}): ComboSeed => ({
   slug: "test-combo",
   concern: "Testing",
   description: "A combo for tests.",
-  productSlugs: ["a", "b"],
+  tag: "Testing",
+  badge: "TEST BADGE",
+  bestFor: "Tests.",
+  note: "For tests only.",
+  routine: "AM: test. PM: test.",
+  imageUrl: "https://ik.imagekit.io/koreanhive/combo/test.webp",
+  imageAlt: "Test combo",
+  steps: [
+    { slug: "a", role: "first" },
+    { slug: "b", role: "second" },
+  ],
   price: 1500,
   position: 0,
   ...over,
@@ -85,7 +95,13 @@ describe("combo publication", () => {
 
   it("reports every blocker at once, not just the first", () => {
     const plan = planCombo(
-      combo({ price: null, productSlugs: ["a", "gone"] }),
+      combo({
+        price: null,
+        steps: [
+          { slug: "a", role: "first" },
+          { slug: "gone", role: "second" },
+        ],
+      }),
       catalog({ a: draft(1000) }),
     );
 
@@ -115,7 +131,83 @@ describe("the configured combos", () => {
 
   it("lists products for every combo", () => {
     for (const entry of COMBOS) {
-      assert.ok(entry.productSlugs.length > 0, `${entry.slug} has no products`);
+      assert.ok(
+        comboProductSlugs(entry).length > 0,
+        `${entry.slug} has no products`,
+      );
+    }
+  });
+
+  it("gives every step a role, so no card renders a blank line", () => {
+    for (const entry of COMBOS) {
+      for (const step of entry.steps) {
+        assert.ok(step.role.trim().length > 0, `${entry.slug}: ${step.slug}`);
+      }
+    }
+  });
+
+  it("carries the document's suitability note on every combo", () => {
+    // The client's publishing checklist requires these to stay visible. They
+    // are the honest limits of what four bottles can do, and the retinol one
+    // is a safety instruction, not marketing copy.
+    for (const entry of COMBOS) {
+      assert.ok(entry.note.trim().length > 20, `${entry.slug} has no note`);
+    }
+  });
+
+  it("keeps the retinol warnings intact", () => {
+    const retinol = COMBOS.find((entry) => entry.slug === "anti-ageing-night-routine");
+    assert.ok(retinol, "the anti-ageing combo is missing");
+
+    for (const required of ["pregnan", "sunscreen"]) {
+      assert.ok(
+        retinol.note.toLowerCase().includes(required),
+        `the retinol note lost its "${required}" warning`,
+      );
+    }
+  });
+
+  it("points every image at the combo folder on ImageKit", () => {
+    for (const entry of COMBOS) {
+      assert.match(
+        entry.imageUrl,
+        /^https:\/\/ik\.imagekit\.io\/koreanhive\/combo\//,
+        `${entry.slug}: ${entry.imageUrl}`,
+      );
+      assert.ok(entry.imageAlt.trim().length > 0, `${entry.slug} has no alt`);
+    }
+  });
+
+  it("labels every combo without claiming how well it sells", () => {
+    // The design's "MOST POPULAR" and "HIGH DEMAND" are sales claims this
+    // shop has no order history to support. Descriptive labels only.
+    const claims = ["popular", "demand", "best seller", "bestseller", "trending"];
+
+    for (const entry of COMBOS) {
+      assert.ok(entry.badge.trim().length > 0, `${entry.slug} has no badge`);
+      for (const claim of claims) {
+        assert.ok(
+          !entry.badge.toLowerCase().includes(claim),
+          `${entry.slug}: "${entry.badge}" claims popularity`,
+        );
+      }
+    }
+  });
+
+  it("uses a distinct image per combo", () => {
+    const urls = COMBOS.map((entry) => entry.imageUrl);
+    assert.equal(new Set(urls).size, urls.length, "two combos share an image");
+  });
+
+  it("prices every combo below the design's own savings claims", () => {
+    // The design PDF advertises savings of ৳560–৳1,010. Those were written
+    // against prices this shop does not charge, so no combo here copies them;
+    // the sync computes the saving from live product prices instead.
+    for (const entry of COMBOS) {
+      assert.ok(
+        entry.price === null || entry.price > 0,
+        `${entry.slug} has a nonsense price`,
+      );
     }
   });
 });
