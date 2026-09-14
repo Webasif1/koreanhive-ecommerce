@@ -10,6 +10,14 @@
  *
  * Safe to re-run: combos are upserted on slug, so this updates in place and
  * a blocked combo publishes itself as soon as its blockers clear.
+ *
+ *   npm run combos:sync -- --dry-run
+ *
+ * Runs every check and prints the same report without writing anything.
+ * This flag did not exist once, and `--dry-run` was silently ignored — the
+ * script published three combos to the live database while being asked only
+ * to preview. So any argument this script does not recognise is now refused
+ * before it connects, and a mistyped flag cannot turn into a write.
  */
 import "dotenv/config";
 
@@ -21,7 +29,21 @@ import { Combo, Product } from "../src/server/models";
 
 type Blocker = string;
 
+const KNOWN_ARGS = new Set(["--dry-run"]);
+
 async function main() {
+  const args = process.argv.slice(2);
+  const unknown = args.filter((arg) => !KNOWN_ARGS.has(arg));
+
+  // refused before connecting: an unrecognised flag must never become a write
+  if (unknown.length > 0) {
+    throw new Error(
+      `Unknown argument ${unknown.join(", ")}. Supported: ${[...KNOWN_ARGS].join(", ")}`,
+    );
+  }
+
+  const dryRun = args.includes("--dry-run");
+
   const uri = process.env.MONGODB_URI;
   if (!uri) throw new Error("Set MONGODB_URI in .env first.");
 
@@ -51,30 +73,32 @@ async function main() {
       continue;
     }
 
-    await Combo.findOneAndUpdate(
-      { slug: combo.slug },
-      {
-        $set: {
-          name: combo.name,
-          concern: combo.concern,
-          description: combo.description,
-          productSlugs: comboProductSlugs(combo),
-          imageUrl: combo.imageUrl,
-          price: plan.price,
-          comparePrice: plan.comparePrice,
-          position: combo.position,
-          isActive: true,
+    if (!dryRun) {
+      await Combo.findOneAndUpdate(
+        { slug: combo.slug },
+        {
+          $set: {
+            name: combo.name,
+            concern: combo.concern,
+            description: combo.description,
+            productSlugs: comboProductSlugs(combo),
+            imageUrl: combo.imageUrl,
+            price: plan.price,
+            comparePrice: plan.comparePrice,
+            position: combo.position,
+            isActive: true,
+          },
+          $setOnInsert: { slug: combo.slug },
         },
-        $setOnInsert: { slug: combo.slug },
-      },
-      { upsert: true },
-    );
+        { upsert: true },
+      );
+    }
 
     published += 1;
 
     const saving = (plan.comparePrice ?? plan.price) - plan.price;
     console.log(
-      `  published  ${combo.slug.padEnd(24)} ৳${plan.price} ` +
+      `  ${dryRun ? "would publish" : "published"}  ${combo.slug.padEnd(24)} ৳${plan.price} ` +
         (saving > 0 ? `(was ৳${plan.comparePrice}, saves ৳${saving})` : ""),
     );
   }
@@ -85,9 +109,11 @@ async function main() {
   }
 
   console.log(
-    `\n  ${published} published, ${blocked.length} blocked, ` +
+    `\n  ${published} ${dryRun ? "would publish" : "published"}, ${blocked.length} blocked, ` +
       `${await Combo.countDocuments({ isActive: true })} live in total\n`,
   );
+
+  if (dryRun) console.log("  dry run — nothing written.\n");
 
   if (blocked.length > 0) {
     console.log("  Blocked combos publish themselves on the next run once the");
