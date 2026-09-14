@@ -1,4 +1,4 @@
-import type { ComboSeed } from "@/data/combos";
+import { comboProductSlugs, type ComboSeed } from "@/data/combos";
 
 /**
  * Deciding whether a bundle may go live.
@@ -28,11 +28,13 @@ export function planCombo(
     blockers.push("no price set — fill it in src/data/combos.ts");
   }
 
-  if (combo.productSlugs.length === 0) {
+  const slugs = comboProductSlugs(combo);
+
+  if (slugs.length === 0) {
     blockers.push("no products listed");
   }
 
-  for (const slug of combo.productSlugs) {
+  for (const slug of slugs) {
     const product = catalog.get(slug);
 
     if (!product) {
@@ -46,8 +48,8 @@ export function planCombo(
 
   if (blockers.length > 0) return { status: "blocked", combo, blockers };
 
-  const sum = combo.productSlugs.reduce(
-    (total, slug) => total + (catalog.get(slug)?.price ?? 0),
+  const sum = slugs.reduce(
+    (total: number, slug: string) => total + (catalog.get(slug)?.price ?? 0),
     0,
   );
 

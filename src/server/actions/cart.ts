@@ -12,7 +12,7 @@ import {
   type CartCookieItem,
 } from "@/server/cart-cookie";
 import { connectDb } from "@/server/db";
-import { Product } from "@/server/models";
+import { Combo, Product } from "@/server/models";
 import { getCart, resolveCouponForSubtotal } from "@/server/queries/cart";
 
 type AddInput = {
@@ -245,4 +245,70 @@ export async function clearCouponAction(): Promise<CartResult> {
   revalidatePath("/checkout");
 
   return { ok: true, message: "Coupon removed" };
+}
+
+/**
+ * Add every product in a bundle, in one click.
+ *
+ * The combo slug is the only thing the form sends. Members are looked up
+ * server-side rather than posted as a list of ids, because a form that names
+ * its own products is a form that can be edited to name cheaper ones — the
+ * cart is priced from what is in it, so that would be a discount anyone could
+ * mint.
+ *
+ * A member that has since been unpublished is skipped rather than failing the
+ * whole click, and the message says how many went in. The sync should have
+ * unpublished the combo too, but a shopper mid-session should not meet a dead
+ * button because of a race between the two.
+ */
+export async function addComboToCartAction(
+  formData: FormData,
+): Promise<CartResult> {
+  const slug = String(formData.get("comboSlug") ?? "").trim();
+  if (!slug) return { ok: false, message: "That combo is no longer available." };
+
+  await connectDb();
+
+  const combo = await Combo.findOne({ slug, isActive: true })
+    .select("name productSlugs")
+    .lean();
+
+  if (!combo) {
+    return { ok: false, message: "That combo is no longer available." };
+  }
+
+  const products = await Product.find({
+    slug: { $in: combo.productSlugs },
+    isActive: true,
+  })
+    .select("_id slug")
+    .lean();
+
+  const byslug = new Map(products.map((p) => [p.slug, p._id.toString()]));
+
+  let added = 0;
+  // sequential, not Promise.all: each merge reads and rewrites the same cookie,
+  // so running them together would have the last write win and drop the rest
+  for (const productSlug of combo.productSlugs) {
+    const productId = byslug.get(productSlug);
+    if (!productId) continue;
+
+    await mergeIntoCart({ productId, variantId: null, quantity: 1 });
+    added += 1;
+  }
+
+  if (added === 0) {
+    return { ok: false, message: "That combo is no longer available." };
+  }
+
+  revalidatePath("/cart");
+  revalidatePath("/checkout");
+
+  return {
+    ok: true,
+    message:
+      added === combo.productSlugs.length
+        ? `${combo.name} added to cart`
+        : `${added} of ${combo.productSlugs.length} products added — the rest are out of stock`,
+  };
 }
