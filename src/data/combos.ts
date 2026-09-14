@@ -21,7 +21,11 @@
  *
  * Slugs marked NOT IN CATALOGUE are the document's intended product, written
  * out so the sync names it in the blocker rather than the combo quietly
- * shipping without that step. Substituting a near-match was not an option: a
+ * shipping without that step. Slugs marked DRAFT are in the catalogue but
+ * unpublished for want of an image; the combo publishes on the next sync after
+ * the photo lands. Every slug here was checked against the catalogue — two
+ * combos read as blocked only because their slug was spelled differently from
+ * the product's. Substituting a near-match was not an option: a
  * lotion is not a cream and a 15ml is not a 50ml, and both change what lands
  * on a customer's skin and what the bundle should cost.
  */
@@ -151,10 +155,12 @@ export const COMBOS: ComboSeed[] = [
     imageUrl: `${IMAGE}/campus%20essential.webp`,
     imageAlt: "Campus Essentials combo — three essentials, a smaller spend",
     steps: [
-      // NOT IN CATALOGUE at the stated size. The shop stocks "COSRX Low pH
-      // Good Morning Gel 50ml" — filed as a moisturizer, not the cleanser —
-      // so this stays on the document's product until that is resolved.
-      { slug: "cosrx-low-ph-good-morning-gel-cleanser-50ml", role: "Morning and night", short: "Low-pH cleanser mini" },
+      // The 50ml mini of the same cleanser as the other combos. The catalogue
+      // slug drops the word "cleanser" ("COSRX Low pH Good Morning Gel 50ml") —
+      // COSRX makes no other Good Morning Gel — which is why this combo read as
+      // blocked. Its sheet description wrongly calls it a moisturiser; that is
+      // a copy error in the sheet, not a different product.
+      { slug: "cosrx-low-ph-good-morning-gel-50ml", role: "Morning and night", short: "Low-pH cleanser mini" },
       { slug: "cosrx-advanced-snail-92-all-in-one-cream-tube-50g", role: "Suits every skin type", short: "Barrier cream" },
       { slug: "iunik-centella-calming-daily-sunscreen-60ml", role: "The step that matters most", short: "Centella SPF50+" },
     ],
@@ -222,10 +228,10 @@ export const COMBOS: ComboSeed[] = [
     imageUrl: `${IMAGE}/Dry%20skin%20comfort.webp`,
     imageAlt: "Dry Skin Comfort combo — comfort starts with moisture",
     steps: [
-      // NOT IN CATALOGUE — the shop stocks Beauty of Joseon's Green Plum
-      // *Toner*, not a Green Plum cleanser. Five of these ten combos open
-      // with this product.
-      { slug: "beauty-of-joseon-green-plum-cleanser-100ml", role: "Non-foaming, no tightness", short: "Green plum cleanser" },
+      // DRAFT — NEEDS AN IMAGE. The cleanser is in the catalogue as "Green Plum
+      // Refreshing Cleanser 100ml" but unpublished for want of a photo. Five of
+      // these ten combos open with it, so its image unblocks the most combos.
+      { slug: "beauty-of-joseon-green-plum-refreshing-cleanser-100ml", role: "Non-foaming, no tightness", short: "Green plum cleanser" },
       // NOT IN CATALOGUE as a cream — the shop has AtoBarrier 365 *Lotion*
       // in 30ml and 150ml, which is a lighter texture at a different price.
       { slug: "aestura-atobarrier-365-cream-30ml", role: "Rebuilds the skin barrier", short: "Ceramide cream" },
@@ -249,8 +255,8 @@ export const COMBOS: ComboSeed[] = [
     imageUrl: `${IMAGE}/Everyday%20sun%20care.webp`,
     imageAlt: "Everyday Sun Care combo — make protection part of your morning",
     steps: [
-      // NOT IN CATALOGUE — see Dry Skin Comfort
-      { slug: "beauty-of-joseon-green-plum-cleanser-100ml", role: "Gentle daily cleanse", short: "Green plum cleanser" },
+      // DRAFT — NEEDS AN IMAGE; see Dry Skin Comfort
+      { slug: "beauty-of-joseon-green-plum-refreshing-cleanser-100ml", role: "Gentle daily cleanse", short: "Green plum cleanser" },
       { slug: "cosrx-advanced-snail-92-all-in-one-cream-tube-50g", role: "Moisture in one step", short: "Barrier cream" },
       { slug: "beauty-of-joseon-relief-sun-aqua-fresh-rice-plus-b5-spf50-pa-50ml", role: "The habit that matters most", short: "Relief Sun SPF50+" },
     ],
@@ -271,8 +277,8 @@ export const COMBOS: ComboSeed[] = [
     imageUrl: `${IMAGE}/sensitive%20skin12_54_02%20AM.webp`,
     imageAlt: "Sensitive Skin Comfort combo — a little less, thoughtfully chosen",
     steps: [
-      // NOT IN CATALOGUE — see Dry Skin Comfort
-      { slug: "beauty-of-joseon-green-plum-cleanser-100ml", role: "Non-foaming, no tightness", short: "Green plum cleanser" },
+      // DRAFT — NEEDS AN IMAGE; see Dry Skin Comfort
+      { slug: "beauty-of-joseon-green-plum-refreshing-cleanser-100ml", role: "Non-foaming, no tightness", short: "Green plum cleanser" },
       // NOT IN CATALOGUE as a cream — see Dry Skin Comfort
       { slug: "aestura-atobarrier-365-cream-30ml", role: "Barrier support", short: "Ceramide cream" },
       // NOT IN CATALOGUE at 50ml — the shop stocks the 15ml.
@@ -295,8 +301,8 @@ export const COMBOS: ComboSeed[] = [
     imageUrl: `${IMAGE}/Beginar%20skin%20care.%20Sep%2013,%202026,%2012_57_09%20AM.webp`,
     imageAlt: "Beginner Korean Skincare combo — your first three steps",
     steps: [
-      // NOT IN CATALOGUE — see Dry Skin Comfort
-      { slug: "beauty-of-joseon-green-plum-cleanser-100ml", role: "Morning and night", short: "Green plum cleanser" },
+      // DRAFT — NEEDS AN IMAGE; see Dry Skin Comfort
+      { slug: "beauty-of-joseon-green-plum-refreshing-cleanser-100ml", role: "Morning and night", short: "Green plum cleanser" },
       { slug: "cosrx-advanced-snail-92-all-in-one-cream-tube-50g", role: "Suits every skin type", short: "Barrier cream" },
       // NOT IN CATALOGUE at 50ml — see Sensitive Skin Comfort
       { slug: "skin1004-madagascar-centella-hyalu-cica-water-fit-sun-serum-50ml", role: "The step that matters most", short: "Water-fit sun serum" },
@@ -319,8 +325,8 @@ export const COMBOS: ComboSeed[] = [
     imageUrl: `${IMAGE}/anti%20agin%2013,%202026,%2001_01_51%20AM.webp`,
     imageAlt: "Anti-Ageing Night Routine combo — a thoughtful step into retinol",
     steps: [
-      // NOT IN CATALOGUE — see Dry Skin Comfort
-      { slug: "beauty-of-joseon-green-plum-cleanser-100ml", role: "Melts the day off", short: "Green plum cleanser" },
+      // DRAFT — NEEDS AN IMAGE; see Dry Skin Comfort
+      { slug: "beauty-of-joseon-green-plum-refreshing-cleanser-100ml", role: "Melts the day off", short: "Green plum cleanser" },
       // NOT IN CATALOGUE
       { slug: "cosrx-the-retinol-0-1-cream-20ml", role: "Two nights a week to start", short: "Retinol 0.1 cream" },
       // NOT IN CATALOGUE as a cream — see Dry Skin Comfort
