@@ -18,6 +18,47 @@ export type ComboPlan =
   | { status: "publish"; combo: ComboSeed; price: number; comparePrice: number | null }
   | { status: "blocked"; combo: ComboSeed; blockers: string[] };
 
+export type ShelfEntry<T extends { slug: string }> =
+  | { status: "live"; combo: T; seed: ComboSeed | undefined }
+  | { status: "soon"; seed: ComboSeed };
+
+/**
+ * Every combo the /combos page shows, buyable ones first.
+ *
+ * The page used to render only what combos:sync had published, so a combo
+ * whose products were not stocked yet vanished — the client supplied ten and
+ * saw four. Now each seed appears either way: live if its combo is published,
+ * otherwise "soon", shown with no way to buy it.
+ *
+ * Live first, so the top of the page is what a shopper can actually order.
+ * Both groups follow the seed's `position`. A published combo with no seed
+ * (removed from the data but still in the database) stays in the live group
+ * rather than silently disappearing.
+ */
+export function comboShelf<T extends { slug: string }>(
+  seeds: ComboSeed[],
+  live: T[],
+): ShelfEntry<T>[] {
+  const bySlug = new Map(live.map((combo) => [combo.slug, combo]));
+  const ordered = [...seeds].sort((a, b) => a.position - b.position);
+  const seeded = new Set(seeds.map((seed) => seed.slug));
+
+  const liveEntries: ShelfEntry<T>[] = ordered.flatMap((seed) => {
+    const combo = bySlug.get(seed.slug);
+    return combo ? [{ status: "live" as const, combo, seed }] : [];
+  });
+
+  const unseeded: ShelfEntry<T>[] = live
+    .filter((combo) => !seeded.has(combo.slug))
+    .map((combo) => ({ status: "live" as const, combo, seed: undefined }));
+
+  const soon: ShelfEntry<T>[] = ordered
+    .filter((seed) => !bySlug.has(seed.slug))
+    .map((seed) => ({ status: "soon" as const, seed }));
+
+  return [...liveEntries, ...unseeded, ...soon];
+}
+
 export function planCombo(
   combo: ComboSeed,
   catalog: Map<string, CatalogEntry>,

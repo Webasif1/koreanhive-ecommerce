@@ -13,7 +13,7 @@ import { ReelTile } from "@/components/home/reel-tile";
 import { PostCard } from "@/components/blog/post-card";
 import { ComboStripCard } from "@/components/combo/combo-strip-card";
 import { POSTS } from "@/data/blog";
-import { COMBO_BY_SLUG } from "@/data/combos";
+import { COMBO_BY_SLUG, COMBOS } from "@/data/combos";
 import { CONCERNS } from "@/data/concerns";
 import { FAQS } from "@/data/faqs";
 import { HERO_ROUTINE_SLUGS, stepForSlug } from "@/data/hero-routine";
@@ -514,7 +514,10 @@ export default async function Home() {
               href="/combos"
               className="bg-ink px-6 py-3.5 text-[13px] font-semibold text-white hover:bg-ink/90"
             >
-              See all {combos.length} combo{combos.length === 1 ? "" : "s"}
+              {/* /combos lists every combo in the client's document, the ones
+                  not stocked yet as coming soon, so the count is all of them —
+                  not just the three buyable cards on this shelf */}
+              See all {COMBOS.length} combos
             </Link>
           </div>
 

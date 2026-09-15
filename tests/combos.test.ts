@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { COMBOS, comboProductSlugs, type ComboSeed } from "@/data/combos";
-import { planCombo, type CatalogEntry } from "@/lib/combos";
+import { comboShelf, planCombo, type CatalogEntry } from "@/lib/combos";
 
 /**
  * The rule this file exists to protect: a bundle is never published when a
@@ -36,8 +36,8 @@ const combo = (over: Partial<ComboSeed> = {}): ComboSeed => ({
   imageUrl: "https://ik.imagekit.io/koreanhive/combo/test.webp",
   imageAlt: "Test combo",
   steps: [
-    { slug: "a", role: "first", short: "Step" },
-    { slug: "b", role: "second", short: "Step" },
+    { slug: "a", name: "Product a", role: "first", short: "Step" },
+    { slug: "b", name: "Product b", role: "second", short: "Step" },
   ],
   price: 1500,
   position: 0,
@@ -98,8 +98,8 @@ describe("combo publication", () => {
       combo({
         price: null,
         steps: [
-          { slug: "a", role: "first", short: "Step" },
-          { slug: "gone", role: "second", short: "Step" },
+          { slug: "a", name: "Product a", role: "first", short: "Step" },
+          { slug: "gone", name: "Product gone", role: "second", short: "Step" },
         ],
       }),
       catalog({ a: draft(1000) }),
@@ -223,6 +223,53 @@ describe("the configured combos", () => {
         entry.price === null || entry.price > 0,
         `${entry.slug} has a nonsense price`,
       );
+    }
+  });
+});
+
+/**
+ * The page shows every seeded combo: buyable ones first, the rest as coming
+ * soon. The failure this guards against is a combo the client supplied simply
+ * not appearing because one of its products is not stocked yet.
+ */
+describe("comboShelf", () => {
+  const seed = (slug: string, position: number) => combo({ slug, name: slug, position });
+  const pub = (slug: string) => ({ slug, id: slug });
+
+  it("lists every seed, live ones first, each group in position order", () => {
+    const shelf = comboShelf(
+      [seed("c", 2), seed("a", 0), seed("d", 3), seed("b", 1)],
+      [pub("d"), pub("b")],
+    );
+
+    assert.deepEqual(
+      shelf.map((entry) => entry.status + ":" + (entry.status === "live" ? entry.combo.slug : entry.seed.slug)),
+      ["live:b", "live:d", "soon:a", "soon:c"],
+    );
+  });
+
+  it("moves a combo from soon to live once it is published", () => {
+    const seeds = [seed("a", 0), seed("b", 1)];
+    assert.equal(comboShelf(seeds, []).find((e) => e.seed?.slug === "b")?.status, "soon");
+    assert.equal(comboShelf(seeds, [pub("b")]).find((e) => e.seed?.slug === "b")?.status, "live");
+  });
+
+  it("keeps a published combo that has no seed rather than hiding it", () => {
+    const shelf = comboShelf([seed("a", 0)], [pub("legacy")]);
+    assert.ok(shelf.some((e) => e.status === "live" && e.combo.slug === "legacy"));
+  });
+
+  it("shows all ten configured combos with nothing published", () => {
+    const shelf = comboShelf(COMBOS, []);
+    assert.equal(shelf.length, COMBOS.length);
+    assert.equal(COMBOS.length, 10);
+  });
+
+  it("names every product in every combo, for the coming-soon list", () => {
+    for (const entry of COMBOS) {
+      for (const step of entry.steps) {
+        assert.ok(step.name.trim().length > 0, entry.slug + ": " + step.slug + " has no name");
+      }
     }
   });
 });
