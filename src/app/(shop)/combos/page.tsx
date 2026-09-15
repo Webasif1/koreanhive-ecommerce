@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
-import { ComboCard } from "@/components/combo/combo-card";
+import { ComboCard, ComboComingSoonCard } from "@/components/combo/combo-card";
 import type { FaqItem } from "@/components/home/faq-accordion";
-import { COMBO_BY_SLUG } from "@/data/combos";
+import { COMBOS } from "@/data/combos";
+import { comboShelf } from "@/lib/combos";
 import { siteConfig } from "@/lib/site";
 import { getCombos, getDeliveryZones } from "@/server/queries/catalog";
 
@@ -65,16 +66,13 @@ export default async function CombosPage() {
       ? Math.max(...thresholds)
       : null;
 
-  // Tabs come from what is actually live. A tab that filters to nothing is a
-  // dead end, and combos block themselves when a product goes out of stock.
-  const tags = [
-    ...new Set(
-      combos.flatMap((combo) => {
-        const seed = COMBO_BY_SLUG.get(combo.slug);
-        return seed ? [seed.tag] : [];
-      }),
-    ),
-  ];
+  // Every combo in the client's document: the published ones first, then the
+  // ones still waiting on a product, shown as coming soon rather than hidden.
+  const shelf = comboShelf(COMBOS, combos);
+  const shelfSeeds = shelf.flatMap((entry) => (entry.seed ? [entry.seed] : []));
+
+  // Labels for what the page holds, coming-soon combos included.
+  const tags = [...new Set(shelfSeeds.map((seed) => seed.tag))];
 
   return (
     <div>
@@ -148,7 +146,7 @@ export default async function CombosPage() {
       </section>
 
       <div className="container-page py-12">
-        {combos.length === 0 ? (
+        {shelf.length === 0 ? (
           <p className="border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
             No combos running right now — check back soon.
           </p>
@@ -176,14 +174,18 @@ export default async function CombosPage() {
             )}
 
             <ul className="mt-6 space-y-5">
-              {combos.map((combo) => (
-                <ComboCard
-                  key={combo.id}
-                  combo={combo}
-                  seed={COMBO_BY_SLUG.get(combo.slug)}
-                  freeDeliveryEverywhereAbove={freeDeliveryEverywhereAbove}
-                />
-              ))}
+              {shelf.map((entry) =>
+                entry.status === "live" ? (
+                  <ComboCard
+                    key={entry.combo.id}
+                    combo={entry.combo}
+                    seed={entry.seed}
+                    freeDeliveryEverywhereAbove={freeDeliveryEverywhereAbove}
+                  />
+                ) : (
+                  <ComboComingSoonCard key={entry.seed.slug} seed={entry.seed} />
+                ),
+              )}
             </ul>
 
             {/* The suitability notes, kept together under the grid rather than
@@ -197,16 +199,15 @@ export default async function CombosPage() {
                 What each routine can and cannot do
               </h2>
               <dl className="mt-5 grid gap-5 sm:grid-cols-2">
-                {combos.map((combo) => {
-                  const seed = COMBO_BY_SLUG.get(combo.slug);
-                  if (!seed) return null;
-
+                {/* all ten, coming soon included: the retinol warning has to
+                    be visible before anyone can buy that combo, not after */}
+                {shelfSeeds.map((seed) => {
                   return (
                     <div
-                      key={combo.id}
+                      key={seed.slug}
                       className="border-t border-hairline pt-3"
                     >
-                      <dt className="text-[13px] font-semibold">{combo.name}</dt>
+                      <dt className="text-[13px] font-semibold">{seed.name}</dt>
                       <dd className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">
                         {seed.note}
                       </dd>
