@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { ComboCard, ComboComingSoonCard } from "@/components/combo/combo-card";
+import { ComboFilter, type ComboFilterItem } from "@/components/combo/combo-filter";
 import type { FaqItem } from "@/components/home/faq-accordion";
 import { COMBOS } from "@/data/combos";
 import { comboShelf } from "@/lib/combos";
@@ -18,8 +19,9 @@ export const metadata: Metadata = {
 
 export const revalidate = 3600;
 
-const HERO_IMAGE =
-  "https://ik.imagekit.io/koreanhive/combo/glass%20skin%20combo.webp";
+/* A photograph, not one of the combo posters, so unlike those it can be
+   cropped: there is no printed name or price to lose off an edge. */
+const HERO_IMAGE = "https://ik.imagekit.io/koreanhive/cover%20photo.webp";
 
 const ADVICE_IMAGE =
   "https://ik.imagekit.io/koreanhive/skin%20concern/Healthy-looking.webp";
@@ -71,8 +73,30 @@ export default async function CombosPage() {
   const shelf = comboShelf(COMBOS, combos);
   const shelfSeeds = shelf.flatMap((entry) => (entry.seed ? [entry.seed] : []));
 
-  // Labels for what the page holds, coming-soon combos included.
-  const tags = [...new Set(shelfSeeds.map((seed) => seed.tag))];
+  // The cards are built here so they stay server components; the filter only
+  // decides which of them to show.
+  const items: ComboFilterItem[] = shelf.map((entry) =>
+    entry.status === "live"
+      ? {
+          key: entry.combo.id,
+          // a published combo with no seed has no tag, so it shows only under
+          // "All combos" rather than inventing a category for it
+          tag: entry.seed?.tag ?? null,
+          card: (
+            <ComboCard
+              key={entry.combo.id}
+              combo={entry.combo}
+              seed={entry.seed}
+              freeDeliveryEverywhereAbove={freeDeliveryEverywhereAbove}
+            />
+          ),
+        }
+      : {
+          key: entry.seed.slug,
+          tag: entry.seed.tag,
+          card: <ComboComingSoonCard key={entry.seed.slug} seed={entry.seed} />,
+        },
+  );
 
   return (
     <div>
@@ -128,18 +152,17 @@ export default async function CombosPage() {
             </ul>
           </div>
 
-          {/* A square poster with its name and price printed on it, so it is
-              shown whole: a cover crop into a short phone strip or a tall
-              desktop column cut the logo off the top and the price off the
-              side. */}
-          <div className="relative order-first aspect-square w-full bg-blush lg:order-last lg:self-center">
+          {/* Portrait 3:4, so it keeps a portrait shape on a phone and fills
+              the column on desktop. The combo posters below must never be
+              cropped; this one is a photograph and can be. */}
+          <div className="relative order-first aspect-4/5 w-full bg-blush lg:order-last lg:aspect-auto lg:min-h-full">
             <Image
               src={HERO_IMAGE}
-              alt="A Korean skincare routine laid out as one set"
+              alt="A customer applying Korean sunscreen at her mirror, her cleanser, ampoule and cream on the table"
               fill
               priority
               sizes="(min-width: 1024px) 45vw, 100vw"
-              className="object-contain"
+              className="object-cover object-center"
             />
           </div>
         </div>
@@ -152,41 +175,7 @@ export default async function CombosPage() {
           </p>
         ) : (
           <>
-            {tags.length > 1 && (
-              /* Labels, not filters. Ten combos fit on one page, and a filter
-                 that reloads the page to hide four cards costs more than it
-                 saves — so these say what is here rather than pretending to
-                 narrow it. */
-              <ul className="flex flex-wrap gap-2">
-                <li>
-                  <span className="inline-block bg-ink px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-white">
-                    All combos
-                  </span>
-                </li>
-                {tags.map((tag) => (
-                  <li key={tag}>
-                    <span className="inline-block border border-border bg-white px-4 py-2 text-[12px] font-semibold text-foreground">
-                      {tag}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <ul className="mt-6 space-y-5">
-              {shelf.map((entry) =>
-                entry.status === "live" ? (
-                  <ComboCard
-                    key={entry.combo.id}
-                    combo={entry.combo}
-                    seed={entry.seed}
-                    freeDeliveryEverywhereAbove={freeDeliveryEverywhereAbove}
-                  />
-                ) : (
-                  <ComboComingSoonCard key={entry.seed.slug} seed={entry.seed} />
-                ),
-              )}
-            </ul>
+            <ComboFilter items={items} />
 
             {/* The suitability notes, kept together under the grid rather than
                 repeated inside every card. The client's publishing checklist
