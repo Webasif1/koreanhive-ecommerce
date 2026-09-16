@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { ComboCard, ComboComingSoonCard } from "@/components/combo/combo-card";
 import { ComboFilter, type ComboFilterItem } from "@/components/combo/combo-filter";
-import type { FaqItem } from "@/components/home/faq-accordion";
+import { FaqAccordion, type FaqItem } from "@/components/home/faq-accordion";
 import { COMBOS } from "@/data/combos";
 import { comboShelf } from "@/lib/combos";
 import { siteConfig } from "@/lib/site";
@@ -271,25 +271,10 @@ export default async function CombosPage() {
             </h2>
           </div>
 
-          {/* Plain list, not the accordion used on the home page: the design
-              shows every answer open, and with four short answers there is
-              nothing here worth a click to reveal. */}
-          <dl>
-            {COMBO_FAQS.map((faq) => (
-              <div
-                key={faq.question}
-                lang={faq.lang}
-                className="border-t border-hairline py-5"
-              >
-                <dt className="text-[15px] font-bold leading-snug">
-                  {faq.question}
-                </dt>
-                <dd className="mt-2 text-[13.5px] leading-[1.7] text-muted-foreground">
-                  {faq.answer}
-                </dd>
-              </div>
-            ))}
-          </dl>
+          {/* The same accordion as the home page, so the two FAQs behave
+              alike. It is <details>/<summary>, so it costs no JavaScript and
+              the answers stay in the DOM while collapsed. */}
+          <FaqAccordion items={COMBO_FAQS} />
         </section>
       </div>
     </div>
