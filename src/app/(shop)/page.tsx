@@ -9,7 +9,7 @@ import { ReviewCard } from "@/components/review/review-card";
 import { ReviewSummaryPanel } from "@/components/review/review-summary";
 import { JsonLd } from "@/components/seo/json-ld";
 import { Button } from "@/components/ui/button";
-import { ReelTile } from "@/components/home/reel-tile";
+import { ReelCarousel } from "@/components/home/reel-carousel";
 import { PostCard } from "@/components/blog/post-card";
 import { ComboStripCard } from "@/components/combo/combo-strip-card";
 import { POSTS } from "@/data/blog";
@@ -536,17 +536,19 @@ export default async function Home() {
       {/* ---------------------------------------------------------- reels */}
       <section className="border-y border-border bg-white">
         <div className="container-page py-14">
-          <p className="eyebrow">Watch · discover · shop</p>
-          <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
-            See it used before you buy it
-          </h2>
           {/* Real reels, loaded on click. The five tiles here were mock-up
               frames reading "drop your reel here", each linking to /shop. */}
-          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
-            {REELS.map((reel) => (
-              <ReelTile key={reel.url} reel={reel} />
-            ))}
-          </div>
+          <ReelCarousel
+            reels={REELS}
+            heading={
+              <>
+                <p className="eyebrow">Watch · discover · shop</p>
+                <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
+                  See it used before you buy it
+                </h2>
+              </>
+            }
+          />
         </div>
       </section>
 
