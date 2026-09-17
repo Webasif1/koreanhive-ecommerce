@@ -19,7 +19,11 @@ type Variant = {
   stock: number;
 };
 
-/** Buy Now redirects, so it stays a plain form action. */
+/** Buy Now redirects, so it stays a plain form action.
+ *
+ *  The action is on the <form>, not on this button's formAction — see the
+ *  comment on the form below for why that distinction decides whether the
+ *  button works at all. */
 function BuyNowButton({
   disabled,
   className,
@@ -34,7 +38,6 @@ function BuyNowButton({
       type="submit"
       size="lg"
       variant="dark"
-      formAction={buyNowAction}
       disabled={disabled || pending}
       className={className}
     >
@@ -90,7 +93,16 @@ export function ProductActions({
   const saving = comparePrice ? comparePrice - price : 0;
 
   return (
-    <form className="border border-border bg-white p-5">
+    /* The action lives here rather than on the Buy Now button's formAction.
+       React 19 attaches its submit interceptor per form, and only to a form it
+       was given an action for: with no `action` here the rendered markup came
+       out as `<form>` with `formaction=""` on the button, so the browser did
+       its own native submit and the click simply reloaded the page without
+       ever reaching the server. Add to Cart survived only because it is a
+       type="button" that calls the action directly. Buy Now is the sole submit
+       button in this form, so the form can own the action outright — which
+       also makes it work with JavaScript disabled. */
+    <form action={buyNowAction} className="border border-border bg-white p-5">
       <input type="hidden" name="productId" value={productId} />
       <input type="hidden" name="variantId" value={selectedId} />
       <input type="hidden" name="quantity" value={quantity} />
