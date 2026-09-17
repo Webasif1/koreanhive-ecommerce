@@ -17,10 +17,17 @@ export function WishlistButton({
   productId,
   productName,
   className,
+  variant = "overlay",
 }: {
   productId: string;
   productName: string;
   className?: string;
+  /**
+   * `overlay` pins the heart to the corner of a product card. `inline` sits in
+   * normal flow with a visible label, for the product page — where the
+   * overlay's absolute positioning left the heart hanging over the buy box.
+   */
+  variant?: "overlay" | "inline";
 }) {
   const { isSaved, toggleLocal } = useWishlist();
   const [isPending, startTransition] = useTransition();
@@ -61,9 +68,17 @@ export function WishlistButton({
             ? `Remove ${productName} from wishlist`
             : `Save ${productName} to wishlist`
         }
-        className="absolute right-2.5 top-2.5 grid size-8 place-items-center border border-border bg-white text-primary transition-colors hover:border-primary disabled:opacity-60"
+        className={cn(
+          "border border-border bg-white text-primary transition-colors hover:border-primary disabled:opacity-60",
+          variant === "inline"
+            ? "inline-flex h-9 items-center gap-1.5 px-3 text-[12.5px] font-semibold"
+            : "absolute right-2.5 top-2.5 grid size-8 place-items-center",
+        )}
       >
         <Heart className={cn("size-3.5", saved && "fill-primary")} />
+        {variant === "inline" ? (
+          <span aria-hidden>{saved ? "Saved" : "Save"}</span>
+        ) : null}
       </button>
     </form>
   );

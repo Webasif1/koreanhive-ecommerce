@@ -241,11 +241,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
             >
               {inStock ? "In stock · ships today" : "Back in stock soon"}
             </span>
-            <span className="relative">
+            <span className="ml-auto">
               <WishlistButton
                 productId={product.id}
                 productName={product.name}
-                className="static"
+                variant="inline"
               />
             </span>
           </div>

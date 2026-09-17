@@ -90,7 +90,7 @@ export function ProductActions({
   const saving = comparePrice ? comparePrice - price : 0;
 
   return (
-    <form className="border border-border bg-white p-6">
+    <form className="border border-border bg-white p-5">
       <input type="hidden" name="productId" value={productId} />
       <input type="hidden" name="variantId" value={selectedId} />
       <input type="hidden" name="quantity" value={quantity} />
@@ -110,9 +110,18 @@ export function ProductActions({
       </div>
 
       {variants.length > 0 && (
-        <div className="mt-5 flex flex-wrap gap-2.5">
+        <div className="mt-4 flex flex-wrap gap-2">
           {variants.map((variant) => {
             const active = variant.id === selectedId;
+            // With one size the price is already the big number above; only
+            // repeat it on the chip when there are sizes to compare.
+            const detail =
+              variant.stock <= 0
+                ? "Out of stock"
+                : variants.length > 1
+                  ? formatBDT(variant.price ?? basePrice)
+                  : null;
+
             return (
               <button
                 key={variant.id}
@@ -123,30 +132,28 @@ export function ProductActions({
                 }}
                 disabled={variant.stock <= 0}
                 className={cn(
-                  "border px-4 py-3 text-left text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+                  "border px-3.5 py-2 text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40",
                   active
                     ? "border-primary bg-blush text-primary"
                     : "border-border bg-white hover:border-primary/50",
                 )}
               >
-                <span className="block">{variant.name}</span>
-                <span className="mt-0.5 block text-[11px] font-medium opacity-70">
-                  {variant.stock <= 0
-                    ? "Out of stock"
-                    : formatBDT(variant.price ?? basePrice)}
-                </span>
+                {variant.name}
+                {detail ? (
+                  <span className="font-medium opacity-70"> · {detail}</span>
+                ) : null}
               </button>
             );
           })}
         </div>
       )}
 
-      <div className="mt-5 flex items-stretch gap-3">
+      <div className="mt-4 flex items-stretch gap-2.5">
         <div className="flex items-center border border-border bg-cream">
           <button
             type="button"
             onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-            className="h-[54px] w-[42px] text-lg text-muted-foreground disabled:opacity-40"
+            className="h-12 w-10 text-lg text-muted-foreground disabled:opacity-40"
             disabled={quantity <= 1}
             aria-label="Decrease quantity"
           >
@@ -158,7 +165,7 @@ export function ProductActions({
           <button
             type="button"
             onClick={() => setQuantity((q) => Math.min(stock || 1, q + 1))}
-            className="h-[54px] w-[42px] text-lg text-muted-foreground disabled:opacity-40"
+            className="h-12 w-10 text-lg text-muted-foreground disabled:opacity-40"
             disabled={outOfStock || quantity >= stock}
             aria-label="Increase quantity"
           >
@@ -171,7 +178,7 @@ export function ProductActions({
           size="lg"
           variant="default"
           disabled={outOfStock || isAdding}
-          className="flex-1"
+          className="h-12 flex-1"
           onClick={() => {
             const data = new FormData();
             data.set("productId", productId);
@@ -198,15 +205,15 @@ export function ProductActions({
         </Button>
       </div>
 
-      <BuyNowButton disabled={outOfStock} className="mt-2.5 w-full" />
+      <BuyNowButton disabled={outOfStock} className="mt-2.5 h-12 w-full" />
 
       <FreeDeliveryBar
         subtotal={cartSubtotal + price * quantity}
         threshold={freeShippingThreshold}
-        className="mt-4"
+        className="mt-4 p-3"
       />
 
-      <div className="mt-5 grid grid-cols-2 gap-3">
+      <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2.5 border-t border-border pt-4">
         {[
           { title: "100% authentic", sub: "Sealed, imported from Korea" },
           { title: "Cash on delivery", sub: "Pay when it arrives" },
