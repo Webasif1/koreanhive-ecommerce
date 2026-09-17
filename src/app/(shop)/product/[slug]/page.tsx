@@ -5,11 +5,6 @@ import { notFound } from "next/navigation";
 
 import { ProductActions } from "@/components/cart/product-actions";
 import { ProductGallery } from "@/components/product/product-gallery";
-import {
-  DescriptionBlocks,
-  ProductDetailsAccordion,
-  type DetailPanel,
-} from "@/components/product/product-details-accordion";
 import { ProductGrid } from "@/components/product/product-grid";
 import { ReviewCard } from "@/components/review/review-card";
 import { ReviewSummaryPanel } from "@/components/review/review-summary";
@@ -19,9 +14,7 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { Badge } from "@/components/ui/badge";
 import { discountPercent, formatBDT, formatDeliveryWindow } from "@/lib/format";
 import { breadcrumbJsonLd, productJsonLd } from "@/lib/json-ld";
-import { parseDescription, takeSection } from "@/lib/product-description";
 import { productImage } from "@/lib/product-image";
-import { CONCERN_LABELS, type Concern } from "@/data/chatbot/taxonomy";
 import { absoluteUrl, withSiteSuffix } from "@/lib/site";
 import {
   getDeliveryZones,
@@ -124,122 +117,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   const off = discountPercent(product.price, product.comparePrice);
   const insideDhaka = zones.find((z) => z.slug === "inside-dhaka") ?? zones[0];
-
-  // The description's own headings become the accordion. The known sections
-  // are taken out in the order a shopper asks about them; anything left over
-  // still gets a panel, so no copy from the sheet is dropped.
-  const details = parseDescription(product.description);
-  const rest = [...details.sections];
-  const benefits = takeSection(rest, /^key benefits/i);
-  const whoFor = takeSection(rest, /^who it/i);
-  const keyIngredients = takeSection(rest, /^key ingredients/i);
-  const howTo = takeSection(rest, /^how to use/i);
-  const whyUs = takeSection(rest, /^why buy/i);
-  const faq = takeSection(rest, /^frequently asked/i);
-  const concernLabels = product.concerns.map(
-    (concern) => CONCERN_LABELS[concern as Concern] ?? concern,
-  );
-
-  const detailPanels: DetailPanel[] = [];
-
-  if (benefits) {
-    detailPanels.push({
-      title: "Key benefits",
-      content: <DescriptionBlocks blocks={benefits.blocks} />,
-    });
-  }
-
-  if (whoFor || concernLabels.length > 0) {
-    detailPanels.push({
-      title: "Skin type & who it's for",
-      content: (
-        <>
-          {whoFor && <DescriptionBlocks blocks={whoFor.blocks} />}
-          {concernLabels.length > 0 && (
-            <div>
-              <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-foreground">
-                Targets
-              </p>
-              <ul className="mt-2 flex flex-wrap gap-2">
-                {concernLabels.map((label) => (
-                  <li
-                    key={label}
-                    className="border border-chip-border bg-blush px-3 py-1 text-[12.5px] font-semibold text-primary"
-                  >
-                    {label}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </>
-      ),
-    });
-  }
-
-  if (keyIngredients || product.ingredients) {
-    detailPanels.push({
-      title: "Key ingredients",
-      content: keyIngredients ? (
-        <DescriptionBlocks blocks={keyIngredients.blocks} />
-      ) : (
-        <p className="whitespace-pre-line">{product.ingredients}</p>
-      ),
-    });
-  }
-
-  if (howTo || product.howToUse) {
-    detailPanels.push({
-      title: "How to use",
-      content: (
-        <>
-          {howTo && <DescriptionBlocks blocks={howTo.blocks} />}
-          {product.howToUse && (
-            <div className="border-l-2 border-primary pl-4">
-              <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-foreground">
-                Our tips
-              </p>
-              <p className="mt-1 whitespace-pre-line">{product.howToUse}</p>
-            </div>
-          )}
-        </>
-      ),
-    });
-  }
-
-  if (whyUs || insideDhaka) {
-    detailPanels.push({
-      title: "Why buy from Korean Hive",
-      content: (
-        <>
-          {whyUs && <DescriptionBlocks blocks={whyUs.blocks} />}
-          {insideDhaka && (
-            <p className="text-[13px]">
-              Delivered {insideDhaka.name.toLowerCase()} in{" "}
-              {formatDeliveryWindow(insideDhaka.minDays, insideDhaka.maxDays)} ·
-              cash on delivery
-            </p>
-          )}
-        </>
-      ),
-    });
-  }
-
-  if (faq) {
-    detailPanels.push({
-      title: "Frequently asked questions",
-      content: <DescriptionBlocks blocks={faq.blocks} />,
-    });
-  }
-
-  for (const section of rest) {
-    detailPanels.push({
-      title: section.title,
-      content: <DescriptionBlocks blocks={section.blocks} />,
-    });
-  }
-
-  if (detailPanels[0]) detailPanels[0].defaultOpen = true;
 
   const crumbs = [
     { name: "Home", path: "/" },
@@ -447,31 +324,68 @@ export default async function ProductPage({ params }: ProductPageProps) {
         </div>
       </section>
 
-      {/* ------------------------------------------------ detail sections
-          One accordion instead of three blocks. The description used to print
-          as raw markdown, asterisks and all, and four hardcoded tiles told
-          every product — cleansers and sunscreens included — that it suited
-          all skin types and went after toner. Each panel now holds that
-          product's own content, parsed from its description's headings. */}
+      {/* ------------------------------------------------ detail sections */}
       <section className="mt-16 border border-border bg-white">
-        <div className="max-w-3xl p-6 sm:p-8 lg:p-12">
+        {/* Copy only. This used to sit beside a lifestyle photo, but the asset
+            was an unfilled mock-up — "drop your image here" — shown on every
+            product page. max-w-3xl because without that second column the text
+            would run the full container width, around 150 characters a line. */}
+        <div className="max-w-3xl p-8 lg:p-12">
           <p className="eyebrow">Why you&apos;ll love it</p>
           <h2 className="mt-3.5 font-display text-2xl leading-snug md:text-[32px]">
             What it actually does
           </h2>
-          <div className="mt-4 space-y-3 text-[15px] leading-relaxed text-muted-foreground">
-            {details.intro.length > 0 ? (
-              <DescriptionBlocks blocks={details.intro} />
-            ) : (
-              <p>{product.shortDescription ?? "Description coming soon."}</p>
-            )}
-          </div>
+          <p className="mt-4 whitespace-pre-line text-[15px] leading-relaxed text-muted-foreground">
+            {product.description ??
+              product.shortDescription ??
+              "Description coming soon."}
+          </p>
+        </div>
+      </section>
 
-          {detailPanels.length > 0 && (
-            <div className="mt-8">
-              <ProductDetailsAccordion panels={detailPanels} />
+      <section className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "Skin type", value: "All skin types, including sensitive" },
+          { label: "Routine step", value: "After toner, before moisturiser" },
+          { label: "Use", value: "Morning and night" },
+          { label: "Origin", value: "Made in Korea" },
+        ].map((item) => (
+          <div key={item.label} className="border border-border bg-white p-6">
+            <div className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-mulberry-hover">
+              {item.label}
             </div>
+            <div className="mt-3 text-[14.5px] font-semibold leading-relaxed">
+              {item.value}
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <section className="mt-16 grid gap-12 lg:grid-cols-[1fr_1.15fr]">
+        <div>
+          <p className="eyebrow">How to use</p>
+          <h2 className="mt-3.5 font-display text-2xl md:text-[32px]">
+            Where it sits in your routine
+          </h2>
+          <p className="mt-3.5 whitespace-pre-line text-[14.5px] leading-relaxed text-muted-foreground">
+            {product.howToUse ?? "Usage guidance coming soon."}
+          </p>
+          {insideDhaka && (
+            <p className="mt-6 border-t border-hairline pt-4 text-[13px] text-muted-foreground">
+              Delivered {insideDhaka.name.toLowerCase()} in{" "}
+              {formatDeliveryWindow(insideDhaka.minDays, insideDhaka.maxDays)} ·
+              cash on delivery
+            </p>
           )}
+        </div>
+        <div>
+          <p className="eyebrow">Key ingredients</p>
+          <h2 className="mt-3.5 font-display text-2xl md:text-[32px]">
+            What&apos;s inside
+          </h2>
+          <p className="mt-3.5 whitespace-pre-line text-[14.5px] leading-relaxed text-muted-foreground">
+            {product.ingredients ?? "Full ingredient list coming soon."}
+          </p>
         </div>
       </section>
 
