@@ -183,7 +183,14 @@ export default async function ProductPage({ params }: ProductPageProps) {
       </nav>
 
       <section className="mt-6 grid gap-10 lg:grid-cols-2 lg:gap-14">
-        <div className="relative">
+        {/* On desktop the details column runs far past the image, which left a
+            tall white gap under it. Sticky keeps the image in view while the
+            details scroll, and because a sticky box cannot leave its
+            containing block it lets go when this section ends. self-start
+            stops the grid stretching the wrapper to the row, which would leave
+            it no room to move; top-37.5 (150px) is the 126px sticky header plus
+            a gap. */}
+        <div className="relative lg:sticky lg:top-37.5 lg:self-start">
           <ProductGallery images={product.images} productName={product.name} />
           <div className="pointer-events-none absolute left-3.5 top-3.5 z-10 flex flex-col items-start gap-2">
             {off !== null && <Badge variant="sale">−{off}%</Badge>}
