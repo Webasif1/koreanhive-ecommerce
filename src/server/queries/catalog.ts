@@ -941,6 +941,7 @@ export async function getProductBySlug(slug: string) {
     description: product.description ?? null,
     ingredients: product.ingredients ?? null,
     howToUse: product.howToUse ?? null,
+    concerns: product.concerns ?? [],
     price: product.price,
     comparePrice: product.comparePrice ?? null,
     sku: product.sku ?? null,
