@@ -5,12 +5,13 @@ import { notFound } from "next/navigation";
 
 import { ProductActions } from "@/components/cart/product-actions";
 import { ProductGallery } from "@/components/product/product-gallery";
-import { ProductGrid } from "@/components/product/product-grid";
+import { ProductCard } from "@/components/product/product-card";
 import { ReviewCard } from "@/components/review/review-card";
 import { ReviewSummaryPanel } from "@/components/review/review-summary";
 import { StarRating } from "@/components/product/star-rating";
 import { WishlistButton } from "@/components/product/wishlist-button";
 import { JsonLd } from "@/components/seo/json-ld";
+import { ScrollCarousel } from "@/components/ui/scroll-carousel";
 import { Badge } from "@/components/ui/badge";
 import { discountPercent, formatBDT, formatDeliveryWindow } from "@/lib/format";
 import { breadcrumbJsonLd, productJsonLd } from "@/lib/json-ld";
@@ -96,6 +97,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
     getRelatedProducts({
       productId: product.id,
       categoryId: product.categoryId,
+      // enough for the slider below to have somewhere to go on a desktop,
+      // which shows four at a time
+      take: 8,
     }),
     getDeliveryZones(),
     getProductReviews(product.id),
@@ -401,13 +405,26 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
       {related.length > 0 && (
         <section className="mt-16">
-          <p className="eyebrow">You may also like</p>
-          <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
-            Pairs well with this
-          </h2>
-          <div className="mt-6">
-            <ProductGrid products={related} />
-          </div>
+          {/* One row that slides, rather than a grid that wraps onto a second
+              line on a phone. Card widths match the old grid: two across on
+              a phone, three on a tablet, four on a desktop. */}
+          <ScrollCarousel
+            label="Pairs well with this"
+            itemLabel="product"
+            slideClassName="basis-[calc((100%-1rem)/2)] sm:basis-[calc((100%-2rem)/3)] lg:basis-[calc((100%-3rem)/4)]"
+            heading={
+              <>
+                <p className="eyebrow">You may also like</p>
+                <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
+                  Pairs well with this
+                </h2>
+              </>
+            }
+          >
+            {related.map((item) => (
+              <ProductCard key={item.id} product={item} />
+            ))}
+          </ScrollCarousel>
         </section>
       )}
     </div>
