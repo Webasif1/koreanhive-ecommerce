@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -12,7 +11,6 @@ import {
   type DetailPanel,
 } from "@/components/product/product-details-accordion";
 import { ProductGrid } from "@/components/product/product-grid";
-import { ProductTabs, type ProductTab } from "@/components/product/product-tabs";
 import { ReviewCard } from "@/components/review/review-card";
 import { ReviewSummaryPanel } from "@/components/review/review-summary";
 import { StarRating } from "@/components/product/star-rating";
@@ -127,9 +125,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const off = discountPercent(product.price, product.comparePrice);
   const insideDhaka = zones.find((z) => z.slug === "inside-dhaka") ?? zones[0];
 
-  // The description's own headings become the Description tab's cards. The known
-  // sections are taken out in the order a shopper asks about them; anything
-  // left over still gets a card, so no copy from the sheet is dropped.
+  // The description's own headings become the accordion. The known sections
+  // are taken out in the order a shopper asks about them; anything left over
+  // still gets a panel, so no copy from the sheet is dropped.
   const details = parseDescription(product.description);
   const rest = [...details.sections];
   const benefits = takeSection(rest, /^key benefits/i);
@@ -142,17 +140,17 @@ export default async function ProductPage({ params }: ProductPageProps) {
     (concern) => CONCERN_LABELS[concern as Concern] ?? concern,
   );
 
-  const descriptionCards: { title: string; content: ReactNode }[] = [];
+  const detailPanels: DetailPanel[] = [];
 
   if (benefits) {
-    descriptionCards.push({
+    detailPanels.push({
       title: "Key benefits",
       content: <DescriptionBlocks blocks={benefits.blocks} />,
     });
   }
 
   if (whoFor || concernLabels.length > 0) {
-    descriptionCards.push({
+    detailPanels.push({
       title: "Skin type & who it's for",
       content: (
         <>
@@ -180,7 +178,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   if (keyIngredients || product.ingredients) {
-    descriptionCards.push({
+    detailPanels.push({
       title: "Key ingredients",
       content: keyIngredients ? (
         <DescriptionBlocks blocks={keyIngredients.blocks} />
@@ -191,7 +189,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   if (howTo || product.howToUse) {
-    descriptionCards.push({
+    detailPanels.push({
       title: "How to use",
       content: (
         <>
@@ -210,7 +208,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   if (whyUs || insideDhaka) {
-    descriptionCards.push({
+    detailPanels.push({
       title: "Why buy from Korean Hive",
       content: (
         <>
@@ -227,104 +225,21 @@ export default async function ProductPage({ params }: ProductPageProps) {
     });
   }
 
+  if (faq) {
+    detailPanels.push({
+      title: "Frequently asked questions",
+      content: <DescriptionBlocks blocks={faq.blocks} />,
+    });
+  }
+
   for (const section of rest) {
-    descriptionCards.push({
+    detailPanels.push({
       title: section.title,
       content: <DescriptionBlocks blocks={section.blocks} />,
     });
   }
 
-  // Each FAQ question is its own collapsible row inside the FAQ tab.
-  const faqPanels: DetailPanel[] = (faq?.blocks ?? []).flatMap((block, index) =>
-    block.kind === "qa"
-      ? [
-          {
-            title: block.question,
-            defaultOpen: index === 0,
-            content: (
-              <DescriptionBlocks
-                blocks={[{ kind: "paragraph", text: block.answer }]}
-              />
-            ),
-          },
-        ]
-      : [],
-  );
-
-  const reviewCount = productReviews.summary.count;
-
-  const tabs: ProductTab[] = [
-    {
-      value: "description",
-      label: "Description",
-      content: (
-        <div>
-          <p className="eyebrow">Why you&apos;ll love it</p>
-          <h2 className="mt-3 font-display text-2xl leading-snug md:text-[32px]">
-            What it actually does
-          </h2>
-          <div className="mt-4 max-w-3xl space-y-3 text-[15px] leading-relaxed text-muted-foreground">
-            {details.intro.length > 0 ? (
-              <DescriptionBlocks blocks={details.intro} />
-            ) : (
-              <p>{product.shortDescription ?? "Description coming soon."}</p>
-            )}
-          </div>
-
-          {descriptionCards.length > 0 && (
-            <div className="mt-8 grid gap-4 md:grid-cols-2">
-              {descriptionCards.map((card) => (
-                <div
-                  key={card.title}
-                  className="border border-border bg-cream/60 p-5 sm:p-6"
-                >
-                  <h3 className="eyebrow">{card.title}</h3>
-                  <div className="mt-3 space-y-3 text-[14px] leading-[1.8] text-muted-foreground">
-                    {card.content}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ),
-    },
-  ];
-
-  if (faqPanels.length > 0) {
-    tabs.push({
-      value: "faq",
-      label: "FAQ",
-      content: (
-        <div className="max-w-3xl">
-          <ProductDetailsAccordion panels={faqPanels} />
-        </div>
-      ),
-    });
-  }
-
-  // Hidden until a product has an approved review: "Reviews (0)" on every
-  // page in the catalogue would advertise that nobody has bought anything.
-  if (reviewCount > 0) {
-    tabs.push({
-      value: "reviews",
-      label: `Reviews (${reviewCount})`,
-      content: (
-        <div className="grid gap-8 lg:grid-cols-[300px_1fr]">
-          <ReviewSummaryPanel
-            summary={productReviews.summary}
-            heading="What buyers say"
-            className="h-fit border border-border bg-card p-6"
-          />
-          <ul className="grid gap-4 sm:grid-cols-2">
-            {productReviews.reviews.slice(0, 6).map((review) => (
-              <ReviewCard key={review.id} review={review} />
-            ))}
-          </ul>
-        </div>
-      ),
-    });
-  }
+  if (detailPanels[0]) detailPanels[0].defaultOpen = true;
 
   const crumbs = [
     { name: "Home", path: "/" },
@@ -474,6 +389,24 @@ export default async function ProductPage({ params }: ProductPageProps) {
             />
           </div>
 
+          {/* Reviews for this product only. Absent until one is approved — an
+          empty "Reviews (0)" heading on every page in a 279-product catalogue
+          advertises that nobody has bought anything. */}
+      {productReviews.reviews.length > 0 && (
+        <section className="mt-16 grid gap-8 lg:grid-cols-[300px_1fr]">
+          <ReviewSummaryPanel
+            summary={productReviews.summary}
+            heading="What buyers say"
+            className="h-fit border border-border bg-card p-6"
+          />
+          <ul className="grid gap-4 sm:grid-cols-2">
+            {productReviews.reviews.slice(0, 6).map((review) => (
+              <ReviewCard key={review.id} review={review} />
+            ))}
+          </ul>
+        </section>
+      )}
+
       {related.length > 0 && (
             <div className="mt-4 border border-border bg-white p-6">
               <p className="eyebrow">Complete the routine</p>
@@ -515,13 +448,31 @@ export default async function ProductPage({ params }: ProductPageProps) {
       </section>
 
       {/* ------------------------------------------------ detail sections
-          Description / FAQ / Reviews tabs. The description used to print as
-          raw markdown, asterisks and all, and four hardcoded tiles told every
-          product — cleansers and sunscreens included — that it suited all skin
-          types and went after toner. Each tab now holds that product's own
-          content, parsed from its description's headings. */}
-      <section className="mt-16 border border-border bg-white p-4 sm:p-6 lg:p-8">
-        <ProductTabs tabs={tabs} />
+          One accordion instead of three blocks. The description used to print
+          as raw markdown, asterisks and all, and four hardcoded tiles told
+          every product — cleansers and sunscreens included — that it suited
+          all skin types and went after toner. Each panel now holds that
+          product's own content, parsed from its description's headings. */}
+      <section className="mt-16 border border-border bg-white">
+        <div className="max-w-3xl p-6 sm:p-8 lg:p-12">
+          <p className="eyebrow">Why you&apos;ll love it</p>
+          <h2 className="mt-3.5 font-display text-2xl leading-snug md:text-[32px]">
+            What it actually does
+          </h2>
+          <div className="mt-4 space-y-3 text-[15px] leading-relaxed text-muted-foreground">
+            {details.intro.length > 0 ? (
+              <DescriptionBlocks blocks={details.intro} />
+            ) : (
+              <p>{product.shortDescription ?? "Description coming soon."}</p>
+            )}
+          </div>
+
+          {detailPanels.length > 0 && (
+            <div className="mt-8">
+              <ProductDetailsAccordion panels={detailPanels} />
+            </div>
+          )}
+        </div>
       </section>
 
       {related.length > 0 && (
