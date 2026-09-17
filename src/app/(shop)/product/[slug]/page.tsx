@@ -118,6 +118,48 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const off = discountPercent(product.price, product.comparePrice);
   const insideDhaka = zones.find((z) => z.slug === "inside-dhaka") ?? zones[0];
 
+  // Rendered in two places: under the image on desktop, where it evens out
+  // the columns so no empty block sits under the gallery, and after the buy
+  // box on phones, where the columns are stacked.
+  const routineCard =
+    related.length > 0 ? (
+      <div className="border border-border bg-white p-6">
+        <p className="eyebrow">Complete the routine</p>
+        <div className="mt-3.5 flex flex-col gap-2.5">
+          {related.slice(0, 2).map((item) => (
+            <Link
+              key={item.id}
+              href={`/product/${item.slug}`}
+              className="grid grid-cols-[54px_1fr_auto] items-center gap-3 border border-border p-2.5 hover:border-primary"
+            >
+              <div className="relative size-[54px] bg-blush">
+                {item.images[0] && (
+                  <Image
+                    src={productImage(item.images[0].url)}
+                    alt={item.name}
+                    fill
+                    sizes="54px"
+                    className="object-cover"
+                  />
+                )}
+              </div>
+              <div>
+                <div className="text-[12.5px] font-bold leading-snug">
+                  {item.name}
+                </div>
+                <div className="mt-1 text-[11.5px] text-muted-foreground">
+                  {item.brand?.name}
+                </div>
+              </div>
+              <div className="text-[13px] font-bold">
+                {formatBDT(item.variants[0]?.price ?? item.price)}
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    ) : null;
+
   const crumbs = [
     { name: "Home", path: "/" },
     { name: "Shop", path: "/shop" },
@@ -184,12 +226,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
       <section className="mt-6 grid gap-10 lg:grid-cols-2 lg:gap-14">
         {/* On desktop the details column runs far past the image, which left a
-            tall white gap under it. Sticky keeps the image in view while the
-            details scroll, and because a sticky box cannot leave its
-            containing block it lets go when this section ends. self-start
-            stops the grid stretching the wrapper to the row, which would leave
-            it no room to move; top-37.5 (150px) is the 126px sticky header plus
-            a gap. */}
+            tall white gap under it. Two things close it: the routine card
+            moves under the image, so the columns end at about the same
+            height, and the column is sticky, so any difference that remains
+            is taken up by the image staying in view. A sticky box cannot
+            leave its containing block, so it lets go when this section ends.
+            self-start stops the grid stretching the wrapper to the row;
+            top-37.5 (150px) is the 126px sticky header plus a gap. */}
         <div className="relative lg:sticky lg:top-37.5 lg:self-start">
           <ProductGallery images={product.images} productName={product.name} />
           <div className="pointer-events-none absolute left-3.5 top-3.5 z-10 flex flex-col items-start gap-2">
@@ -199,6 +242,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 real it would have become a false claim. The home page ranks
                 best sellers from actual orders. */}
           </div>
+          {routineCard && (
+            <div className="mt-4 hidden lg:block">{routineCard}</div>
+          )}
         </div>
 
         <div>
@@ -284,43 +330,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         </section>
       )}
 
-      {related.length > 0 && (
-            <div className="mt-4 border border-border bg-white p-6">
-              <p className="eyebrow">Complete the routine</p>
-              <div className="mt-3.5 flex flex-col gap-2.5">
-                {related.slice(0, 2).map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/product/${item.slug}`}
-                    className="grid grid-cols-[54px_1fr_auto] items-center gap-3 border border-border p-2.5 hover:border-primary"
-                  >
-                    <div className="relative size-[54px] bg-blush">
-                      {item.images[0] && (
-                        <Image
-                          src={productImage(item.images[0].url)}
-                          alt={item.name}
-                          fill
-                          sizes="54px"
-                          className="object-cover"
-                        />
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-[12.5px] font-bold leading-snug">
-                        {item.name}
-                      </div>
-                      <div className="mt-1 text-[11.5px] text-muted-foreground">
-                        {item.brand?.name}
-                      </div>
-                    </div>
-                    <div className="text-[13px] font-bold">
-                      {formatBDT(item.variants[0]?.price ?? item.price)}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
+          {routineCard && <div className="mt-4 lg:hidden">{routineCard}</div>}
         </div>
       </section>
 
