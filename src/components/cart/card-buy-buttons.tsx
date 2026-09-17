@@ -9,7 +9,11 @@ import { addToCartAction, buyNowAction } from "@/server/actions/cart";
 import { notifyCartChanged } from "@/lib/cart-events";
 
 /** Buy Now redirects to checkout, so it stays a plain form action — a toast
- *  would be replaced by the navigation before anyone read it. */
+ *  would be replaced by the navigation before anyone read it.
+ *
+ *  The action is on the <form>, not on this button's formAction — see the
+ *  comment on the form below for why that distinction decides whether the
+ *  button works at all. */
 function BuyNowButton({ disabled, label }: { disabled?: boolean; label: string }) {
   const { pending } = useFormStatus();
 
@@ -17,7 +21,6 @@ function BuyNowButton({ disabled, label }: { disabled?: boolean; label: string }
     <Button
       type="submit"
       variant="dark"
-      formAction={buyNowAction}
       disabled={disabled || pending}
       aria-label={label}
       className="h-12 w-full text-[13px]"
@@ -41,7 +44,16 @@ export function CardBuyButtons({
   const [isAdding, startTransition] = useTransition();
 
   return (
-    <form className="mt-3.5 flex flex-col gap-2">
+    /* The action lives here rather than on the Buy Now button's formAction.
+       React 19 attaches its submit interceptor per form, and only to a form it
+       was given an action for: with no `action` here the rendered markup came
+       out as `<form>` with `formaction=""` on the button, so the browser did
+       its own native submit and the click simply reloaded the page without
+       ever reaching the server. Add to Cart survived only because it is a
+       type="button" that calls the action directly. Buy Now is the sole submit
+       button in this form, so the form can own the action outright — which
+       also makes it work with JavaScript disabled. */
+    <form action={buyNowAction} className="mt-3.5 flex flex-col gap-2">
       <input type="hidden" name="productId" value={productId} />
       <input type="hidden" name="variantId" value={variantId ?? ""} />
       <input type="hidden" name="quantity" value={1} />
