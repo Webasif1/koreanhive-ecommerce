@@ -90,6 +90,23 @@ const ALIASES: Record<string, CanonicalColumn> = {
   volume: "size",
   "Skin Concerns Targeted": "concerns",
   "Skin Concerns": "concerns",
+
+  // The 2026 expansion sheet, which writes the same three fields under its own
+  // headers. Without these the import fails every row with "new products need
+  // a name" / "new products need a price", because the folded headers
+  // `producttitleenglish`, `suggestedkoreanhivepricebdt` and
+  // `productdescriptionshort` matched nothing at all.
+  "Product Title (English)": "name",
+  "Product Title": "name",
+  "Suggested Korean Hive Price (BDT)": "price",
+  "Product Description (Short)": "shortDescription",
+
+  // "Competitor Price (BDT)" is deliberately NOT mapped to comparePrice.
+  // comparePrice renders as a struck-through "was" price next to a "You save
+  // X" badge, which states that THIS shop charged that much before. A rival's
+  // price is not our old price, and publishing it that way is a false discount
+  // claim. If a genuine former Korean Hive price exists, put it in a
+  // "Regular Price (BDT)" column, which is already mapped above.
 };
 
 function fold(header: string): string {
