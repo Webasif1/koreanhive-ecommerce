@@ -62,7 +62,7 @@ export function ComboFilter({ items }: { items: ComboFilterItem[] }) {
               aria-pressed={isActive}
               onClick={() => setActive(tab.label)}
               className={cn(
-                "inline-block px-4 py-2 text-[12px] font-semibold transition-colors",
+                "inline-block px-4 py-2.5 text-[12px] font-semibold transition-colors",
                 isActive
                   ? "bg-ink uppercase tracking-[0.06em] text-white"
                   : "border border-border bg-white text-foreground hover:border-primary hover:text-primary",
