@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { ComboCard, ComboComingSoonCard } from "@/components/combo/combo-card";
 import { ComboFilter, type ComboFilterItem } from "@/components/combo/combo-filter";
+import { RoutineNotesAccordion } from "@/components/combo/routine-notes-accordion";
 import { FaqAccordion, type FaqItem } from "@/components/home/faq-accordion";
 import { COMBOS } from "@/data/combos";
 import { comboShelf } from "@/lib/combos";
@@ -125,7 +126,7 @@ export default async function CombosPage() {
                 data, the saving is computed from live prices by the sync, and
                 the delivery line is checked against the real zone thresholds
                 on each card rather than asserted here. */}
-            <ul className="mt-8 grid gap-6 sm:grid-cols-3">
+            <ul className="mt-8 grid gap-6 md:grid-cols-3">
               {[
                 {
                   title: "Step order, not discount order",
@@ -177,39 +178,20 @@ export default async function CombosPage() {
           <>
             <ComboFilter items={items} />
 
-            {/* The suitability notes, kept together under the grid rather than
-                repeated inside every card. The client's publishing checklist
-                requires them visible — for the retinol combo it is a safety
-                instruction, not a disclaimer — but eleven of them inline
-                turned each card into a wall of small print. */}
+            {/* The suitability notes, kept together in one accordion rather
+                than repeated inside every card. The client's publishing
+                checklist requires them visible — for the retinol combo it is
+                a safety instruction, not a disclaimer — but ten of them
+                expanded inline turned this into a wall of small print on a
+                phone, so each collapses until tapped. */}
             <section className="mt-10 border border-border bg-white p-6 lg:p-8">
               <p className="eyebrow">Before you buy</p>
               <h2 className="mt-3 font-display text-[22px] tracking-[-0.01em]">
                 What each routine can and cannot do
               </h2>
-              <dl className="mt-5 grid gap-5 sm:grid-cols-2">
-                {/* all ten, coming soon included: the retinol warning has to
-                    be visible before anyone can buy that combo, not after */}
-                {shelfSeeds.map((seed) => {
-                  return (
-                    <div
-                      key={seed.slug}
-                      className="border-t border-hairline pt-3"
-                    >
-                      <dt className="text-[13px] font-semibold">{seed.name}</dt>
-                      <dd className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">
-                        {seed.note}
-                      </dd>
-                      <dd className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">
-                        <span className="font-semibold text-foreground">
-                          How to use:
-                        </span>{" "}
-                        {seed.routine}
-                      </dd>
-                    </div>
-                  );
-                })}
-              </dl>
+              {/* all ten, coming soon included: the retinol warning has to
+                  be visible before anyone can buy that combo, not after */}
+              <RoutineNotesAccordion seeds={shelfSeeds} />
             </section>
           </>
         )}
