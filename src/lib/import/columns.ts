@@ -85,6 +85,8 @@ const ALIASES: Record<string, CanonicalColumn> = {
   "User Guidance (Bangla + English)": "howToUse",
   "User Guidance": "howToUse",
   "Image Alt Text": "imageAlt",
+  "Main Image URL": "images",
+  "Usage Guidance (Bangla + English)": "howToUse",
   "Stock Status": "stockStatus",
   "Size / Volume": "size",
   volume: "size",
