@@ -128,7 +128,7 @@ export async function placeOrderAction(
      * actually created instead.
      */
     const lastOrder = await readLastOrder();
-    if (lastOrder) redirect(`/order/${lastOrder}`);
+    if (lastOrder) redirect(`/success/${lastOrder}`);
 
     return { ok: false, message: "Your cart is empty.", errors: {} };
   }
@@ -230,7 +230,7 @@ export async function placeOrderAction(
       await writeCartCookie([]);
       await writeCouponCookie(null);
       await grantOrderAccess(existing.orderNumber);
-      redirect(`/order/${existing.orderNumber}`);
+      redirect(`/success/${existing.orderNumber}`);
     }
   }
 
@@ -410,7 +410,7 @@ export async function placeOrderAction(
   if (!finalNumber) {
     // Unreachable: the transaction either returns a number or throws, and
     // every throw path above returns. Belt and braces so a future edit cannot
-    // redirect to /order/null.
+    // redirect to /success/null.
     return {
       ok: false,
       message: "Something went wrong placing your order. Please try again.",
@@ -422,5 +422,5 @@ export async function placeOrderAction(
   await writeCouponCookie(null);
   await grantOrderAccess(finalNumber);
 
-  redirect(`/order/${finalNumber}`);
+  redirect(`/success/${finalNumber}`);
 }

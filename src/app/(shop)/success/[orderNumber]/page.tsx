@@ -8,6 +8,8 @@ import { formatBDT, formatDeliveryWindow } from "@/lib/format";
 import { hasOrderAccess } from "@/server/cart-cookie";
 import { getOrderByNumber } from "@/server/queries/order";
 
+import { PurchaseEvent } from "./purchase-event";
+
 export const metadata: Metadata = {
   title: "Order Confirmed",
   robots: { index: false },
@@ -46,6 +48,18 @@ export default async function OrderSuccessPage({ params }: OrderPageProps) {
 
   return (
     <div className="container-page py-12 md:py-16">
+      <PurchaseEvent
+        orderNumber={order.orderNumber}
+        total={order.total}
+        shipping={order.shippingCharge}
+        coupon={order.couponCode}
+        items={order.items.map((item) => ({
+          name: item.productName,
+          variant: item.variantName,
+          price: item.unitPrice,
+          quantity: item.quantity,
+        }))}
+      />
       <div className="mx-auto max-w-2xl">
         <div className="flex flex-col items-center gap-3 text-center">
           <CheckCircle2 className="size-12 text-success" />
