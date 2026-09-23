@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { Banknote, CheckCircle2, Truck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { formatBDT, formatDeliveryWindow } from "@/lib/format";
 import { hasOrderAccess } from "@/server/cart-cookie";
 import { getOrderByNumber } from "@/server/queries/order";
 
+import { SuccessMessage } from "../success-message";
 import { PurchaseEvent } from "./purchase-event";
 
 export const metadata: Metadata = {
@@ -22,29 +22,14 @@ type OrderPageProps = {
 export default async function OrderSuccessPage({ params }: OrderPageProps) {
   const { orderNumber } = await params;
 
-  // only the browser that just placed this order may read it here; anyone
-  // else has to go through /track with the order number *and* the phone
-  if (!(await hasOrderAccess(orderNumber))) {
-    return (
-      <div className="container-page flex flex-col items-center gap-4 py-20 text-center">
-        <h1 className="font-display text-2xl font-semibold tracking-tight">
-          Order details are private
-        </h1>
-        <p className="max-w-md text-sm text-muted-foreground">
-          For your security we only show a confirmation right after checkout.
-          You can still look this order up with your order number and phone
-          number.
-        </p>
-        <Button asChild>
-          <Link href="/track">Track Your Order</Link>
-        </Button>
-      </div>
-    );
-  }
+  // only the browser that just placed this order may read its details here;
+  // anyone else gets the plain confirmation and has to go through /track with
+  // the order number *and* the phone
+  if (!(await hasOrderAccess(orderNumber))) return <SuccessMessage />;
 
   const order = await getOrderByNumber(orderNumber);
 
-  if (!order) notFound();
+  if (!order) return <SuccessMessage />;
 
   return (
     <div className="container-page py-12 md:py-16">
