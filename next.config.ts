@@ -59,6 +59,16 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // the order confirmation page moved from /order/<n> to /success/<n>
+  async redirects() {
+    return [
+      {
+        source: "/order/:orderNumber",
+        destination: "/success/:orderNumber",
+        permanent: true,
+      },
+    ];
+  },
   experimental: {
     // a product import posts the whole file through a Server Action, and the
     // 1MB default rejects a few hundred rows with an opaque error

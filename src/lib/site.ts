@@ -29,7 +29,7 @@ export const NO_INDEX_PATHS = [
   "/cart",
   "/checkout",
   "/account",
-  "/order/",
+  "/success/",
   "/wishlist",
   "/search",
   "/api/",
