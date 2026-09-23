@@ -37,6 +37,8 @@ export const metadata: Metadata = {
     googleBot: { index: true, follow: true, "max-image-preview": "large" },
   },
   formatDetection: { telephone: false },
+  // Google Search Console ownership check
+  verification: { google: "yotugleZDgNxkag75qQVa6FGm9uEecjTLfTh0vxkHU4" },
 };
 
 export default function RootLayout({
