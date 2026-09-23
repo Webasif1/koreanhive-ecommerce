@@ -53,6 +53,10 @@ export default function RootLayout({
             path — worth ~100-300ms on a Bangladeshi mobile connection. */}
         <link rel="preconnect" href="https://ik.imagekit.io" crossOrigin="" />
         <link rel="dns-prefetch" href="https://ik.imagekit.io" />
+        {/* Create the dataLayer before GTM loads so early pushes aren't lost */}
+        <Script id="gtm-datalayer" strategy="beforeInteractive">
+          {`window.dataLayer = window.dataLayer || [];`}
+        </Script>
         {/* Google Tag Manager */}
         <Script id="gtm" strategy="afterInteractive">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
