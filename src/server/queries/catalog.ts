@@ -6,6 +6,7 @@ import { truncateBenefit } from "@/lib/format";
 import type { QueryFilter, Types } from "mongoose";
 
 import { PER_PAGE } from "@/lib/listing-params";
+import type { FeedProduct } from "@/lib/tracking/feed";
 import {
   buildListingFacetPipeline,
   type ListingFacetRows,
@@ -30,6 +31,8 @@ export type ProductCardData = {
   id: string;
   name: string;
   slug: string;
+  /** the tracking item_id and Meta catalogue id */
+  sku: string | null;
   price: number;
   comparePrice: number | null;
   stock: number;
@@ -44,7 +47,7 @@ export type ProductCardData = {
 };
 
 const CARD_FIELDS =
-  "name slug price comparePrice stock ratingAvg ratingCount shortDescription brandId images variants";
+  "name slug sku price comparePrice stock ratingAvg ratingCount shortDescription brandId images variants";
 
 export type ProductSort =
   | "newest"
@@ -79,6 +82,7 @@ type LeanProduct = Pick<
   | "_id"
   | "name"
   | "slug"
+  | "sku"
   | "price"
   | "comparePrice"
   | "stock"
@@ -122,6 +126,7 @@ function toCard(
     id: product._id.toString(),
     name: product.name,
     slug: product.slug,
+    sku: product.sku ?? null,
     price: product.price,
     comparePrice: product.comparePrice ?? null,
     stock: product.stock,
@@ -649,7 +654,7 @@ export async function getCombos() {
   const slugs = [...new Set(combos.flatMap((c) => c.productSlugs))];
 
   const products = await Product.find({ slug: { $in: slugs }, isActive: true })
-    .select("name slug price images stock")
+    .select("name slug sku price images stock")
     .lean();
 
   const bySlug = new Map(products.map((p) => [p.slug, p]));
@@ -678,6 +683,7 @@ export async function getCombos() {
           id: product._id.toString(),
           name: product.name,
           slug: product.slug,
+          sku: product.sku ?? null,
           price: product.price,
           stock: product.stock,
           imageUrl: image?.url ?? null,
@@ -748,6 +754,73 @@ export async function getBrandScope(slug: string) {
 
 /** Slugs + timestamps for sitemap.ts. Deliberately minimal: this runs on a
  *  route search engines hit, not a customer. */
+/**
+ * Every product the Meta catalogue can use: published, photographed and
+ * SKU'd — the SKU is the feed id and the item_id every pixel/CAPI event
+ * carries, so a product without one could never be matched to an event.
+ *
+ * Read from the database rather than by crawling the site's own product
+ * pages: a multi-size product's JSON-LD is an AggregateOffer with no single
+ * price, so a crawler reading offers.price would silently drop it.
+ */
+export async function getFeedProducts(): Promise<FeedProduct[]> {
+  await connectDb();
+
+  const [products, brands, categories] = await Promise.all([
+    Product.find({
+      isActive: true,
+      "images.0": { $exists: true },
+      sku: { $nin: [null, ""] },
+    })
+      .select(
+        "name slug sku description shortDescription price comparePrice stock images variants brandId categoryId",
+      )
+      .sort({ createdAt: -1 })
+      .lean(),
+    Brand.find({}).select("name").lean(),
+    Category.find({}).select("name parentId").lean(),
+  ]);
+
+  const brandName = new Map(brands.map((b) => [b._id.toString(), b.name]));
+  const categoryById = new Map(categories.map((c) => [c._id.toString(), c]));
+
+  const pathFor = (id: Types.ObjectId | null | undefined) => {
+    const leaf = id ? categoryById.get(id.toString()) : undefined;
+    if (!leaf) return [];
+    const parent = leaf.parentId
+      ? categoryById.get(leaf.parentId.toString())
+      : undefined;
+    return parent ? [parent.name, leaf.name] : [leaf.name];
+  };
+
+  return products.map((product) => {
+    const variants = product.variants ?? [];
+    // the same price the product card and page lead with
+    const defaultVariant = variants.find((v) => v.isDefault) ?? variants[0];
+
+    return {
+      sku: product.sku as string,
+      name: product.name,
+      slug: product.slug,
+      description: product.description ?? null,
+      shortDescription: product.shortDescription ?? null,
+      price: defaultVariant?.price ?? product.price,
+      comparePrice: product.comparePrice ?? null,
+      inStock:
+        variants.length > 0
+          ? variants.some((v) => v.stock > 0)
+          : product.stock > 0,
+      images: [...product.images]
+        .sort((a, b) => a.position - b.position)
+        .map((image) => image.url),
+      brand: product.brandId
+        ? (brandName.get(product.brandId.toString()) ?? null)
+        : null,
+      categoryPath: pathFor(product.categoryId),
+    };
+  });
+}
+
 export async function getSitemapEntries() {
   await connectDb();
 

@@ -8,11 +8,14 @@ import { Button } from "@/components/ui/button";
 import type { ComboSeed } from "@/data/combos";
 import { formatBDT } from "@/lib/format";
 import { productImage } from "@/lib/product-image";
+import { toTrackItem } from "@/lib/tracking/shared";
+import type { TrackItem } from "@/lib/tracking/types";
 
 type ComboProduct = {
   id: string;
   name: string;
   slug: string;
+  sku: string | null;
   price: number;
   stock: number;
   imageUrl: string | null;
@@ -28,6 +31,17 @@ export type ComboCardData = {
   comparePrice: number | null;
   products: ComboProduct[];
 };
+
+export function comboTrackItems(combo: ComboCardData): TrackItem[] {
+  return combo.products.map((product) =>
+    toTrackItem({
+      sku: product.sku,
+      slug: product.slug,
+      name: product.name,
+      price: product.price,
+    }),
+  );
+}
 
 /** A bundle lasts 2.5–3 months at twice-daily use, per the FAQ below the grid. */
 const DAYS_IN_ROUTINE = 90;
@@ -313,7 +327,10 @@ export function ComboCard({
         <div className="flex-1" />
 
         <div className="mt-5 space-y-2">
-          <ComboAddButton comboSlug={combo.slug} />
+          <ComboAddButton
+            comboSlug={combo.slug}
+            trackItems={comboTrackItems(combo)}
+          />
           <Button variant="outline" className="w-full" asChild>
             <Link href={`/product/${combo.products[0]?.slug ?? ""}`}>
               See what&apos;s inside

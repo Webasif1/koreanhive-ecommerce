@@ -2,7 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { ComboAddButton } from "@/components/combo/combo-add-button";
-import type { ComboCardData } from "@/components/combo/combo-card";
+import {
+  comboTrackItems,
+  type ComboCardData,
+} from "@/components/combo/combo-card";
 import type { ComboSeed } from "@/data/combos";
 import { formatBDT } from "@/lib/format";
 import { productImage } from "@/lib/product-image";
@@ -91,7 +94,10 @@ export function ComboStripCard({
         </div>
 
         <div className="mt-4">
-          <ComboAddButton comboSlug={combo.slug} />
+          <ComboAddButton
+            comboSlug={combo.slug}
+            trackItems={comboTrackItems(combo)}
+          />
         </div>
       </div>
     </li>

@@ -11,6 +11,8 @@ export type CartLine = {
   variantId: string | null;
   name: string;
   slug: string;
+  /** product SKU, the tracking item_id */
+  sku: string | null;
   variantName: string | null;
   imageUrl: string | null;
   unitPrice: number;
@@ -109,7 +111,7 @@ export async function getCart(zoneSlug?: string) {
       _id: { $in: items.map((i) => i.productId) },
       isActive: true,
     })
-      .select("name slug price stock images variants")
+      .select("name slug sku price stock images variants")
       .lean(),
     zoneSlug
       ? DeliveryZone.findOne({ slug: zoneSlug, isActive: true }).lean()
@@ -149,6 +151,7 @@ export async function getCart(zoneSlug?: string) {
       variantId: variant?._id.toString() ?? null,
       name: product.name,
       slug: product.slug,
+      sku: product.sku ?? null,
       variantName: variant?.name ?? null,
       imageUrl: firstImage?.url ?? null,
       unitPrice,

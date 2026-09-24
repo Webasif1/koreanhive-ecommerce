@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ProductPlaceholder } from "@/components/ui/product-placeholder";
 import { discountPercent, formatBDT } from "@/lib/format";
 import { productImage } from "@/lib/product-image";
+import { toTrackItem } from "@/lib/tracking/shared";
 import type { ProductCardData } from "@/server/queries/catalog";
 
 /**
@@ -137,6 +138,14 @@ export function ProductCard({
           variantId={defaultVariant?.id ?? null}
           disabled={outOfStock}
           productName={product.name}
+          trackItem={toTrackItem({
+            sku: product.sku,
+            slug: product.slug,
+            name: product.name,
+            brand: product.brand?.name,
+            variant: defaultVariant?.name,
+            price,
+          })}
         />
 
         <p className="mt-2 text-center text-[11px] text-muted-foreground">

@@ -43,17 +43,19 @@ export function absoluteUrl(path = "/") {
 }
 
 /**
- * Appends the site name once, and only once.
+ * Removes a trailing "| Korean Hive" or "| Korean Hive BD".
  *
- * The catalogue sheet writes its own meta titles and most already end in
- * "| Korean Hive"; the root layout's title template appends the same suffix,
- * so an untreated value came out doubled.
+ * The catalogue sheet writes its own meta titles, usually ending in one of
+ * those, and the root layout's title template appends " | Korean Hive" again.
+ * Use this on any title that goes through the template.
  */
-export function withSiteSuffix(title: string) {
-  const trimmed = title.trim();
-  const suffix = siteConfig.name;
+export function stripSiteSuffix(title: string) {
+  return title
+    .trim()
+    .replace(new RegExp(`\\s*\\|\\s*${siteConfig.name}(\\s+BD)?\\s*$`, "i"), "");
+}
 
-  return new RegExp(`\\|\\s*${suffix}\\s*$`, "i").test(trimmed)
-    ? trimmed
-    : `${trimmed} | ${suffix}`;
+/** The site name appended once, and only once, for an absolute title. */
+export function withSiteSuffix(title: string) {
+  return `${stripSiteSuffix(title)} | ${siteConfig.name}`;
 }

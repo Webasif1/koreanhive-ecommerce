@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { addToCartAction, buyNowAction } from "@/server/actions/cart";
 import { notifyCartChanged } from "@/lib/cart-events";
+import { trackAddToCart } from "@/lib/tracking/client";
+import type { TrackItem } from "@/lib/tracking/types";
 
 /** Buy Now redirects to checkout, so it stays a plain form action — a toast
  *  would be replaced by the navigation before anyone read it.
@@ -35,13 +37,16 @@ export function CardBuyButtons({
   variantId,
   disabled,
   productName,
+  trackItem,
 }: {
   productId: string;
   variantId: string | null;
   disabled?: boolean;
   productName: string;
+  trackItem: TrackItem;
 }) {
   const [isAdding, startTransition] = useTransition();
+  const trackAdd = () => trackAddToCart(trackItem);
 
   return (
     /* The action lives here rather than on the Buy Now button's formAction.
@@ -53,7 +58,11 @@ export function CardBuyButtons({
        type="button" that calls the action directly. Buy Now is the sole submit
        button in this form, so the form can own the action outright — which
        also makes it work with JavaScript disabled. */
-    <form action={buyNowAction} className="mt-3.5 flex flex-col gap-2">
+    <form
+      action={buyNowAction}
+      onSubmit={trackAdd}
+      className="mt-3.5 flex flex-col gap-2"
+    >
       <input type="hidden" name="productId" value={productId} />
       <input type="hidden" name="variantId" value={variantId ?? ""} />
       <input type="hidden" name="quantity" value={1} />
@@ -75,6 +84,7 @@ export function CardBuyButtons({
 
             if (result.ok) {
               notifyCartChanged();
+              trackAdd();
               toast.success(result.message, { description: productName });
             } else {
               toast.error(result.message);

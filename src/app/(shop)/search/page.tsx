@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ProductListing } from "@/components/product/product-listing";
+import { TrackSearch } from "@/components/tracking/trackers";
 import {
   parseListingParams,
   type ListingSearchParams,
@@ -81,6 +82,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   return (
     <div className="container-page py-12">
+      <TrackSearch term={query} />
       <p className="eyebrow">Search</p>
       <h1 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
         Results for “{query}”
@@ -97,6 +99,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         listing={listing}
         sort={sort}
         emptyMessage={`Nothing matches “${query}”. Try a shorter or more general word.`}
+        listName="Search results"
       />
     </div>
   );

@@ -4,8 +4,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { CheckoutForm } from "@/components/checkout/checkout-form";
+import { TrackBeginCheckout } from "@/components/tracking/trackers";
 import { formatBDT } from "@/lib/format";
 import { productImage } from "@/lib/product-image";
+import { cartTrackItems } from "@/lib/tracking/shared";
 import { getDeliveryZones } from "@/server/queries/catalog";
 import { getCart } from "@/server/queries/cart";
 
@@ -21,8 +23,11 @@ export default async function CheckoutPage() {
     redirect("/cart");
   }
 
+  const trackItems = cartTrackItems(cart.lines);
+
   return (
     <div className="container-page py-10 md:py-14">
+      <TrackBeginCheckout items={trackItems} />
       <h1 className="font-display text-3xl font-semibold tracking-tight">
         Checkout
       </h1>
@@ -78,6 +83,7 @@ export default async function CheckoutPage() {
           }))}
           subtotal={cart.subtotal}
           discount={cart.discount}
+          trackItems={trackItems}
         />
       </div>
     </div>

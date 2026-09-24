@@ -35,7 +35,7 @@ export async function getWishlist() {
     isActive: true,
   })
     .select(
-      "name slug price comparePrice stock ratingAvg ratingCount shortDescription images variants brandId",
+      "name slug sku price comparePrice stock ratingAvg ratingCount shortDescription images variants brandId",
     )
     .lean();
 
@@ -66,6 +66,7 @@ export async function getWishlist() {
         id: product._id.toString(),
         name: product.name,
         slug: product.slug,
+        sku: product.sku ?? null,
         price: product.price,
         comparePrice: product.comparePrice ?? null,
         stock: product.stock,

@@ -13,10 +13,11 @@ export const metadata: Metadata = {
 /**
  * Written against what the application actually does, not a generic template:
  * guest orders only, cash on delivery, no customer accounts, no payment
- * credentials, no analytics or advertising trackers in the codebase.
+ * credentials. Measurement is Google Tag Manager (GA4 + the Meta Pixel) and
+ * the Meta Conversions API in src/server/tracking/meta-capi.ts.
  *
- * If any of that changes — an online payment gateway, a pixel, a newsletter —
- * this page has to change with it.
+ * If any of that changes — an online payment gateway, another pixel, a
+ * newsletter — this page has to change with it.
  */
 export default function PrivacyPage() {
   return (
@@ -43,6 +44,20 @@ export default function PrivacyPage() {
         and quantities only — never prices, and never anything about you.
       </p>
       <p>
+        <strong>Analytics and advertising.</strong> We use Google Analytics
+        (through Google Tag Manager) to understand how the site is used, and
+        the Meta Pixel and Meta Conversions API to measure our Facebook and
+        Instagram ads. These record the pages and products you view, what you
+        add to your cart, and orders placed, along with your browser, device
+        and IP address. A cookie of ours, <code>kh_eid</code>, holds a random
+        visitor identifier so that the same visit is not counted twice. When
+        you place an order, your phone number, name, email, district and
+        postal code are scrambled with a one-way hash (SHA-256) before being
+        sent to Meta, so Meta can match the order to an ad without receiving
+        your details in readable form. Google and Meta also set their own
+        cookies; you can block them in your browser settings.
+      </p>
+      <p>
         <strong>When you use the shop assistant.</strong> Nothing is stored.
         The assistant is stateless: your message is answered and discarded, and
         no conversation history is written to our database.
@@ -59,7 +74,8 @@ export default function PrivacyPage() {
         To pack and deliver your order, to call you to confirm it before
         dispatch, to hand your address to the courier who brings it, to let you
         track it afterwards, and to keep the records a business is required to
-        keep. We do not use your details for anything else.
+        keep. Browsing and order events, as described above, are also used to
+        measure and improve our advertising.
       </p>
 
       <h2>Who else sees it</h2>
@@ -67,9 +83,9 @@ export default function PrivacyPage() {
         The courier delivering your parcel receives your name, address and
         phone number, because they cannot deliver without them. Our website and
         database are hosted by service providers who process data on our
-        instruction and for no purpose of their own. We do not sell, rent or
-        trade your information to anyone, and we do not share it for
-        advertising.
+        instruction and for no purpose of their own. Google and Meta receive
+        the analytics and advertising data described above. We do not sell,
+        rent or trade your information to anyone.
       </p>
 
       <h2>How long we keep it</h2>
