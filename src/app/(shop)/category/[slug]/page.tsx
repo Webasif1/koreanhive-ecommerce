@@ -10,6 +10,7 @@ import {
   parseListingParams,
   type ListingSearchParams,
 } from "@/lib/listing-params";
+import { stripSiteSuffix } from "@/lib/site";
 import { getCatalogListing, getCategoryScope } from "@/server/queries/catalog";
 
 type CategoryPageProps = {
@@ -29,7 +30,7 @@ export async function generateMetadata({
   const { page } = parseListingParams(rawParams);
 
   return {
-    title: scope.category.metaTitle ?? scope.category.name,
+    title: stripSiteSuffix(scope.category.metaTitle ?? scope.category.name),
     description:
       scope.category.metaDescription ?? scope.category.description ?? undefined,
     // filter and sort combinations are the same listing; pages are not
@@ -115,6 +116,8 @@ export default async function CategoryPage({
         listing={listing}
         sort={sort}
         emptyMessage={`Nothing in ${category.name} matches those filters.`}
+        listName={category.name}
+        listCategory={category.name}
       />
     </div>
   );

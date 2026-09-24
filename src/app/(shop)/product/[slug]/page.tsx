@@ -11,12 +11,14 @@ import { ReviewSummaryPanel } from "@/components/review/review-summary";
 import { StarRating } from "@/components/product/star-rating";
 import { WishlistButton } from "@/components/product/wishlist-button";
 import { JsonLd } from "@/components/seo/json-ld";
+import { TrackViewItem } from "@/components/tracking/trackers";
 import { ScrollCarousel } from "@/components/ui/scroll-carousel";
 import { Badge } from "@/components/ui/badge";
 import { discountPercent, formatBDT, formatDeliveryWindow } from "@/lib/format";
 import { breadcrumbJsonLd, productJsonLd } from "@/lib/json-ld";
 import { productImage } from "@/lib/product-image";
 import { absoluteUrl, withSiteSuffix } from "@/lib/site";
+import { toTrackItem } from "@/lib/tracking/shared";
 import {
   getDeliveryZones,
   getProductBySlug,
@@ -178,8 +180,19 @@ export default async function ProductPage({ params }: ProductPageProps) {
     { name: product.name, path: `/product/${product.slug}` },
   ];
 
+  const trackItem = toTrackItem({
+    sku: product.sku,
+    slug: product.slug,
+    name: product.name,
+    brand: product.brand?.name,
+    category: product.category?.name,
+    variant: product.variants[0]?.name,
+    price: product.variants[0]?.price ?? product.price,
+  });
+
   return (
     <div className="container-page py-8">
+      <TrackViewItem item={trackItem} />
       <JsonLd
         data={productJsonLd({
           name: product.name,
@@ -313,6 +326,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
               comparePrice={product.comparePrice}
               baseStock={product.stock}
               freeShippingThreshold={insideDhaka?.freeShippingThreshold ?? null}
+              trackItem={trackItem}
             />
           </div>
 

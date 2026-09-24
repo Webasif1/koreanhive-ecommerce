@@ -16,7 +16,36 @@ import { BD_DISTRICTS, zoneSlugForDistrict } from "@/lib/bd-districts";
 import { emptyCheckoutState } from "@/lib/checkout-state";
 import { formatBDT, formatDeliveryWindow } from "@/lib/format";
 import { calcShipping } from "@/lib/pricing";
+import { trackAddShippingInfo } from "@/lib/tracking/client";
+import type { TrackItem } from "@/lib/tracking/types";
 import { placeOrderAction } from "@/server/actions/checkout";
+
+/**
+ * add_shipping_info / AddPaymentInfo, fired once, the first time a field
+ * loses focus with phone, address and district all filled in.
+ */
+function useShippingInfoTracker(items: TrackItem[]) {
+  const done = useRef(false);
+
+  return (
+    e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+  ) => {
+    if (done.current) return;
+    const form = e.currentTarget.form;
+    if (!form) return;
+
+    const f = new FormData(form);
+    const phoneOk =
+      String(f.get("customerPhone") ?? "").replace(/\D/g, "").length >= 11;
+    const addrOk = String(f.get("addressLine") ?? "").trim().length > 3;
+    const distOk = String(f.get("district") ?? "").trim().length > 0;
+
+    if (phoneOk && addrOk && distOk) {
+      done.current = true;
+      trackAddShippingInfo(items);
+    }
+  };
+}
 
 export type CheckoutZone = {
   id: string;
@@ -54,11 +83,14 @@ export function CheckoutForm({
   zones,
   subtotal,
   discount,
+  trackItems,
 }: {
   zones: CheckoutZone[];
   subtotal: number;
   discount: number;
+  trackItems: TrackItem[];
 }) {
+  const maybeTrackShipping = useShippingInfoTracker(trackItems);
   const [state, formAction] = useActionState(
     placeOrderAction,
     emptyCheckoutState,
@@ -127,6 +159,7 @@ export function CheckoutForm({
               placeholder="01XXXXXXXXX"
               autoComplete="tel"
               required
+              onBlur={maybeTrackShipping}
               aria-invalid={Boolean(state.errors.customerPhone)}
             />
             <FieldError>{state.errors.customerPhone}</FieldError>
@@ -164,6 +197,7 @@ export function CheckoutForm({
               placeholder="House 12, Road 5, Block C"
               autoComplete="street-address"
               required
+              onBlur={maybeTrackShipping}
               aria-invalid={Boolean(state.errors.addressLine)}
             />
             <FieldError>{state.errors.addressLine}</FieldError>
@@ -178,6 +212,7 @@ export function CheckoutForm({
                 required
                 value={district}
                 onChange={(e) => setDistrict(e.target.value)}
+                onBlur={maybeTrackShipping}
                 aria-invalid={Boolean(state.errors.district)}
               >
                 <option value="">Select district</option>

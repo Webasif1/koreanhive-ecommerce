@@ -349,6 +349,8 @@ export type OrderItemSub = {
   variantId?: Types.ObjectId | null;
   productName: string;
   productSlug: string;
+  /** Null on orders placed before SKUs were snapshotted. */
+  sku?: string | null;
   variantName?: string | null;
   imageUrl?: string | null;
   unitPrice: number;
@@ -363,6 +365,7 @@ const orderItemSchema = new Schema<OrderItemSub>({
   variantId: { type: Schema.Types.ObjectId, default: null },
   productName: { type: String, required: true },
   productSlug: { type: String, required: true },
+  sku: { type: String, default: null },
   variantName: { type: String, default: null },
   imageUrl: { type: String, default: null },
   unitPrice: money,

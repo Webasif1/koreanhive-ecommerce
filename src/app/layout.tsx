@@ -39,6 +39,10 @@ export const metadata: Metadata = {
   formatDetection: { telephone: false },
   // Google Search Console ownership check
   verification: { google: "yotugleZDgNxkag75qQVa6FGm9uEecjTLfTh0vxkHU4" },
+  // Meta domain verification (Business portfolio → Brand safety → Domains)
+  other: {
+    "facebook-domain-verification": "l4txv5xvcxu5tb8e8vm5ddo09t07de",
+  },
 };
 
 export default function RootLayout({

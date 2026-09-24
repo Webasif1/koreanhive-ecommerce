@@ -11,6 +11,8 @@ import { formatBDT } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { addToCartAction, buyNowAction } from "@/server/actions/cart";
 import { notifyCartChanged } from "@/lib/cart-events";
+import { trackAddToCart } from "@/lib/tracking/client";
+import type { TrackItem } from "@/lib/tracking/types";
 
 type Variant = {
   id: string;
@@ -57,6 +59,7 @@ export function ProductActions({
   comparePrice,
   baseStock,
   freeShippingThreshold,
+  trackItem,
 }: {
   productId: string;
   variants: Variant[];
@@ -64,6 +67,9 @@ export function ProductActions({
   comparePrice: number | null;
   baseStock: number;
   freeShippingThreshold: number | null;
+  /** The product as tracking describes it; size, price and quantity are
+   *  filled in from the current selection. */
+  trackItem: TrackItem;
 }) {
   const [selectedId, setSelectedId] = useState(variants[0]?.id ?? "");
   const [quantity, setQuantity] = useState(1);
@@ -92,6 +98,14 @@ export function ProductActions({
   const outOfStock = stock <= 0;
   const saving = comparePrice ? comparePrice - price : 0;
 
+  const trackAdd = () =>
+    trackAddToCart({
+      ...trackItem,
+      item_variant: selected?.name ?? trackItem.item_variant,
+      price,
+      quantity,
+    });
+
   return (
     /* The action lives here rather than on the Buy Now button's formAction.
        React 19 attaches its submit interceptor per form, and only to a form it
@@ -102,7 +116,13 @@ export function ProductActions({
        type="button" that calls the action directly. Buy Now is the sole submit
        button in this form, so the form can own the action outright — which
        also makes it work with JavaScript disabled. */
-    <form action={buyNowAction} className="border border-border bg-white p-5">
+    // onSubmit runs before React hands the form to the action, so Buy Now is
+    // tracked even though the action redirects straight to checkout.
+    <form
+      action={buyNowAction}
+      onSubmit={trackAdd}
+      className="border border-border bg-white p-5"
+    >
       <input type="hidden" name="productId" value={productId} />
       <input type="hidden" name="variantId" value={selectedId} />
       <input type="hidden" name="quantity" value={quantity} />
@@ -202,6 +222,7 @@ export function ProductActions({
 
               if (result.ok) {
                 notifyCartChanged();
+                trackAdd();
                 toast.success(result.message, {
                   description: `Quantity ${quantity}`,
                 });

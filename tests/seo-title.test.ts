@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { withSiteSuffix } from "@/lib/site";
+import { stripSiteSuffix, withSiteSuffix } from "@/lib/site";
 
 /**
  * Regression test for the doubled title suffix.
@@ -13,16 +13,16 @@ import { withSiteSuffix } from "@/lib/site";
  * the product name, and truncating some titles before the name finished.
  */
 describe("withSiteSuffix", () => {
-  it("leaves a title that already carries the suffix alone", () => {
+  it("leaves a title that already carries the suffix with one copy", () => {
     assert.equal(
       withSiteSuffix("W.skin Laboratory Stop-Aging Peptide 250ml | Korean Hive"),
       "W.skin Laboratory Stop-Aging Peptide 250ml | Korean Hive",
     );
   });
 
-  it("matches the suffix regardless of case or trailing space", () => {
-    assert.equal(withSiteSuffix("Anua Toner | korean hive  "), "Anua Toner | korean hive");
-    assert.equal(withSiteSuffix("Anua Toner |Korean Hive"), "Anua Toner |Korean Hive");
+  it("normalises the suffix regardless of case or spacing", () => {
+    assert.equal(withSiteSuffix("Anua Toner | korean hive  "), "Anua Toner | Korean Hive");
+    assert.equal(withSiteSuffix("Anua Toner |Korean Hive"), "Anua Toner | Korean Hive");
   });
 
   it("adds the suffix when the sheet left it off", () => {
@@ -32,11 +32,27 @@ describe("withSiteSuffix", () => {
     );
   });
 
-  it("does not strip a brand that merely contains the words", () => {
-    // "Korean Hive BD" is not the suffix, so the suffix is still appended
+  it('replaces the sheet\'s "| Korean Hive BD" rather than stacking a second brand', () => {
+    // the newer sheets end titles this way; it rendered as
+    // "… | Korean Hive BD | Korean Hive"
     assert.equal(
       withSiteSuffix("Tenzero Retinol Ampoule 50ml | Korean Hive BD"),
-      "Tenzero Retinol Ampoule 50ml | Korean Hive BD | Korean Hive",
+      "Tenzero Retinol Ampoule 50ml | Korean Hive",
+    );
+  });
+});
+
+describe("stripSiteSuffix", () => {
+  it("leaves the page part for the layout template to suffix", () => {
+    assert.equal(stripSiteSuffix("Toner | Korean Hive BD"), "Toner");
+    assert.equal(stripSiteSuffix("Toner | Korean Hive"), "Toner");
+    assert.equal(stripSiteSuffix("Toner"), "Toner");
+  });
+
+  it("does not touch the brand name mid-title", () => {
+    assert.equal(
+      stripSiteSuffix("Korean Hive Picks: Toners"),
+      "Korean Hive Picks: Toners",
     );
   });
 });

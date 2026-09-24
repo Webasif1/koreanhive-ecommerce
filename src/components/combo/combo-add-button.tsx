@@ -5,6 +5,8 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { notifyCartChanged } from "@/lib/cart-events";
+import { trackEcommerce } from "@/lib/tracking/client";
+import type { TrackItem } from "@/lib/tracking/types";
 import { addComboToCartAction } from "@/server/actions/cart";
 
 /**
@@ -15,7 +17,14 @@ import { addComboToCartAction } from "@/server/actions/cart";
  * it runs. Four products go into the cart one at a time on the server, which
  * takes a moment; a button that looks idle through that gets clicked twice.
  */
-export function ComboAddButton({ comboSlug }: { comboSlug: string }) {
+export function ComboAddButton({
+  comboSlug,
+  trackItems,
+}: {
+  comboSlug: string;
+  /** Each member at its own price, which is what the cart charges. */
+  trackItems: TrackItem[];
+}) {
   const [pending, startTransition] = useTransition();
 
   return (
@@ -31,6 +40,7 @@ export function ComboAddButton({ comboSlug }: { comboSlug: string }) {
 
           if (result.ok) {
             notifyCartChanged();
+            trackEcommerce("add_to_cart", trackItems);
             toast.success(result.message);
           } else {
             toast.error(result.message);

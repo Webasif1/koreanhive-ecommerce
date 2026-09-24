@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Banknote, CheckCircle2, Truck } from "lucide-react";
 
+import { TrackPurchase } from "@/components/tracking/trackers";
 import { Button } from "@/components/ui/button";
 import { formatBDT, formatDeliveryWindow } from "@/lib/format";
+import { toTrackItem } from "@/lib/tracking/shared";
 import { hasOrderAccess } from "@/server/cart-cookie";
 import { getOrderByNumber } from "@/server/queries/order";
 
 import { SuccessMessage } from "../success-message";
-import { PurchaseEvent } from "./purchase-event";
 
 export const metadata: Metadata = {
   title: "Order Confirmed",
@@ -33,17 +34,23 @@ export default async function OrderSuccessPage({ params }: OrderPageProps) {
 
   return (
     <div className="container-page py-12 md:py-16">
-      <PurchaseEvent
-        orderNumber={order.orderNumber}
-        total={order.total}
+      <TrackPurchase
+        orderId={order.orderNumber}
+        itemsTotal={order.subtotal - order.discount}
         shipping={order.shippingCharge}
         coupon={order.couponCode}
-        items={order.items.map((item) => ({
-          name: item.productName,
-          variant: item.variantName,
-          price: item.unitPrice,
-          quantity: item.quantity,
-        }))}
+        items={order.items.map((item) =>
+          toTrackItem(
+            {
+              sku: item.sku,
+              slug: item.productSlug,
+              name: item.productName,
+              variant: item.variantName,
+              price: item.unitPrice,
+            },
+            item.quantity,
+          ),
+        )}
       />
       <div className="mx-auto max-w-2xl">
         <div className="flex flex-col items-center gap-3 text-center">

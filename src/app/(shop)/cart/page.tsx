@@ -6,9 +6,11 @@ import { CartLineRow } from "@/components/cart/cart-line-row";
 import { CartRecommendations } from "@/components/cart/cart-recommendations";
 import { CouponForm } from "@/components/cart/coupon-form";
 import { FreeDeliveryBar } from "@/components/cart/free-delivery-bar";
+import { TrackViewCart } from "@/components/tracking/trackers";
 import { Button } from "@/components/ui/button";
 import { ProductGridSkeleton } from "@/components/ui/skeleton";
 import { formatBDT } from "@/lib/format";
+import { cartTrackItems } from "@/lib/tracking/shared";
 import { getCart } from "@/server/queries/cart";
 import { getDeliveryZones } from "@/server/queries/catalog";
 
@@ -39,6 +41,7 @@ export default async function CartPage() {
 
   return (
     <div className="container-page py-12">
+      <TrackViewCart items={cartTrackItems(cart.lines)} />
       <p className="eyebrow">Your bag</p>
       <h1 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
         Cart

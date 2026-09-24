@@ -103,6 +103,7 @@ export default async function ConcernPage({
         listing={listing}
         sort={sort}
         emptyMessage={`Nothing for ${concern.label.toLowerCase()} matches those filters.`}
+        listName={concern.label}
       />
     </div>
   );

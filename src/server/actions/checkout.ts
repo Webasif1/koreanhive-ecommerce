@@ -12,6 +12,7 @@ import {
 } from "@/lib/bd-districts";
 import type { CheckoutState } from "@/lib/checkout-state";
 import { calcDiscount, calcShipping, type CouponRule } from "@/lib/pricing";
+import { toTrackItem } from "@/lib/tracking/shared";
 import {
   grantOrderAccess,
   readCartCookie,
@@ -23,6 +24,7 @@ import {
 } from "@/server/cart-cookie";
 import { connectDb, mongoose } from "@/server/db";
 import { Coupon, DeliveryZone, Order, Product } from "@/server/models";
+import { sendPurchaseToMeta } from "@/server/tracking/meta-capi";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no I/O/0/1
 
@@ -162,7 +164,7 @@ export async function placeOrderAction(
     },
     isActive: true,
   })
-    .select("name slug price stock images variants")
+    .select("name slug sku price stock images variants")
     .lean();
 
   const byId = new Map(products.map((p) => [p._id.toString(), p]));
@@ -189,6 +191,7 @@ export async function placeOrderAction(
         variantId: variant?._id ?? null,
         productName: product.name,
         productSlug: product.slug,
+        sku: product.sku ?? null,
         variantName: variant?.name ?? null,
         imageUrl: firstImage?.url ?? null,
         unitPrice,
@@ -238,6 +241,8 @@ export async function placeOrderAction(
   let createdNumber: string | null = null;
   /** Set when a concurrent request won the race for this cart. */
   let duplicateOf: string | null = null;
+  /** The committed order's discount, for the Meta Purchase value. */
+  let orderDiscount = 0;
 
   try {
     createdNumber = await session.withTransaction(async () => {
@@ -309,6 +314,7 @@ export async function placeOrderAction(
       }
 
       const discount = calcDiscount(subtotal, coupon);
+      orderDiscount = discount;
       const shippingCharge = calcShipping(subtotal, {
         charge: zone.charge,
         freeShippingThreshold: zone.freeShippingThreshold ?? null,
@@ -421,6 +427,34 @@ export async function placeOrderAction(
   await writeCartCookie([]);
   await writeCouponCookie(null);
   await grantOrderAccess(finalNumber);
+
+  // Only for the order this request created: a lost race's winner already
+  // sent its own. Queued with after(), so the redirect does not wait on Meta.
+  if (createdNumber && !duplicateOf) {
+    await sendPurchaseToMeta({
+      id: createdNumber,
+      itemsTotal: subtotal - orderDiscount,
+      customer: {
+        name: customerName,
+        phone: customerPhone,
+        email: customerEmail || null,
+        district,
+        postalCode: postalCode || null,
+      },
+      items: lines.map((line) =>
+        toTrackItem(
+          {
+            sku: line.sku,
+            slug: line.productSlug,
+            name: line.productName,
+            variant: line.variantName,
+            price: line.unitPrice,
+          },
+          line.quantity,
+        ),
+      ),
+    }).catch((error) => console.error("[meta-capi] purchase", error));
+  }
 
   redirect(`/success/${finalNumber}`);
 }

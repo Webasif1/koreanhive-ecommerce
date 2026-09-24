@@ -50,7 +50,7 @@ export default async function ShopPage({
         </p>
       </header>
 
-      <ProductListing listing={listing} sort={sort} />
+      <ProductListing listing={listing} sort={sort} listName="Shop" />
     </div>
   );
 }

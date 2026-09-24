@@ -63,6 +63,7 @@ export default async function DealsPage({
         listing={listing}
         sort={sort}
         emptyMessage="No active discounts match those filters."
+        listName="Deals"
       />
     </div>
   );

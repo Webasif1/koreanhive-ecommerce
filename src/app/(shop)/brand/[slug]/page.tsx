@@ -9,6 +9,7 @@ import {
   parseListingParams,
   type ListingSearchParams,
 } from "@/lib/listing-params";
+import { stripSiteSuffix } from "@/lib/site";
 import { getBrandScope, getCatalogListing } from "@/server/queries/catalog";
 
 type BrandPageProps = {
@@ -28,7 +29,7 @@ export async function generateMetadata({
   const { page } = parseListingParams(rawParams);
 
   return {
-    title: scope.brand.metaTitle ?? scope.brand.name,
+    title: stripSiteSuffix(scope.brand.metaTitle ?? scope.brand.name),
     description:
       scope.brand.metaDescription ?? scope.brand.description ?? undefined,
     // filter and sort combinations are the same listing; pages are not
@@ -89,6 +90,7 @@ export default async function BrandPage({
         // the route already fixes the brand
         hideFacets={["brand"]}
         emptyMessage={`No ${brand.name} products match those filters.`}
+        listName={brand.name}
       />
     </div>
   );

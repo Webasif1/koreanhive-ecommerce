@@ -7,7 +7,9 @@ import { ListingToolbar } from "@/components/product/listing-toolbar";
 import { Pagination } from "@/components/product/pagination";
 import { ProductGrid } from "@/components/product/product-grid";
 import { SidebarPromos } from "@/components/product/sidebar-promos";
+import { TrackViewItemList } from "@/components/tracking/trackers";
 import { deliveryPromise, deliveryWindowsBn } from "@/lib/delivery-promise";
+import { toTrackItem } from "@/lib/tracking/shared";
 import {
   getDeliveryZones,
   type CatalogListing,
@@ -24,11 +26,17 @@ export async function ProductListing({
   sort,
   hideFacets = [],
   emptyMessage,
+  listName,
+  listCategory,
 }: {
   listing: CatalogListing;
   sort: ProductSort;
   hideFacets?: ("brand" | "category")[];
   emptyMessage?: string;
+  /** GA4 item_list_name for the view_item_list event. */
+  listName: string;
+  /** Set on a category page, where every item shares the category. */
+  listCategory?: string;
 }) {
   const from =
     listing.products.length === 0 ? 0 : (listing.page - 1) * listing.perPage + 1;
@@ -51,6 +59,22 @@ export async function ProductListing({
 
   return (
     <div className="mt-8 grid gap-6 lg:grid-cols-[260px_1fr] lg:items-start">
+      {listing.products.length > 0 && (
+        <TrackViewItemList
+          listName={listName}
+          items={listing.products.map((product) =>
+            toTrackItem({
+              sku: product.sku,
+              slug: product.slug,
+              name: product.name,
+              brand: product.brand?.name,
+              category: listCategory,
+              variant: product.variants[0]?.name,
+              price: product.variants[0]?.price ?? product.price,
+            }),
+          )}
+        />
+      )}
       {/* collapsed by default on mobile so the products stay above the fold */}
       <details className="group lg:hidden">
         <summary className="flex cursor-pointer list-none items-center justify-between border border-border bg-white px-5 py-4 text-[13px] font-bold uppercase tracking-[0.1em]">

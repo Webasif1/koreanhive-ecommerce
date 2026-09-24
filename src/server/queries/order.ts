@@ -129,6 +129,8 @@ export async function getOrderByNumber(orderNumber: string) {
     items: order.items.map((item) => ({
       id: item._id.toString(),
       productName: item.productName,
+      productSlug: item.productSlug,
+      sku: item.sku ?? null,
       variantName: item.variantName ?? null,
       unitPrice: item.unitPrice,
       quantity: item.quantity,
