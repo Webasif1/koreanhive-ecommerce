@@ -241,7 +241,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         </ol>
       </nav>
 
-      <section className="mt-6 grid gap-10 lg:grid-cols-2 lg:gap-14">
+      <section className="mt-4 grid gap-6 sm:mt-6 sm:gap-10 lg:grid-cols-2 lg:gap-14">
         {/* On desktop the details column runs far past the image, which left a
             tall white gap under it. Two things close it: the routine card
             moves under the image, so the columns end at about the same
@@ -274,7 +274,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
             </Link>
           )}
 
-          <h1 className="mt-3 font-display text-[30px] leading-tight tracking-[-0.01em] md:text-[38px]">
+          <h1 className="mt-3 font-display text-[26px] leading-tight sm:text-[30px] tracking-[-0.01em] md:text-[38px]">
             {product.name}
           </h1>
 
@@ -334,7 +334,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           empty "Reviews (0)" heading on every page in a 279-product catalogue
           advertises that nobody has bought anything. */}
       {productReviews.reviews.length > 0 && (
-        <section className="mt-16 grid gap-8 lg:grid-cols-[300px_1fr]">
+        <section className="mt-10 lg:mt-16 grid gap-8 lg:grid-cols-[300px_1fr]">
           <ReviewSummaryPanel
             summary={productReviews.summary}
             heading="What buyers say"
@@ -353,7 +353,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       </section>
 
       {/* ------------------------------------------------ detail sections */}
-      <section className="mt-16 border border-border bg-white">
+      <section className="mt-10 lg:mt-16 border border-border bg-white">
         {/* Copy only. This used to sit beside a lifestyle photo, but the asset
             was an unfilled mock-up — "drop your image here" — shown on every
             product page. max-w-3xl because without that second column the text
@@ -389,7 +389,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         ))}
       </section>
 
-      <section className="mt-16 grid gap-12 lg:grid-cols-[1fr_1.15fr]">
+      <section className="mt-10 grid gap-10 lg:mt-16 lg:gap-12 lg:grid-cols-[1fr_1.15fr]">
         <div>
           <p className="eyebrow">How to use</p>
           <h2 className="mt-3.5 font-display text-2xl md:text-[32px]">
@@ -418,7 +418,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       </section>
 
       {related.length > 0 && (
-        <section className="mt-16">
+        <section className="mt-10 lg:mt-16">
           {/* One row that slides, rather than a grid that wraps onto a second
               line on a phone. Card widths match the old grid: two across on
               a phone, three on a tablet, four on a desktop. */}
@@ -429,7 +429,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
             heading={
               <>
                 <p className="eyebrow">You may also like</p>
-                <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
+                <h2 className="mt-3 font-display text-[26px] tracking-[-0.01em] sm:text-[30px] md:text-[38px]">
                   Pairs well with this
                 </h2>
               </>

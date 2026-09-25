@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 
 import { Toaster } from "@/components/ui/toaster";
@@ -45,6 +45,16 @@ export const metadata: Metadata = {
   },
 };
 
+/** viewport-fit=cover is what makes env(safe-area-inset-*) non-zero on
+ *  iPhones, which the bottom nav, chat button and toasts rely on to clear the
+ *  home indicator. No maximum-scale: shoppers must still be able to zoom. */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#ffffff",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -64,7 +74,11 @@ export default function RootLayout({
           {`window.dataLayer = window.dataLayer || [];`}
         </Script>
         {/* Google Tag Manager */}
-        <Script id="gtm" strategy="afterInteractive">
+        {/* lazyOnload: GTM (and the GA4 + Meta tags inside it) waits for the
+            page to finish loading instead of competing with hydration on a
+            phone. Nothing is lost — every event is queued in the dataLayer
+            above, and GTM replays the queue when it starts. */}
+        <Script id="gtm" strategy="lazyOnload">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
 j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=

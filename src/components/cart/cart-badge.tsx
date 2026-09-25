@@ -3,39 +3,39 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
+import { getCartSummary } from "@/lib/cart-count";
 import { CART_CHANGED_EVENT } from "@/lib/cart-events";
 
 /** The header sits in the root layout. Reading the cart cookie there would
  *  make every page dynamic and kill ISR, so the count is fetched instead —
  *  on navigation, on a cart change anywhere on the page, and when the tab
- *  regains focus after the cart may have moved in another one. */
+ *  regains focus after the cart may have moved in another one.
+ *
+ *  Navigation reads through the shared cache in lib/cart-count, so a page
+ *  that also needs the summary (the product page) does not fetch it twice;
+ *  a cart change or a return to the tab always goes to the server. */
 export function CartBadge() {
   const [count, setCount] = useState<number | null>(null);
   const pathname = usePathname();
 
-  const refresh = useCallback(() => {
+  const refresh = useCallback((fresh: boolean) => {
     let cancelled = false;
 
-    fetch("/api/cart/count")
-      .then((res) => (res.ok ? res.json() : { count: 0 }))
-      .then((data: { count?: number }) => {
-        if (!cancelled) setCount(data.count ?? 0);
-      })
-      .catch(() => {
-        if (!cancelled) setCount(0);
-      });
+    getCartSummary({ fresh }).then((summary) => {
+      if (!cancelled) setCount(summary.count);
+    });
 
     return () => {
       cancelled = true;
     };
   }, []);
 
-  useEffect(() => refresh(), [pathname, refresh]);
+  useEffect(() => refresh(false), [pathname, refresh]);
 
   useEffect(() => {
-    const onChange = () => refresh();
+    const onChange = () => refresh(true);
     const onFocus = () => {
-      if (document.visibilityState === "visible") refresh();
+      if (document.visibilityState === "visible") refresh(true);
     };
 
     window.addEventListener(CART_CHANGED_EVENT, onChange);

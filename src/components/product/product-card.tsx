@@ -47,7 +47,9 @@ export function ProductCard({
                 alt={image.alt ?? product.name}
                 fill
                 priority={priority}
-                sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+                // the page caps at max-w-7xl, so past 1280px a card never gets
+                // wider than ~300px however wide the window is
+                sizes="(min-width: 1280px) 300px, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
                 // contain, not cover: cover crops to fill the square, which
                 // takes the cap off a tall bottle. Contain fits the whole
                 // product, and productImage() above has already made every
@@ -75,11 +77,11 @@ export function ProductCard({
         <WishlistButton productId={product.id} productName={product.name} />
       </div>
 
-      <div className="flex flex-1 flex-col p-4">
+      <div className="flex flex-1 flex-col p-3 sm:p-4">
         {product.brand && (
           <Link
             href={`/brand/${product.brand.slug}`}
-            className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-mulberry-hover"
+            className="text-[10px] font-semibold uppercase tracking-[0.1em] text-mulberry-hover sm:text-[10.5px]"
           >
             {product.brand.name}
           </Link>
@@ -97,13 +99,13 @@ export function ProductCard({
             below the old bold, which is enough to name the product without
             competing with the price. */}
         <Link href={`/product/${product.slug}`} className="mt-1.5">
-          <h3 className="line-clamp-2 text-[15px] font-medium leading-snug text-foreground hover:text-primary">
+          <h3 className="line-clamp-2 text-[13.5px] font-medium leading-snug text-foreground hover:text-primary sm:text-[15px]">
             {product.name}
           </h3>
         </Link>
 
         {product.benefit && (
-          <p className="mt-1.5 line-clamp-2 text-[11.5px] leading-relaxed text-muted-foreground">
+          <p className="mt-1 line-clamp-1 text-[11.5px] leading-relaxed text-muted-foreground sm:mt-1.5 sm:line-clamp-2">
             {product.benefit}
           </p>
         )}
@@ -112,12 +114,12 @@ export function ProductCard({
           <StarRating
             value={product.ratingAvg}
             count={product.ratingCount}
-            className="mt-2.5"
+            className="mt-2 sm:mt-2.5"
           />
         )}
 
-        <div className="mt-3 flex items-baseline gap-2.5">
-          <span className="font-display text-xl">{formatBDT(price)}</span>
+        <div className="mt-2 flex flex-wrap items-baseline gap-x-2 sm:mt-3 sm:gap-x-2.5">
+          <span className="font-display text-lg sm:text-xl">{formatBDT(price)}</span>
           {product.comparePrice && product.comparePrice > price && (
             <span className="text-[12.5px] text-faint line-through">
               {formatBDT(product.comparePrice)}
@@ -148,7 +150,7 @@ export function ProductCard({
           })}
         />
 
-        <p className="mt-2 text-center text-[11px] text-muted-foreground">
+        <p className="mt-1.5 text-center text-[11px] text-muted-foreground sm:mt-2">
           {outOfStock
             ? "Back in stock soon"
             : stock <= 5

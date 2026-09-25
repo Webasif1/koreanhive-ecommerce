@@ -72,7 +72,9 @@ export function WishlistButton({
           "border border-border bg-white text-primary transition-colors hover:border-primary disabled:opacity-60",
           variant === "inline"
             ? "inline-flex h-9 items-center gap-1.5 px-3 text-[12.5px] font-semibold"
-            : "absolute right-2.5 top-2.5 grid size-8 place-items-center",
+            : // 32px to look at, 44px to hit: the ::before pads the touch
+              // target out 6px on each side without moving the icon
+              "absolute right-2.5 top-2.5 grid size-8 place-items-center before:absolute before:-inset-1.5 before:content-['']",
         )}
       >
         <Heart className={cn("size-3.5", saved && "fill-primary")} />

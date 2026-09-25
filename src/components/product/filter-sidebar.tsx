@@ -35,7 +35,7 @@ function FacetRow({
   return (
     <label
       className={cn(
-        "flex cursor-pointer items-center gap-3 py-1.5 text-sm",
+        "flex cursor-pointer items-center gap-3 py-2.5 text-sm lg:py-1.5",
         disabled && "cursor-wait opacity-60",
       )}
     >
@@ -44,7 +44,7 @@ function FacetRow({
         checked={checked}
         onChange={onToggle}
         disabled={disabled}
-        className="size-4 accent-mulberry"
+        className="size-5 accent-mulberry lg:size-4"
       />
       <span className="flex-1">{label}</span>
       <span className="text-xs text-faint tabular-nums">{count}</span>

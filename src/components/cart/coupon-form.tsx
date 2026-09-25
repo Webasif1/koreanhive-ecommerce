@@ -33,7 +33,7 @@ export function CouponForm({
               toast.success(result.message);
             })
           }
-          className="text-xs text-muted-foreground hover:text-destructive disabled:opacity-40"
+          className="-my-2 -mr-2 min-h-11 px-2 text-xs text-muted-foreground hover:text-destructive disabled:opacity-40 lg:my-0 lg:mr-0 lg:min-h-0 lg:px-0"
         >
           Remove
         </button>
@@ -62,9 +62,14 @@ export function CouponForm({
           name="code"
           placeholder="Coupon code"
           aria-label="Coupon code"
-          className="uppercase"
+          className="min-w-0 uppercase"
         />
-        <Button type="submit" variant="outline" disabled={isPending}>
+        <Button
+          type="submit"
+          variant="outline"
+          disabled={isPending}
+          className="h-12 shrink-0 lg:h-11"
+        >
           {isPending ? "Checking…" : "Apply"}
         </Button>
       </div>

@@ -1,9 +1,11 @@
 import "server-only";
 
+import { cache } from "react";
 import { unstable_cache } from "next/cache";
 
 import { truncateBenefit } from "@/lib/format";
-import type { QueryFilter, Types } from "mongoose";
+import { Types } from "mongoose";
+import type { QueryFilter } from "mongoose";
 
 import { PER_PAGE } from "@/lib/listing-params";
 import type { FeedProduct } from "@/lib/tracking/feed";
@@ -388,14 +390,20 @@ export async function getCatalogListing({
   const categoryIdBySlug = new Map(allCategories.map((c) => [c.slug, c._id]));
 
   // flatMap rather than filter(Boolean): the latter does not narrow away the
-  // undefined, and Mongoose's filter types reject it
+  // undefined, and Mongoose's filter types reject it.
+  //
+  // Re-wrapped as ObjectIds because unstable_cache stores its result as JSON,
+  // so the cached brands and categories hand back their _id as a string. find()
+  // casts that silently, but the $facet aggregation below does not: a string
+  // never equals an ObjectId there, so every brand or category filter counted
+  // 0 — "No products" and no pager above a grid that was full of them.
   const selectedBrandIds = (filters.brands ?? []).flatMap((slug) => {
     const id = brandIdBySlug.get(slug);
-    return id ? [id] : [];
+    return id ? [new Types.ObjectId(String(id))] : [];
   });
   const selectedCategoryIds = (filters.categories ?? []).flatMap((slug) => {
     const id = categoryIdBySlug.get(slug);
-    return id ? [id] : [];
+    return id ? [new Types.ObjectId(String(id))] : [];
   });
 
   const base: ProductFilter = { isActive: true, ...scope };
@@ -696,7 +704,10 @@ export async function getCombos() {
 /** Category meta plus the ids a listing on that page should cover — the
  *  category itself and its direct children, so "Skincare" is not empty just
  *  because every product sits on a leaf. */
-export async function getCategoryScope(slug: string) {
+// cache(): generateMetadata and the page both ask for it in one render
+export const getCategoryScope = cache(async function getCategoryScope(
+  slug: string,
+) {
   await connectDb();
 
   const category = await Category.findOne({ slug, isActive: true }).lean();
@@ -729,10 +740,11 @@ export async function getCategoryScope(slug: string) {
     },
     categoryIds: [category._id, ...children.map((c) => c._id)],
   };
-}
+});
 
 /** Brand meta for a brand listing page. */
-export async function getBrandScope(slug: string) {
+// cache(): generateMetadata and the page both ask for it in one render
+export const getBrandScope = cache(async function getBrandScope(slug: string) {
   await connectDb();
 
   const brand = await Brand.findOne({ slug, isActive: true }).lean();
@@ -750,7 +762,7 @@ export async function getBrandScope(slug: string) {
     },
     brandId: brand._id,
   };
-}
+});
 
 /** Slugs + timestamps for sitemap.ts. Deliberately minimal: this runs on a
  *  route search engines hit, not a customer. */
@@ -989,7 +1001,11 @@ export function getProductsBySlugs(slugs: string[]) {
   return slugs.length > 0 ? productsBySlugsCached(slugs) : Promise.resolve([]);
 }
 
-export async function getProductBySlug(slug: string) {
+// cache(): generateMetadata and the page both ask for it in one render, and
+// without it that was two identical round trips to the database per view
+export const getProductBySlug = cache(async function getProductBySlug(
+  slug: string,
+) {
   await connectDb();
 
   const product = await Product.findOne({ slug, isActive: true }).lean();
@@ -1043,7 +1059,7 @@ export async function getProductBySlug(slug: string) {
         stock: v.stock,
       })),
   };
-}
+});
 
 /** Same category first. A category holding a single product would otherwise
  *  render an empty "You may also like", so top up from the wider catalogue. */

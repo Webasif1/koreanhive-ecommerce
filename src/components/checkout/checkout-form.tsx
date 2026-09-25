@@ -244,7 +244,12 @@ export function CheckoutForm({
                 Postal code{" "}
                 <span className="text-muted-foreground">(optional)</span>
               </Label>
-              <Input id="postalCode" name="postalCode" inputMode="numeric" />
+              <Input
+                id="postalCode"
+                name="postalCode"
+                inputMode="numeric"
+                autoComplete="postal-code"
+              />
             </div>
           </div>
 

@@ -29,8 +29,8 @@ const trust = [
 
 export function SiteFooter({ deliveryLine }: { deliveryLine: string }) {
   return (
-    <footer className="mt-20 bg-ink text-blush">
-      <div className="container-page grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-4">
+    <footer className="mt-14 bg-ink text-blush lg:mt-20">
+      <div className="container-page grid gap-8 py-10 sm:grid-cols-2 sm:gap-10 lg:grid-cols-4 lg:py-14">
         <div className="space-y-4">
           <Link href="/" className="block">
             {/* Rendered as-is, like the header. It was previously filtered
@@ -53,18 +53,19 @@ export function SiteFooter({ deliveryLine }: { deliveryLine: string }) {
           <p lang="bn" className="text-sm leading-relaxed text-light">
             {deliveryLine}।
           </p>
-          <div className="flex gap-3 pt-1">
+          {/* 44px tap targets on touch; desktop keeps the bare icons */}
+          <div className="-ml-2.5 flex gap-1 pt-1 lg:ml-0 lg:gap-3">
             <Link
               href="https://facebook.com"
               aria-label="Korean Hive on Facebook"
-              className="text-light transition-colors hover:text-white"
+              className="p-2.5 text-light transition-colors hover:text-white lg:p-0"
             >
               <FacebookIcon className="size-5" />
             </Link>
             <Link
               href="https://instagram.com"
               aria-label="Korean Hive on Instagram"
-              className="text-light transition-colors hover:text-white"
+              className="p-2.5 text-light transition-colors hover:text-white lg:p-0"
             >
               <InstagramIcon className="size-5" />
             </Link>
@@ -74,12 +75,12 @@ export function SiteFooter({ deliveryLine }: { deliveryLine: string }) {
         {footerNav.map((group) => (
           <div key={group.title}>
             <h2 className="font-display text-base text-white">{group.title}</h2>
-            <ul className="mt-4 space-y-2.5">
+            <ul className="mt-3 space-y-1 lg:mt-4 lg:space-y-2.5">
               {group.items.map((item) => (
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className="text-sm text-light transition-colors hover:text-white"
+                    className="inline-block py-1.5 text-sm text-light transition-colors hover:text-white lg:py-0"
                   >
                     {item.label}
                   </Link>
