@@ -67,7 +67,7 @@ export function PriceRangeFilter({
                 commit([clamp(draft[0]), draft[1]]);
               }
             }}
-            className="h-10 text-center text-[13px]"
+            className="h-10 text-center text-base lg:text-[13px]"
             aria-label="Minimum price"
           />
         </label>
@@ -88,14 +88,14 @@ export function PriceRangeFilter({
                 commit([draft[0], clamp(draft[1])]);
               }
             }}
-            className="h-10 text-center text-[13px]"
+            className="h-10 text-center text-base lg:text-[13px]"
             aria-label="Maximum price"
           />
         </label>
       </div>
 
       <Slider.Root
-        className="relative mt-5 flex h-4 w-full touch-none select-none items-center"
+        className="relative mt-5 flex h-6 w-full touch-none select-none items-center lg:h-4"
         min={bounds.min}
         max={bounds.max}
         step={50}
@@ -112,7 +112,7 @@ export function PriceRangeFilter({
           <Slider.Thumb
             key={label}
             aria-label={`${label} price`}
-            className="block size-4 rounded-full border-2 border-primary bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="block size-6 rounded-full border-2 border-primary bg-white lg:size-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         ))}
       </Slider.Root>

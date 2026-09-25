@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { usePathname } from "next/navigation";
 
 import type { ChatTurn } from "@/components/chatbot/chat-panel";
 
@@ -27,6 +28,7 @@ const ChatPanel = dynamic(
 );
 import { OPENING_QUICK_REPLIES } from "@/data/chatbot/quick-replies";
 import { EMPTY_SLOTS, type ChatResponse, type Slots } from "@/lib/chatbot/types";
+import { cn } from "@/lib/utils";
 
 const GREETING: ChatTurn = {
   id: 0,
@@ -51,6 +53,7 @@ export function ChatWidget() {
   const [error, setError] = useState<string | null>(null);
 
   const nextId = useRef(1);
+  const hideOnPhone = usePathname().startsWith("/checkout");
 
   const send = async (message: string) => {
     setError(null);
@@ -99,9 +102,10 @@ export function ChatWidget() {
     <>
       {open && (
         <div
-          // full screen on a phone, a panel on a desktop. bottom-16 clears the
-          // mobile bottom nav, which is fixed at the same edge.
-          className="fixed inset-x-0 bottom-16 top-0 z-60 p-3 lg:inset-auto lg:bottom-24 lg:right-6 lg:top-auto lg:h-140 lg:w-95 lg:p-0"
+          // full screen on a phone, a panel on a desktop. The bottom offset clears the
+          // mobile bottom nav (and its home-indicator inset), fixed at the same
+          // edge. kh-chat-open stops the page behind scrolling on phones.
+          className="kh-chat-open fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] top-0 z-60 p-3 lg:inset-auto lg:bottom-24 lg:right-6 lg:top-auto lg:h-140 lg:w-95 lg:p-0"
         >
           <ChatPanel
             turns={turns}
@@ -118,7 +122,11 @@ export function ChatWidget() {
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
         aria-label={open ? "Close shop assistant" : "Open shop assistant"}
-        className="fixed right-4 bottom-20 z-60 flex size-12 items-center justify-center bg-primary text-primary-foreground shadow-lg transition-colors hover:bg-mulberry-hover lg:right-6 lg:bottom-6 lg:size-14"
+        className={cn(
+          "kh-chat-launcher fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-60 flex size-12 items-center justify-center bg-primary text-primary-foreground shadow-lg transition-colors hover:bg-mulberry-hover lg:right-6 lg:bottom-6 lg:size-14",
+          // on a phone the checkout button owns the bottom of the screen
+          hideOnPhone && !open && "max-lg:hidden",
+        )}
       >
         <svg
           viewBox="0 0 24 24"

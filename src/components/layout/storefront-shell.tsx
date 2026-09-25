@@ -21,7 +21,7 @@ export async function StorefrontShell({ children }: { children: ReactNode }) {
   const { bn: deliveryLine } = deliveryPromise(zones);
 
   return (
-    <div className="flex min-h-screen flex-col pb-16 lg:pb-0">
+    <div className="flex min-h-screen flex-col pb-bottom-nav lg:pb-0">
       <JsonLd data={organizationJsonLd()} />
       <JsonLd data={websiteJsonLd()} />
       <FirstVisitLoader />

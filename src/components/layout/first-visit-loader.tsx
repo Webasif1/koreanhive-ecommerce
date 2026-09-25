@@ -31,6 +31,7 @@ import Image from "next/image";
 const MIN_VISIBLE_MS = 900;
 const MAX_VISIBLE_MS = 2200;
 const SESSION_KEY = "kh-welcomed";
+const WELCOME_MARK = "/brand/logo.webp";
 
 /**
  * Runs synchronously, before the body renders.
@@ -44,12 +45,23 @@ const GATE_SCRIPT = `
 (function () {
   try {
     if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // Phones skip it. It waits for \`load\` (GTM plus every image), and on a
+    // slow mobile connection that is exactly when it would sit there longest.
+    if (window.matchMedia && window.matchMedia("(max-width: 1023.98px)").matches) return;
     if (sessionStorage.getItem(${JSON.stringify(SESSION_KEY)})) return;
     sessionStorage.setItem(${JSON.stringify(SESSION_KEY)}, "1");
   } catch (e) { return; }
 
   var root = document.documentElement;
   root.classList.add("kh-welcome");
+
+  // the wordmark's preload, issued only when the overlay is really shown
+  var mark = document.createElement("link");
+  mark.rel = "preload";
+  mark.as = "image";
+  mark.href = ${JSON.stringify(WELCOME_MARK)};
+  mark.setAttribute("fetchpriority", "high");
+  document.head.appendChild(mark);
 
   var started = Date.now();
   var done = false;
@@ -111,11 +123,16 @@ export function FirstVisitLoader() {
 
           <Image
             className="kh-welcome-mark"
-            src="/brand/logo.webp"
+            src={WELCOME_MARK}
             alt=""
             width={220}
             height={42}
-            priority
+            // Lazy, not preloaded: the overlay is display:none unless the gate
+            // script reveals it (never on phones), and a lazy image inside a
+            // hidden box is not fetched. The preload it had was a second logo
+            // download competing with the header's on every page view. When
+            // the overlay does show, the gate script preloads it at high
+            // priority, exactly as before.
             fetchPriority="high"
           />
 

@@ -397,3 +397,120 @@ html.kh-welcome-out .kh-welcome-screen {
     transform: scaleX(0.94);
   }
 }
+
+/* ---------------------------------------------------------------
+   Mobile chrome
+
+   Everything below is scoped to touch/narrow screens or only
+   reaches markup that exists below `lg`, so desktop is untouched.
+   --------------------------------------------------------------- */
+
+/* A safety net, not a fix: the real overflow sources are fixed where
+   they live. `clip` rather than `hidden` so the sticky header keeps
+   working — `hidden` makes body a scroll container and breaks it. */
+html,
+body {
+  overflow-x: clip;
+}
+
+/* Room for the fixed bottom nav: 56px of tabs plus the home-indicator
+   inset (non-zero now that the viewport is viewport-fit=cover). */
+@utility pb-bottom-nav {
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+}
+
+/* --- mobile category sheet — components/layout/mobile-nav-drawer.tsx */
+
+/* the page behind does not scroll while the sheet is open */
+@media (max-width: 1023.98px) {
+  html:has(.kh-nav[open]) {
+    overflow: hidden;
+  }
+}
+
+.kh-nav-sheet {
+  animation: kh-sheet-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.kh-nav-backdrop {
+  animation: kh-fade-in 220ms ease-out;
+}
+
+@keyframes kh-sheet-in {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes kh-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kh-nav-sheet,
+  .kh-nav-backdrop {
+    animation: none;
+  }
+}
+
+/* Toasts between Sonner's own 600px mobile breakpoint and `lg` still
+   have the bottom nav under them; below 600px mobileOffset does this
+   (components/ui/toaster.tsx). */
+@media (min-width: 601px) and (max-width: 1023.98px) {
+  [data-sonner-toaster][data-y-position="bottom"] {
+    bottom: calc(4.5rem + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* viewport-fit=cover lets the page run under the notch in landscape;
+   this keeps content out from behind it. Both insets are 0 on desktop. */
+body {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Chat on phones: the page behind the full-screen panel stays put, and
+   the launcher lifts above the product page's sticky buy bar while that
+   is showing (components/cart/product-actions.tsx sets the attribute). */
+@media (max-width: 1023.98px) {
+  html:has(.kh-chat-open) {
+    overflow: hidden;
+  }
+
+  html[data-sticky-buy] .kh-chat-launcher {
+    bottom: calc(9rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* --- mobile filter sheet — components/product/mobile-filter-sheet.tsx */
+
+@media (max-width: 1023.98px) {
+  html:has(.kh-filter[open]) {
+    overflow: hidden;
+  }
+}
+
+.kh-sheet-up {
+  animation: kh-sheet-up 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes kh-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kh-sheet-up {
+    animation: none;
+  }
+}
+
+/* The sticky header is its own stacking context (z-40), so the category
+   sheet inside it would otherwise sit under the bottom nav and chat
+   button. Lift the whole header while the sheet is open. */
+header:has(.kh-nav[open]) {
+  z-index: 80;
+}

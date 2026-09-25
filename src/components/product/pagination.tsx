@@ -67,7 +67,10 @@ export function Pagination({
     navigate(() => router.push(href, { scroll: true }));
   };
 
-  const arrow = "border px-3 py-2 text-xs font-semibold transition-colors";
+  // 44px targets below lg; desktop keeps its compact pager
+  const target =
+    "inline-flex min-h-11 min-w-11 items-center justify-center lg:min-h-0 lg:min-w-0";
+  const arrow = cn(target, "border px-3 py-2 text-xs font-semibold transition-colors");
   const enabled = "border-border bg-white text-foreground hover:border-primary";
   const disabled = "border-hairline bg-white text-faint";
 
@@ -93,7 +96,7 @@ export function Pagination({
   return (
     <nav
       aria-label="Product pages"
-      className="flex flex-wrap items-center justify-center gap-2"
+      className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2"
     >
       {arrowLink(page - 1, "‹ Prev")}
 
@@ -114,6 +117,7 @@ export function Pagination({
             aria-label={`Page ${entry}`}
             aria-current={entry === page ? "page" : undefined}
             className={cn(
+              target,
               "border px-3.5 py-2 text-xs font-semibold tabular-nums transition-colors",
               entry === page
                 ? "border-ink bg-ink text-white"

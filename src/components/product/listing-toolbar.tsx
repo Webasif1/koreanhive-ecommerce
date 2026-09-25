@@ -52,7 +52,7 @@ export function ListingToolbar({
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 border border-border bg-white px-5 py-4">
+    <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-white px-4 py-3 sm:gap-4 sm:px-5 sm:py-4">
       <p className="text-sm text-muted-foreground">
         {total === 0 ? (
           "No products"
@@ -68,14 +68,15 @@ export function ListingToolbar({
         )}
       </p>
 
-      <div className="flex flex-wrap gap-2">
+      {/* one swipeable row on a phone rather than three wrapped lines */}
+      <div className="-mx-4 flex w-[calc(100%+2rem)] gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:w-auto sm:flex-wrap sm:overflow-visible sm:px-0">
         {SORTS.map((option) => (
           <Link
             key={option.value}
             href={hrefFor(option.value)}
             scroll={false}
             className={cn(
-              "border px-4 py-2 text-xs font-semibold transition-colors",
+              "inline-flex min-h-10 shrink-0 items-center whitespace-nowrap border px-4 py-2 text-xs font-semibold transition-colors sm:min-h-0",
               option.value === active
                 ? "border-ink bg-ink text-white"
                 : "border-border bg-white text-foreground hover:border-primary",

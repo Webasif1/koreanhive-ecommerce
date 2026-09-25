@@ -4,6 +4,7 @@ import {
   PendingGrid,
 } from "@/components/product/listing-pending";
 import { ListingToolbar } from "@/components/product/listing-toolbar";
+import { MobileFilterSheet } from "@/components/product/mobile-filter-sheet";
 import { Pagination } from "@/components/product/pagination";
 import { ProductGrid } from "@/components/product/product-grid";
 import { SidebarPromos } from "@/components/product/sidebar-promos";
@@ -75,19 +76,12 @@ export async function ProductListing({
           )}
         />
       )}
-      {/* collapsed by default on mobile so the products stay above the fold */}
-      <details className="group lg:hidden">
-        <summary className="flex cursor-pointer list-none items-center justify-between border border-border bg-white px-5 py-4 text-[13px] font-bold uppercase tracking-[0.1em]">
-          Filters
-          <span className="text-primary transition-transform group-open:rotate-180">
-            ▾
-          </span>
-        </summary>
-        <div className="mt-3">
-          <FilterSidebar facets={listing.facets} hide={hideFacets} />
-          <SidebarPromos {...promo} />
-        </div>
-      </details>
+      {/* collapsed by default on mobile so the products stay above the fold;
+          opens as a sheet over the results rather than pushing them away */}
+      <MobileFilterSheet total={listing.total}>
+        <FilterSidebar facets={listing.facets} hide={hideFacets} />
+        <SidebarPromos {...promo} />
+      </MobileFilterSheet>
 
       <aside className="hidden lg:block">
         <FilterSidebar facets={listing.facets} hide={hideFacets} />
@@ -97,7 +91,9 @@ export async function ProductListing({
       {/* the provider spans the grid and the pager so a page click can dim the
           cards it is replacing rather than blanking the whole route */}
       <ListingPendingProvider>
-        <div className="space-y-6">
+        {/* min-w-0: a grid item defaults to its min-content width, and the
+            swipeable sort row is wider than a phone by design */}
+        <div className="min-w-0 space-y-6">
           <ListingToolbar
             from={from}
             to={to}

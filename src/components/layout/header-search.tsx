@@ -11,7 +11,8 @@ import type { SearchSuggestion } from "@/server/queries/catalog";
 
 const PLACEHOLDER = "Search products — serum, sunscreen, Anua, acne care…";
 const INPUT_CLASS =
-  "w-full bg-transparent text-sm outline-none placeholder:text-faint";
+  // text-base below lg: iOS Safari zooms the page into any input under 16px
+  "w-full min-w-0 bg-transparent text-base outline-none placeholder:text-faint lg:text-sm";
 /** One request per typing pause rather than per keystroke. */
 const DEBOUNCE_MS = 200;
 /** Matches buildSearchScope, which ignores single characters. */
@@ -163,6 +164,7 @@ export function HeaderSearchInput() {
           active >= 0 ? `${listId}-option-${active}` : undefined
         }
         autoComplete="off"
+        enterKeyHint="search"
         className={INPUT_CLASS}
       />
 
@@ -178,7 +180,8 @@ export function HeaderSearchInput() {
           id={listId}
           role="listbox"
           aria-label="Product suggestions"
-          className="absolute inset-x-0 top-full z-50 mt-1 border border-border bg-white shadow-lg"
+          // capped on phones so the open keyboard never hides the "see all" row
+          className="absolute inset-x-0 top-full z-50 mt-1 max-h-[60dvh] overflow-y-auto overscroll-contain border border-border bg-white shadow-lg lg:max-h-none lg:overflow-visible"
         >
           <p className="sr-only" role="status">
             {rowCount} {rowCount === 1 ? "suggestion" : "suggestions"}

@@ -10,6 +10,9 @@ export function Toaster() {
   return (
     <Sonner
       position="bottom-right"
+      // Phones: clear the fixed bottom nav (56px + home indicator) instead of
+      // landing on top of it. 601-1023px is handled in globals.css.
+      mobileOffset={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom))" }}
       toastOptions={{
         classNames: {
           toast:

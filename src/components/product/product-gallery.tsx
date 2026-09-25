@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 
 import { ProductPlaceholder } from "@/components/ui/product-placeholder";
@@ -23,6 +23,7 @@ export function ProductGallery({
   const [activeIndex, setActiveIndex] = useState(0);
   const [zoomed, setZoomed] = useState(false);
   const [origin, setOrigin] = useState("50% 50%");
+  const touchStartX = useRef<number | null>(null);
 
   const active = images[activeIndex];
 
@@ -49,8 +50,31 @@ export function ProductGallery({
         tabIndex={0}
         aria-label={zoomed ? "Zoom out" : "Zoom in"}
         onMouseMove={handleMove}
-        onMouseEnter={() => setZoomed(true)}
+        // Mouse only. A tap on a phone fires a synthetic mouseenter right
+        // before its click, so the old onMouseEnter zoomed in and the click
+        // immediately zoomed back out — tap-to-zoom did nothing on touch.
+        onPointerEnter={(e) => {
+          if (e.pointerType === "mouse") setZoomed(true);
+        }}
         onMouseLeave={() => setZoomed(false)}
+        // swipe between photos on a phone (not while zoomed, where a drag
+        // is someone looking closer)
+        onTouchStart={(e) => {
+          touchStartX.current = e.touches[0]?.clientX ?? null;
+        }}
+        onTouchEnd={(e) => {
+          const start = touchStartX.current;
+          touchStartX.current = null;
+          const end = e.changedTouches[0]?.clientX;
+          if (start === null || end === undefined || zoomed) return;
+          const dx = end - start;
+          if (Math.abs(dx) < 40 || images.length < 2) return;
+          setActiveIndex((i) =>
+            dx < 0
+              ? (i + 1) % images.length
+              : (i - 1 + images.length) % images.length,
+          );
+        }}
         onClick={() => setZoomed((z) => !z)}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {

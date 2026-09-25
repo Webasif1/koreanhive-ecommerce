@@ -25,7 +25,7 @@ function BuyNowButton({ disabled, label }: { disabled?: boolean; label: string }
       variant="dark"
       disabled={disabled || pending}
       aria-label={label}
-      className="h-12 w-full text-[13px]"
+      className="h-10 w-full text-[12.5px] sm:h-12 sm:text-[13px]"
     >
       {pending ? "Taking you to checkout…" : "Buy Now"}
     </Button>
@@ -61,7 +61,7 @@ export function CardBuyButtons({
     <form
       action={buyNowAction}
       onSubmit={trackAdd}
-      className="mt-3.5 flex flex-col gap-2"
+      className="mt-3 flex flex-col gap-1.5 sm:mt-3.5 sm:gap-2"
     >
       <input type="hidden" name="productId" value={productId} />
       <input type="hidden" name="variantId" value={variantId ?? ""} />
@@ -72,7 +72,7 @@ export function CardBuyButtons({
         variant="default"
         disabled={disabled || isAdding}
         aria-label={`Add ${productName} to cart`}
-        className="h-12 w-full text-[13px]"
+        className="h-10 w-full text-[12.5px] sm:h-12 sm:text-[13px]"
         onClick={() => {
           const data = new FormData();
           data.set("productId", productId);

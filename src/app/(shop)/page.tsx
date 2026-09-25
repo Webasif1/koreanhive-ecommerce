@@ -130,20 +130,20 @@ export default async function Home() {
 
       {/* ---------------------------------------------------------- hero */}
       <section className="border-b border-border bg-white">
-        <div className="container-page grid items-center gap-12 lg:grid-cols-[1fr_1.05fr] lg:gap-16">
-          <div className="py-14 lg:py-[72px]">
+        <div className="container-page grid items-center gap-8 sm:gap-12 lg:grid-cols-[1fr_1.05fr] lg:gap-16">
+          <div className="pt-8 sm:py-14 lg:py-[72px]">
             <span className="eyebrow inline-flex bg-blush px-3 py-1.5">
               Seoul sourced · delivered nationwide
             </span>
-            <h1 className="mt-6 font-display text-[40px] leading-[1.06] tracking-[-0.02em] md:text-[56px] lg:text-[64px]">
+            <h1 className="mt-4 font-display text-[32px] leading-[1.08] tracking-[-0.02em] sm:mt-6 sm:text-[40px] sm:leading-[1.06] md:text-[56px] lg:text-[64px]">
               Authentic Korean beauty, for skin that looks like yours.
             </h1>
-            <p className="mt-5 max-w-[460px] text-base leading-relaxed text-muted-foreground">
+            <p className="mt-4 max-w-[460px] text-[15px] leading-relaxed text-muted-foreground sm:mt-5 sm:text-base">
               Better skin, better routine, better confidence. Every product is
               imported, batch-checked and stored properly — so what reaches your
               door is the real thing.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-6 flex flex-wrap gap-3 sm:mt-8">
               <Button size="lg" asChild>
                 <Link href="/shop">Shop Korean Skincare</Link>
               </Button>
@@ -151,7 +151,7 @@ export default async function Home() {
                 <Link href="#bestsellers">Explore Best Sellers</Link>
               </Button>
             </div>
-            <div className="mt-9 flex flex-wrap items-center gap-6">
+            <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-4 sm:mt-9 sm:gap-6">
               {/* Every figure here has to be one we can stand behind. This
                   row used to lead with "4.9★ / 3,400+ reviews" against a
                   catalogue holding no reviews at all. */}
@@ -170,7 +170,7 @@ export default async function Home() {
             </div>
           </div>
 
-          <div className="relative min-h-[420px] self-stretch bg-blush lg:min-h-[600px]">
+          <div className="relative min-h-[380px] self-stretch bg-blush sm:min-h-[420px] lg:min-h-[600px]">
             {/* Served from ImageKit rather than public/, like the 279 product
                 shots — the host is already allow-listed, so next/image
                 optimises it the same way and the asset can be swapped without
@@ -193,7 +193,7 @@ export default async function Home() {
                 than three products to show. */}
             {shopTheShot.length === 3 ? (
               <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
-                <div className="flex items-center gap-3 bg-white/95 p-3 shadow-[0_1px_4px_rgba(36,26,36,0.08)] backdrop-blur-[2px] sm:gap-4 sm:p-4">
+                <div className="flex items-center gap-3 bg-white/95 p-3 shadow-[0_1px_4px_rgba(36,26,36,0.08)] sm:gap-4 sm:p-4">
                   <ul className="flex shrink-0 gap-2 sm:gap-2.5">
                     {shopTheShot.map((product) => (
                       <li key={product.id}>
@@ -263,11 +263,11 @@ export default async function Home() {
           a phone and pushed the best sellers below the fold. A concern tile
           only has to answer "is my problem here, and is there stock behind
           it" — the picture and a count do that in a third of the height. */}
-      <section className="container-page py-14">
+      <section className="container-page py-10 sm:py-14">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="eyebrow">Shop by skin concern</p>
-            <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
+            <h2 className="mt-3 font-display text-[26px] sm:text-[30px] tracking-[-0.01em] md:text-[38px]">
               Find what your skin is asking for
             </h2>
           </div>
@@ -331,7 +331,7 @@ export default async function Home() {
           picture bleeds to the card edge because a photograph with a margin
           around it reads as an illustration of the text; one that runs to the
           edge reads as the other half of it. */}
-      <section className="container-page py-14">
+      <section className="container-page py-10 sm:py-14">
         <div className="grid overflow-hidden border border-border bg-white lg:grid-cols-2">
           {/* Photograph first in the markup, so on a phone the section opens
               with the face rather than with 60 words of argument. On desktop
@@ -349,7 +349,7 @@ export default async function Home() {
 
           <div className="order-2 p-7 sm:p-10 lg:order-1 lg:p-14">
             <p className="eyebrow">The Korean Hive approach</p>
-            <h2 className="mt-3 font-display text-[30px] leading-[1.15] tracking-[-0.01em] md:text-[40px]">
+            <h2 className="mt-3 font-display text-[26px] sm:text-[30px] leading-[1.15] tracking-[-0.01em] md:text-[40px]">
               Healthy-looking skin isn&apos;t about using more products.
               It&apos;s about using the right ones.
             </h2>
@@ -394,7 +394,7 @@ export default async function Home() {
           It appears by itself the day the first review is approved. */}
       {reviews.length > 0 && (
         <section className="border-y border-border bg-white">
-          <div className="container-page grid gap-8 py-14 lg:grid-cols-[320px_1fr]">
+          <div className="container-page grid gap-8 py-10 sm:py-14 lg:grid-cols-[320px_1fr]">
             <ReviewSummaryPanel
               summary={reviewSummary}
               heading="Why women love Korean Hive"
@@ -410,13 +410,13 @@ export default async function Home() {
       )}
 
       {/* ---------------------------------------------------- bestsellers */}
-      <section id="bestsellers" className="container-page py-14">
+      <section id="bestsellers" className="container-page py-10 sm:py-14">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="eyebrow">
               {hasRealSales ? "Best sellers this month" : "New this month"}
             </p>
-            <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
+            <h2 className="mt-3 font-display text-[26px] sm:text-[30px] tracking-[-0.01em] md:text-[38px]">
               {hasRealSales
                 ? "What Bangladeshi women keep reordering"
                 : "Just landed from Seoul"}
@@ -434,6 +434,7 @@ export default async function Home() {
           <ProductGrid
             products={popular}
             badge={hasRealSales ? "BEST SELLER" : undefined}
+            priorityCount={0}
           />
         </div>
       </section>
@@ -441,11 +442,11 @@ export default async function Home() {
       {/* --------------------------------------------------------- brands */}
       {/* Cream ground and no rule, so the white cards are what separates this
           band from the page rather than a border drawn around it. */}
-      <section className="container-page py-14">
+      <section className="container-page py-10 sm:py-14">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="eyebrow">Shop by Korean brand</p>
-            <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
+            <h2 className="mt-3 font-display text-[26px] sm:text-[30px] tracking-[-0.01em] md:text-[38px]">
               {brands.length} Korean brands, all authorised
             </h2>
           </div>
@@ -498,11 +499,11 @@ export default async function Home() {
           Three of them here, the rest behind the button: the home page is a
           shelf, and ten routine cards in a row is a catalogue. */}
       {combos.length > 0 && (
-        <section className="container-page py-14">
+        <section className="container-page py-10 sm:py-14">
           <div className="flex flex-wrap items-end justify-between gap-5">
             <div>
               <p className="eyebrow">Combo offers</p>
-              <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
+              <h2 className="mt-3 font-display text-[26px] sm:text-[30px] tracking-[-0.01em] md:text-[38px]">
                 Full routines, one price
               </h2>
               <p className="mt-3 max-w-[54ch] text-[14px] leading-relaxed text-muted-foreground">
@@ -535,7 +536,7 @@ export default async function Home() {
 
       {/* ---------------------------------------------------------- reels */}
       <section className="border-y border-border bg-white">
-        <div className="container-page py-14">
+        <div className="container-page py-10 sm:py-14">
           {/* Real reels, loaded on click. The five tiles here were mock-up
               frames reading "drop your reel here", each linking to /shop. */}
           <ReelCarousel
@@ -543,7 +544,7 @@ export default async function Home() {
             heading={
               <>
                 <p className="eyebrow">Watch · discover · shop</p>
-                <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
+                <h2 className="mt-3 font-display text-[26px] sm:text-[30px] tracking-[-0.01em] md:text-[38px]">
                   See it used before you buy it
                 </h2>
               </>
@@ -554,12 +555,12 @@ export default async function Home() {
 
       {/* ------------------------------------------------------ guarantee */}
       <section className="bg-ink text-blush">
-        <div className="container-page grid gap-10 py-14 lg:grid-cols-2 lg:items-center">
+        <div className="container-page grid gap-8 py-10 sm:gap-10 sm:py-14 lg:grid-cols-2 lg:items-center">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-mulberry-hover">
               Why women love Korean Hive
             </p>
-            <h2 className="mt-4 font-display text-[30px] leading-[1.16] text-white md:text-[40px]">
+            <h2 className="mt-4 font-display text-[26px] sm:text-[30px] leading-[1.16] text-white md:text-[40px]">
               If it isn&apos;t right for your skin, send it back.
             </h2>
             <p className="mt-4 max-w-lg text-sm leading-relaxed text-light">
@@ -590,11 +591,11 @@ export default async function Home() {
           laid out flat is a wall of small grey text that nobody reads; folded
           up, the list of questions is scannable and the heading has something
           to sit beside. */}
-      <section className="container-page py-14">
+      <section className="container-page py-10 sm:py-14">
         <div className="grid gap-8 lg:grid-cols-[360px_1fr] lg:gap-14">
           <div className="lg:sticky lg:top-24 lg:self-start">
             <p className="eyebrow">Common questions</p>
-            <h2 className="mt-3 font-display text-[30px] leading-[1.15] tracking-[-0.01em] md:text-[38px]">
+            <h2 className="mt-3 font-display text-[26px] sm:text-[30px] leading-[1.15] tracking-[-0.01em] md:text-[38px]">
               Korean skincare, explained simply
             </h2>
             <p className="mt-4 max-w-[38ch] text-[15px] leading-relaxed text-muted-foreground">
@@ -615,11 +616,11 @@ export default async function Home() {
 
       {/* -------------------------------------------------------- journal */}
       <section className="border-t border-border bg-white">
-        <div className="container-page py-14">
+        <div className="container-page py-10 sm:py-14">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="eyebrow">The Hive Journal</p>
-              <h2 className="mt-3 font-display text-[30px] tracking-[-0.01em] md:text-[38px]">
+              <h2 className="mt-3 font-display text-[26px] sm:text-[30px] tracking-[-0.01em] md:text-[38px]">
                 Routines that survive Bangladesh weather
               </h2>
             </div>
@@ -640,7 +641,7 @@ export default async function Home() {
       </section>
 
       {/* ----------------------------------------------------- newsletter */}
-      <section className="container-page py-14">
+      <section className="container-page py-10 sm:py-14">
         <div className="flex flex-col items-center gap-4 border border-border bg-blush p-10 text-center">
           <h2 className="font-display text-[26px] md:text-[30px]">
             Get ৳150 off your first order

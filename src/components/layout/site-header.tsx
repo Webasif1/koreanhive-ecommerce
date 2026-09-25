@@ -16,8 +16,8 @@ export function SiteHeader({ deliveryLine }: { deliveryLine: string }) {
       {/* Bangla carries the offer, English the rest — never mixed in one sentence.
           The threshold comes from the live DeliveryZone rows, so this banner can
           never promise free delivery that checkout then charges for. */}
-      <div className="bg-ink text-[12.5px] text-blush">
-        <div className="container-page flex flex-wrap items-center justify-center gap-x-7 gap-y-1 py-2.5 text-center">
+      <div className="bg-ink text-[12px] text-blush sm:text-[12.5px]">
+        <div className="container-page flex flex-wrap items-center justify-center gap-x-7 gap-y-0.5 py-2 text-center sm:gap-y-1 sm:py-2.5">
           {/* deliveryPromise() already ends in "ফ্রি ডেলিভারি" — appending a
               bold "FREE DELIVERY" here said it twice */}
           <span lang="bn" className="font-semibold text-white">
@@ -37,7 +37,7 @@ export function SiteHeader({ deliveryLine }: { deliveryLine: string }) {
       </div>
 
       <header className="sticky top-0 z-40 border-b border-border bg-white">
-        <div className="container-page grid grid-cols-[auto_1fr] items-center gap-4 py-4 lg:grid-cols-[220px_1fr_auto] lg:gap-8">
+        <div className="container-page grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2.5 py-2.5 sm:gap-4 sm:py-4 lg:grid-cols-[220px_1fr_auto] lg:gap-8">
           {/* drawer and logo share the first grid cell, so adding the mobile
               menu does not disturb the desktop three-column layout */}
           <div className="flex items-center gap-1">
@@ -49,8 +49,10 @@ export function SiteHeader({ deliveryLine }: { deliveryLine: string }) {
                 alt="Korean Hive — authentic Korean skincare in Bangladesh"
                 width={220}
                 height={42}
-                priority
-                className="h-9 w-auto lg:h-[42px]"
+                preload
+                // drawn 32-36px tall on phones (~150px wide), 42px on desktop
+                sizes="(min-width: 1024px) 220px, 150px"
+                className="h-8 w-auto sm:h-9 lg:h-[42px]"
               />
             </Link>
           </div>
@@ -75,7 +77,7 @@ export function SiteHeader({ deliveryLine }: { deliveryLine: string }) {
             </Link>
             <Link
               href="/cart"
-              className="relative flex items-center gap-2 bg-primary px-4 py-3 text-xs font-semibold tracking-[0.04em] text-primary-foreground hover:bg-mulberry-hover"
+              className="relative flex min-h-11 items-center gap-2 bg-primary px-4 py-3 text-xs font-semibold tracking-[0.04em] text-primary-foreground hover:bg-mulberry-hover"
             >
               CART
               <CartBadge />

@@ -23,7 +23,7 @@ export async function CartRecommendations({
         Goes well with your bag
       </h2>
       <div className="mt-6">
-        <ProductGrid products={products} />
+        <ProductGrid products={products} priorityCount={0} />
       </div>
     </section>
   );
