@@ -1,3 +1,4 @@
+import { isOnSale } from "@/lib/pricing";
 import { absoluteUrl, siteConfig } from "@/lib/site";
 
 export function organizationJsonLd() {
@@ -100,6 +101,8 @@ type ProductJsonLdInput = {
   sku: string | null;
   images: string[];
   price: number;
+  /** the struck-through "was" price; emitted only when genuinely higher */
+  comparePrice?: number | null;
   inStock: boolean;
   brandName: string | null;
   ratingAvg: number;
@@ -107,6 +110,15 @@ type ProductJsonLdInput = {
   /** variant prices, when the product sells in several sizes */
   priceRange: { low: number; high: number; count: number } | null;
 };
+
+/** Product descriptions are written in markdown; schema text should be plain. */
+const stripMarkdown = (s: string) =>
+  s
+    .replace(/\*+|__|`/g, "")
+    .replace(/^#+\s*/gm, "")
+    .replace(/\[(.*?)\]\((.*?)\)/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
 
 export function productJsonLd(product: ProductJsonLdInput) {
   const url = absoluteUrl(`/product/${product.slug}`);
@@ -131,6 +143,25 @@ export function productJsonLd(product: ProductJsonLdInput) {
           "@type": "Offer",
           priceCurrency: siteConfig.currency,
           price: product.price,
+          // Google's way to show a sale: the current price plus a
+          // StrikethroughPrice. Same rule as /deals and the Meta feed.
+          ...(isOnSale(product.price, product.comparePrice ?? null)
+            ? {
+                priceSpecification: [
+                  {
+                    "@type": "UnitPriceSpecification",
+                    price: product.price,
+                    priceCurrency: siteConfig.currency,
+                  },
+                  {
+                    "@type": "UnitPriceSpecification",
+                    priceType: "https://schema.org/StrikethroughPrice",
+                    price: product.comparePrice,
+                    priceCurrency: siteConfig.currency,
+                  },
+                ],
+              }
+            : {}),
           availability,
           url,
           seller: { "@id": absoluteUrl("/#organization") },
@@ -141,7 +172,9 @@ export function productJsonLd(product: ProductJsonLdInput) {
     "@type": "Product",
     name: product.name,
     url,
-    description: product.description ?? undefined,
+    description: product.description
+      ? stripMarkdown(product.description)
+      : undefined,
     sku: product.sku ?? undefined,
     image: product.images.length > 0 ? product.images : undefined,
     brand: product.brandName
