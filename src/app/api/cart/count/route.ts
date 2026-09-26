@@ -12,8 +12,9 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const cart = await getCart();
 
+  // after any combo saving: the free-delivery bar measures what is paid
   return NextResponse.json(
-    { count: cart.itemCount, subtotal: cart.subtotal },
+    { count: cart.itemCount, subtotal: cart.subtotal - cart.comboDiscount },
     { headers: { "Cache-Control": "no-store" } },
   );
 }

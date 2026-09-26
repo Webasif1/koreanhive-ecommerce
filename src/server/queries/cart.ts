@@ -1,9 +1,14 @@
 import "server-only";
 
+import {
+  applyCombos,
+  type AppliedCombo,
+  type ComboRule,
+} from "@/lib/combo-pricing";
 import { calcTotals, type CouponRule } from "@/lib/pricing";
 import { readCartCookie, readCouponCookie } from "@/server/cart-cookie";
 import { connectDb } from "@/server/db";
-import { Coupon, DeliveryZone, Product } from "@/server/models";
+import { Combo, Coupon, DeliveryZone, Product } from "@/server/models";
 
 export type CartLine = {
   key: string;
@@ -81,6 +86,23 @@ async function resolveCoupon(
   };
 }
 
+/** Live combos as pricing rules. The cart and checkout both read them from
+ *  here, so the two can never price a combo differently. */
+export async function getComboRules(): Promise<ComboRule[]> {
+  await connectDb();
+
+  const combos = await Combo.find({ isActive: true })
+    .select("slug name price productSlugs")
+    .lean();
+
+  return combos.map((combo) => ({
+    slug: combo.slug,
+    name: combo.name,
+    price: combo.price,
+    productSlugs: combo.productSlugs,
+  }));
+}
+
 /** Hydrates the cookie against the database. Products that were deleted or
  *  deactivated since they were added simply drop out. */
 export async function getCart(zoneSlug?: string) {
@@ -94,9 +116,11 @@ export async function getCart(zoneSlug?: string) {
       lines: [] as CartLine[],
       itemCount: 0,
       subtotal: 0,
+      comboDiscount: 0,
       discount: 0,
       shippingCharge: 0,
       total: 0,
+      combos: [] as AppliedCombo[],
       couponCode: null as string | null,
       couponError: null as string | null,
       zone: null,
@@ -162,7 +186,12 @@ export async function getCart(zoneSlug?: string) {
   }
 
   const subtotal = lines.reduce((sum, l) => sum + l.lineTotal, 0);
-  const { coupon, error } = await resolveCoupon(couponCode, subtotal);
+  const { comboDiscount, applied } = applyCombos(lines, await getComboRules());
+  // the coupon applies to what is left after the combo saving
+  const { coupon, error } = await resolveCoupon(
+    couponCode,
+    subtotal - comboDiscount,
+  );
   const totals = calcTotals({
     lines,
     zone: zone
@@ -172,12 +201,14 @@ export async function getCart(zoneSlug?: string) {
         }
       : null,
     coupon,
+    comboDiscount,
   });
 
   return {
     lines,
     itemCount: lines.reduce((sum, l) => sum + l.quantity, 0),
     ...totals,
+    combos: applied,
     couponCode: coupon?.code ?? null,
     couponError: error,
     zone: zone

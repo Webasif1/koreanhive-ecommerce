@@ -190,8 +190,6 @@ export const COMBOS: ComboSeed[] = [
     imageAlt: "Post-Acne Marks combo — give uneven tone consistent care",
     steps: [
       { slug: "cosrx-low-ph-good-morning-gel-cleanser-150ml", name: "COSRX Low pH Good Morning Gel Cleanser 150ml", role: "Cleanses without stripping", short: "Low-pH cleanser" },
-      // NOT IN CATALOGUE — the shop has a Tone Brightening Tone-Up *Sunscreen*,
-      // which is a different product doing a different job.
       { slug: "skin1004-madagascar-centella-tone-brightening-capsule-ampoule-30ml", name: "SKIN1004 Tone Brightening Capsule Ampoule 30ml mini", role: "Fades marks over 4–6 weeks", short: "Brightening ampoule" },
       { slug: "cosrx-advanced-snail-92-all-in-one-cream-tube-50g", name: "COSRX Advanced Snail 92 All In One Cream 50g", role: "Keeps the barrier comfortable", short: "Barrier cream" },
       { slug: "iunik-centella-calming-daily-sunscreen-60ml", name: "iUNIK Centella Calming Daily Sunscreen 60ml", role: "Protects the result daily", short: "Centella SPF50+" },
@@ -243,8 +241,8 @@ export const COMBOS: ComboSeed[] = [
       // NOT IN CATALOGUE as a cream — the shop has AtoBarrier 365 *Lotion*
       // in 30ml and 150ml, which is a lighter texture at a different price.
       { slug: "aestura-atobarrier-365-cream-30ml", name: "Aestura AtoBarrier 365 Cream 30ml mini", role: "Rebuilds the skin barrier", short: "Ceramide cream" },
-      // NOT IN CATALOGUE
-      { slug: "isntree-hyaluronic-acid-watery-sun-gel-50ml", name: "Isntree Hyaluronic Acid Watery Sun Gel 50ml", role: "Protection that does not dry", short: "Watery sun gel" },
+      // The catalogue slug carries "spf50", which is why this read as missing.
+      { slug: "isntree-hyaluronic-acid-watery-sun-gel-spf50-50ml", name: "Isntree Hyaluronic Acid Watery Sun Gel 50ml", role: "Protection that does not dry", short: "Watery sun gel" },
     ],
     price: 3690,
     position: 5,
@@ -289,7 +287,8 @@ export const COMBOS: ComboSeed[] = [
       { slug: "beauty-of-joseon-green-plum-refreshing-cleanser-100ml", name: "Beauty of Joseon Green Plum Cleanser 100ml", role: "Non-foaming, no tightness", short: "Green plum cleanser" },
       // NOT IN CATALOGUE as a cream — see Dry Skin Comfort
       { slug: "aestura-atobarrier-365-cream-30ml", name: "Aestura AtoBarrier 365 Cream 30ml mini", role: "Barrier support", short: "Ceramide cream" },
-      // NOT IN CATALOGUE at 50ml — the shop stocks the 15ml.
+      // DRAFT — NEEDS AN IMAGE. The 50ml is in the catalogue but unpublished
+      // for want of a photo; the 15ml is live but is not this product.
       { slug: "skin1004-madagascar-centella-hyalu-cica-water-fit-sun-serum-50ml", name: "SKIN1004 Hyalu-Cica Water-Fit Sun Serum 50ml", role: "Light, fragrance-free SPF", short: "Water-fit sun serum" },
     ],
     price: 3590,
@@ -312,7 +311,7 @@ export const COMBOS: ComboSeed[] = [
       // DRAFT — NEEDS AN IMAGE; see Dry Skin Comfort
       { slug: "beauty-of-joseon-green-plum-refreshing-cleanser-100ml", name: "Beauty of Joseon Green Plum Cleanser 100ml", role: "Morning and night", short: "Green plum cleanser" },
       { slug: "cosrx-advanced-snail-92-all-in-one-cream-tube-50g", name: "COSRX Advanced Snail 92 All In One Cream 50g", role: "Suits every skin type", short: "Barrier cream" },
-      // NOT IN CATALOGUE at 50ml — see Sensitive Skin Comfort
+      // DRAFT — NEEDS AN IMAGE; see Sensitive Skin Comfort
       { slug: "skin1004-madagascar-centella-hyalu-cica-water-fit-sun-serum-50ml", name: "SKIN1004 Hyalu-Cica Water-Fit Sun Serum 50ml", role: "The step that matters most", short: "Water-fit sun serum" },
     ],
     price: 3590,

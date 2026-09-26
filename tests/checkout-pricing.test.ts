@@ -152,3 +152,64 @@ describe("totals", () => {
     assert.equal(totals.total, 2520);
   });
 });
+
+describe("totals with a combo saving", () => {
+  // Campus Essentials: members 700 + 999 + 1350 = 3049, combo price 2890
+  const campus = [
+    { unitPrice: 700, quantity: 1 },
+    { unitPrice: 999, quantity: 1 },
+    { unitPrice: 1350, quantity: 1 },
+  ];
+
+  it("charges the combo price, and judges delivery on it", () => {
+    // 3049 would clear the 3000 outside threshold; the combo price 2890 does
+    // not, which is what the card (no free-delivery badge) promised
+    const totals = calcTotals({
+      lines: campus,
+      zone: OUTSIDE,
+      coupon: null,
+      comboDiscount: 159,
+    });
+
+    assert.equal(totals.subtotal, 3049);
+    assert.equal(totals.comboDiscount, 159);
+    assert.equal(totals.shippingCharge, 120);
+    assert.equal(totals.total, 2890 + 120);
+  });
+
+  it("stacks a coupon on the after-combo amount", () => {
+    const totals = calcTotals({
+      lines: campus,
+      zone: INSIDE,
+      coupon: {
+        code: "SAVE10",
+        type: "PERCENTAGE",
+        value: 10,
+        minSubtotal: null,
+        maxDiscount: null,
+      },
+      comboDiscount: 159,
+    });
+
+    assert.equal(totals.discount, 289); // 10% of 2890, floored
+    assert.equal(totals.shippingCharge, 0);
+    assert.equal(totals.total, 2890 - 289);
+  });
+
+  it("checks a coupon minimum against the after-combo amount", () => {
+    const totals = calcTotals({
+      lines: campus,
+      zone: INSIDE,
+      coupon: {
+        code: "BIG",
+        type: "FIXED",
+        value: 300,
+        minSubtotal: 3000,
+        maxDiscount: null,
+      },
+      comboDiscount: 159,
+    });
+
+    assert.equal(totals.discount, 0);
+  });
+});

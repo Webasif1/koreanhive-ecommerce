@@ -82,11 +82,16 @@ function PlaceOrderButton({ total }: { total: number | null }) {
 export function CheckoutForm({
   zones,
   subtotal,
+  comboDiscount,
+  comboLabel,
   discount,
   trackItems,
 }: {
   zones: CheckoutZone[];
   subtotal: number;
+  /** complete combo sets in the cart, priced at the combo price */
+  comboDiscount: number;
+  comboLabel: string;
   discount: number;
   trackItems: TrackItem[];
 }) {
@@ -117,8 +122,10 @@ export function CheckoutForm({
     return zones.find((z) => z.slug === slug) ?? null;
   }, [district, zones]);
 
-  const shipping = calcShipping(subtotal, zone);
-  const total = subtotal - discount + shipping;
+  // the same after-combo amount the server measures delivery against
+  const afterCombo = subtotal - comboDiscount;
+  const shipping = calcShipping(afterCombo, zone);
+  const total = afterCombo - discount + shipping;
 
   return (
     <form action={formAction} className="grid gap-10 lg:grid-cols-[1fr_360px]">
@@ -302,6 +309,13 @@ export function CheckoutForm({
             <dd className="tabular-nums">{formatBDT(subtotal)}</dd>
           </div>
 
+          {comboDiscount > 0 && (
+            <div className="flex justify-between gap-3 text-success">
+              <dt>Combo saving ({comboLabel})</dt>
+              <dd className="shrink-0 tabular-nums">−{formatBDT(comboDiscount)}</dd>
+            </div>
+          )}
+
           {discount > 0 && (
             <div className="flex justify-between text-success">
               <dt>Discount</dt>
@@ -340,7 +354,7 @@ export function CheckoutForm({
 
         {zone?.freeShippingThreshold && shipping > 0 && (
           <p className="rounded-lg bg-secondary px-3 py-2 text-xs text-secondary-foreground">
-            Add {formatBDT(zone.freeShippingThreshold - subtotal)} more for free
+            Add {formatBDT(zone.freeShippingThreshold - afterCombo)} more for free
             delivery.
           </p>
         )}

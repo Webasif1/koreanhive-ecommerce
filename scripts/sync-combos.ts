@@ -108,8 +108,34 @@ async function main() {
     for (const blocker of blockers) console.log(`             ${blocker}`);
   }
 
+  // Take down what can no longer be sold: a combo that is now blocked (a
+  // member was unpublished or removed) and one no longer in COMBOS at all.
+  // Skipping them used to leave them live with a button that could not work.
+  const publishable = new Set(
+    COMBOS.map((combo) => combo.slug).filter(
+      (slug) => !blocked.some((entry) => entry.combo.slug === slug),
+    ),
+  );
+  const stale = await Combo.find({
+    isActive: true,
+    slug: { $nin: [...publishable] },
+  })
+    .select("slug")
+    .lean();
+
+  for (const combo of stale) {
+    console.log(`\n  ${dryRun ? "would unpublish" : "unpublished"}  ${combo.slug}`);
+  }
+  if (!dryRun && stale.length > 0) {
+    await Combo.updateMany(
+      { _id: { $in: stale.map((combo) => combo._id) } },
+      { $set: { isActive: false } },
+    );
+  }
+
   console.log(
     `\n  ${published} ${dryRun ? "would publish" : "published"}, ${blocked.length} blocked, ` +
+      `${stale.length} ${dryRun ? "would unpublish" : "unpublished"}, ` +
       `${await Combo.countDocuments({ isActive: true })} live in total\n`,
   );
 

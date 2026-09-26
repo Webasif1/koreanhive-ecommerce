@@ -39,8 +39,10 @@ export function calcDiscount(subtotal: number, coupon: CouponRule | null) {
   return Math.max(0, Math.min(capped, subtotal));
 }
 
-/** Free-shipping threshold is measured against the pre-discount subtotal, so
- *  a coupon can never push an order back into paying delivery. */
+/** Free-shipping threshold is measured before the coupon, so a coupon can
+ *  never push an order back into paying delivery. Callers pass the amount
+ *  after any combo saving: a combo's price is what it costs, and the combo
+ *  card's free-delivery badge is judged on that price too. */
 export function calcShipping(subtotal: number, zone: ZoneRule | null) {
   if (!zone) return 0;
   if (zone.freeShippingThreshold && subtotal >= zone.freeShippingThreshold) {
@@ -49,24 +51,32 @@ export function calcShipping(subtotal: number, zone: ZoneRule | null) {
   return zone.charge;
 }
 
+/**
+ * Subtotal, then the combo saving, then the coupon on what is left (they
+ * stack), then delivery judged on the after-combo amount.
+ */
 export function calcTotals({
   lines,
   zone,
   coupon,
+  comboDiscount = 0,
 }: {
   lines: PricedLine[];
   zone: ZoneRule | null;
   coupon: CouponRule | null;
+  comboDiscount?: number;
 }) {
   const subtotal = calcSubtotal(lines);
-  const discount = calcDiscount(subtotal, coupon);
-  const shippingCharge = calcShipping(subtotal, zone);
+  const afterCombo = subtotal - comboDiscount;
+  const discount = calcDiscount(afterCombo, coupon);
+  const shippingCharge = calcShipping(afterCombo, zone);
 
   return {
     subtotal,
+    comboDiscount,
     discount,
     shippingCharge,
-    total: subtotal - discount + shippingCharge,
+    total: afterCombo - discount + shippingCharge,
   };
 }
 
