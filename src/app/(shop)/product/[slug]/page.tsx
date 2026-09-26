@@ -200,7 +200,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
           description: product.description ?? product.shortDescription,
           sku: product.sku,
           images: product.images.map((image) => image.url),
-          price: product.price,
+          // the same price the buy box leads with (variants[0], else base)
+          price: product.variants[0]?.price ?? product.price,
+          comparePrice: product.comparePrice,
           inStock,
           brandName: product.brand?.name ?? null,
           ratingAvg: product.ratingAvg,
