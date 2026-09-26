@@ -53,6 +53,9 @@ Claude outputs
 DEPLOY-CPANEL.md
 .claude
 
+# Price backups written by scripts/bump-compare-price.ts before it writes
+/backups/
+
 # Scratch tarball used to ferry src/ and tests/ into a Linux checkout for
 # type-checking. Regenerated on demand; never a source of truth.
 src-sync.tgz
