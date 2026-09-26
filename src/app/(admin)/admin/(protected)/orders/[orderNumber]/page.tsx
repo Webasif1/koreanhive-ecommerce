@@ -87,6 +87,12 @@ export default async function AdminOrderDetailPage({
                 <dt className="text-muted-foreground">Subtotal</dt>
                 <dd className="tabular-nums">{formatBDT(order.subtotal)}</dd>
               </div>
+              {order.comboDiscount > 0 && (
+                <div className="flex justify-between text-success">
+                  <dt>Combo saving ({order.comboNames.join(", ")})</dt>
+                  <dd className="tabular-nums">−{formatBDT(order.comboDiscount)}</dd>
+                </div>
+              )}
               {order.discount > 0 && (
                 <div className="flex justify-between text-success">
                   <dt>Discount {order.couponCode && `(${order.couponCode})`}</dt>

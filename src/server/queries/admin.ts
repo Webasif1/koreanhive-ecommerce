@@ -4,6 +4,7 @@ import { isValidObjectId } from "mongoose";
 
 import { requireAdmin } from "@/server/admin-guard";
 import { connectDb } from "@/server/db";
+import { comboNames } from "@/lib/combo-pricing";
 import {
   Banner,
   Brand,
@@ -134,6 +135,8 @@ export async function getAdminOrder(orderNumber: string) {
     postalCode: order.postalCode ?? null,
     note: order.note ?? null,
     subtotal: order.subtotal,
+    comboDiscount: order.comboDiscount ?? 0,
+    comboNames: comboNames(order.combos),
     discount: order.discount,
     couponCode: order.couponCode ?? null,
     shippingCharge: order.shippingCharge,

@@ -406,6 +406,11 @@ export type OrderDoc = {
   couponId?: Types.ObjectId | null;
   couponCode?: string | null;
   subtotal: number;
+  /** Saving from complete combo sets in the order; 0 on older orders. */
+  comboDiscount?: number;
+  /** The combos the saving came from, so staff know what to pack. */
+  combos?: { slug: string; name: string; sets: number }[];
+  /** Coupon discount, applied after comboDiscount. */
   discount: number;
   shippingCharge: number;
   total: number;
@@ -458,6 +463,20 @@ const orderSchema = new Schema<OrderDoc>(
     /** snapshot, survives coupon deletion */
     couponCode: { type: String, default: null },
     subtotal: money,
+    comboDiscount: { type: Number, default: 0, min: 0 },
+    combos: {
+      type: [
+        new Schema(
+          {
+            slug: { type: String, required: true },
+            name: { type: String, required: true },
+            sets: { type: Number, required: true, min: 1 },
+          },
+          { _id: false },
+        ),
+      ],
+      default: [],
+    },
     discount: { type: Number, default: 0, min: 0 },
     shippingCharge: { type: Number, default: 0, min: 0 },
     total: money,

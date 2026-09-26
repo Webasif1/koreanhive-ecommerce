@@ -1,6 +1,7 @@
 import "server-only";
 
 import { normalizeBdPhone } from "@/lib/bd-districts";
+import { comboNames } from "@/lib/combo-pricing";
 import type { OrderStatusValue } from "@/lib/order-status";
 import { connectDb } from "@/server/db";
 import { DeliveryZone, Order } from "@/server/models";
@@ -18,6 +19,8 @@ export type TrackedOrder = {
   paymentMethod: string;
   paymentStatus: string;
   subtotal: number;
+  comboDiscount: number;
+  comboNames: string[];
   discount: number;
   couponCode: string | null;
   shippingCharge: number;
@@ -83,6 +86,8 @@ export async function findOrderForTracking(
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
     subtotal: order.subtotal,
+    comboDiscount: order.comboDiscount ?? 0,
+    comboNames: comboNames(order.combos),
     discount: order.discount,
     couponCode: order.couponCode ?? null,
     shippingCharge: order.shippingCharge,
@@ -122,6 +127,8 @@ export async function getOrderByNumber(orderNumber: string) {
     area: order.area,
     district: order.district,
     subtotal: order.subtotal,
+    comboDiscount: order.comboDiscount ?? 0,
+    comboNames: comboNames(order.combos),
     discount: order.discount,
     couponCode: order.couponCode ?? null,
     shippingCharge: order.shippingCharge,

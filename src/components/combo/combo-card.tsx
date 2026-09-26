@@ -32,6 +32,14 @@ export type ComboCardData = {
   products: ComboProduct[];
 };
 
+/** A bundle is only as available as its scarcest member. */
+export function comboLeastStock(combo: ComboCardData) {
+  return combo.products.reduce(
+    (low, product) => Math.min(low, product.stock),
+    Number.POSITIVE_INFINITY,
+  );
+}
+
 export function comboTrackItems(combo: ComboCardData): TrackItem[] {
   return combo.products.map((product) =>
     toTrackItem({
@@ -198,11 +206,7 @@ export function ComboCard({
     freeDeliveryEverywhereAbove !== null &&
     combo.price >= freeDeliveryEverywhereAbove;
 
-  // A bundle is only as available as its scarcest member.
-  const leastStock = combo.products.reduce(
-    (low, product) => Math.min(low, product.stock),
-    Number.POSITIVE_INFINITY,
-  );
+  const leastStock = comboLeastStock(combo);
   const stockLine =
     leastStock <= 0
       ? "Out of stock"
@@ -329,7 +333,9 @@ export function ComboCard({
         <div className="mt-5 space-y-2">
           <ComboAddButton
             comboSlug={combo.slug}
+            comboPrice={combo.price}
             trackItems={comboTrackItems(combo)}
+            disabled={leastStock <= 0}
           />
           <Button variant="outline" className="w-full" asChild>
             <Link href={`/product/${combo.products[0]?.slug ?? ""}`}>

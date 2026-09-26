@@ -222,7 +222,11 @@ export async function applyCouponAction(
   // — and checkout silently dropped it, so the total moved. One validator,
   // used by both, so the two can no longer disagree.
   const cart = await getCart();
-  const { coupon, error } = await resolveCouponForSubtotal(code, cart.subtotal);
+  // the coupon applies after the combo saving, so its minimum is checked there
+  const { coupon, error } = await resolveCouponForSubtotal(
+    code,
+    cart.subtotal - cart.comboDiscount,
+  );
 
   if (!coupon) {
     return {
@@ -256,10 +260,10 @@ export async function clearCouponAction(): Promise<CartResult> {
  * cart is priced from what is in it, so that would be a discount anyone could
  * mint.
  *
- * A member that has since been unpublished is skipped rather than failing the
- * whole click, and the message says how many went in. The sync should have
- * unpublished the combo too, but a shopper mid-session should not meet a dead
- * button because of a race between the two.
+ * All or nothing. The combo price only applies to a complete set (see
+ * lib/combo-pricing.ts), so adding some members would quietly charge them at
+ * full price. If any member is unpublished or cannot cover one more unit, the
+ * cart is left alone and the message names the product.
  */
 export async function addComboToCartAction(
   formData: FormData,
@@ -281,34 +285,40 @@ export async function addComboToCartAction(
     slug: { $in: combo.productSlugs },
     isActive: true,
   })
-    .select("_id slug")
+    .select("_id slug name stock")
     .lean();
 
-  const byslug = new Map(products.map((p) => [p.slug, p._id.toString()]));
+  const bySlug = new Map(products.map((p) => [p.slug, p]));
 
-  let added = 0;
+  if (combo.productSlugs.some((productSlug) => !bySlug.has(productSlug))) {
+    return { ok: false, message: `${combo.name} is not available right now.` };
+  }
+
+  // stock has to cover what the cart already holds plus this set
+  const items = await readCartCookie();
+  for (const productSlug of combo.productSlugs) {
+    const product = bySlug.get(productSlug)!;
+    const inCart = items
+      .filter((item) => item.productId === product._id.toString() && !item.variantId)
+      .reduce((sum, item) => sum + item.quantity, 0);
+
+    if (product.stock < inCart + 1) {
+      return {
+        ok: false,
+        message: `${product.name} is out of stock, so ${combo.name} cannot be added.`,
+      };
+    }
+  }
+
   // sequential, not Promise.all: each merge reads and rewrites the same cookie,
   // so running them together would have the last write win and drop the rest
   for (const productSlug of combo.productSlugs) {
-    const productId = byslug.get(productSlug);
-    if (!productId) continue;
-
+    const productId = bySlug.get(productSlug)!._id.toString();
     await mergeIntoCart({ productId, variantId: null, quantity: 1 });
-    added += 1;
-  }
-
-  if (added === 0) {
-    return { ok: false, message: "That combo is no longer available." };
   }
 
   revalidatePath("/cart");
   revalidatePath("/checkout");
 
-  return {
-    ok: true,
-    message:
-      added === combo.productSlugs.length
-        ? `${combo.name} added to cart`
-        : `${added} of ${combo.productSlugs.length} products added — the rest are out of stock`,
-  };
+  return { ok: true, message: `${combo.name} added to cart` };
 }

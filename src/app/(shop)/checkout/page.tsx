@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { TrackBeginCheckout } from "@/components/tracking/trackers";
+import { comboNames } from "@/lib/combo-pricing";
 import { formatBDT } from "@/lib/format";
 import { productImage } from "@/lib/product-image";
 import { cartTrackItems } from "@/lib/tracking/shared";
@@ -82,6 +83,8 @@ export default async function CheckoutPage() {
             maxDays: z.maxDays,
           }))}
           subtotal={cart.subtotal}
+          comboDiscount={cart.comboDiscount}
+          comboLabel={comboNames(cart.combos).join(", ")}
           discount={cart.discount}
           trackItems={trackItems}
         />

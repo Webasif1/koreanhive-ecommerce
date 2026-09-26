@@ -667,38 +667,44 @@ export async function getCombos() {
 
   const bySlug = new Map(products.map((p) => [p.slug, p]));
 
-  return combos.map((combo) => ({
-    id: combo._id.toString(),
-    name: combo.name,
-    slug: combo.slug,
-    description: combo.description ?? null,
-    concern: combo.concern ?? null,
-    imageUrl: combo.imageUrl ?? null,
-    price: combo.price,
-    comparePrice: combo.comparePrice ?? null,
-    // a member whose product was removed simply drops out
-    products: combo.productSlugs.flatMap((slug) => {
-      const product = bySlug.get(slug);
-      if (!product) return [];
+  // A combo with an unpublished member is left out: "Add combo to cart" is
+  // all or nothing, so its card would show a button that can only refuse.
+  return combos
+    .filter((combo) => combo.productSlugs.every((slug) => bySlug.has(slug)))
+    .map((combo) => {
+      const members = combo.productSlugs.map((slug) => bySlug.get(slug)!);
 
-      const image = [...(product.images ?? [])].sort(
-        (a, b) => a.position - b.position,
-      )[0];
+      // "Bought separately" from today's prices, not the figure stored at the
+      // last combos:sync, so it cannot drift when a member's price changes
+      const separately = members.reduce((sum, product) => sum + product.price, 0);
 
-      return [
-        {
-          // the cart needs the id; the card needs everything else
-          id: product._id.toString(),
-          name: product.name,
-          slug: product.slug,
-          sku: product.sku ?? null,
-          price: product.price,
-          stock: product.stock,
-          imageUrl: image?.url ?? null,
-        },
-      ];
-    }),
-  }));
+      return {
+        id: combo._id.toString(),
+        name: combo.name,
+        slug: combo.slug,
+        description: combo.description ?? null,
+        concern: combo.concern ?? null,
+        imageUrl: combo.imageUrl ?? null,
+        price: combo.price,
+        comparePrice: separately > combo.price ? separately : null,
+        products: members.map((product) => {
+          const image = [...(product.images ?? [])].sort(
+            (a, b) => a.position - b.position,
+          )[0];
+
+          return {
+            // the cart needs the id; the card needs everything else
+            id: product._id.toString(),
+            name: product.name,
+            slug: product.slug,
+            sku: product.sku ?? null,
+            price: product.price,
+            stock: product.stock,
+            imageUrl: image?.url ?? null,
+          };
+        }),
+      };
+    });
 }
 
 /** Category meta plus the ids a listing on that page should cover — the

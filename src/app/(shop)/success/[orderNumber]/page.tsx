@@ -36,7 +36,7 @@ export default async function OrderSuccessPage({ params }: OrderPageProps) {
     <div className="container-page py-12 md:py-16">
       <TrackPurchase
         orderId={order.orderNumber}
-        itemsTotal={order.subtotal - order.discount}
+        itemsTotal={order.subtotal - order.comboDiscount - order.discount}
         shipping={order.shippingCharge}
         coupon={order.couponCode}
         items={order.items.map((item) =>
@@ -90,6 +90,12 @@ export default async function OrderSuccessPage({ params }: OrderPageProps) {
             <dt className="text-muted-foreground">Subtotal</dt>
             <dd className="tabular-nums">{formatBDT(order.subtotal)}</dd>
           </div>
+          {order.comboDiscount > 0 && (
+            <div className="flex justify-between text-success">
+              <dt>Combo saving ({order.comboNames.join(", ")})</dt>
+              <dd className="tabular-nums">−{formatBDT(order.comboDiscount)}</dd>
+            </div>
+          )}
           {order.discount > 0 && (
             <div className="flex justify-between text-success">
               <dt>Discount {order.couponCode && `(${order.couponCode})`}</dt>

@@ -9,6 +9,7 @@ import { FreeDeliveryBar } from "@/components/cart/free-delivery-bar";
 import { TrackViewCart } from "@/components/tracking/trackers";
 import { Button } from "@/components/ui/button";
 import { ProductGridSkeleton } from "@/components/ui/skeleton";
+import { comboNames } from "@/lib/combo-pricing";
 import { formatBDT } from "@/lib/format";
 import { cartTrackItems } from "@/lib/tracking/shared";
 import { getCart } from "@/server/queries/cart";
@@ -66,7 +67,7 @@ export default async function CartPage() {
           <h2 className="font-display text-xl">Order summary</h2>
 
           <FreeDeliveryBar
-            subtotal={cart.subtotal}
+            subtotal={cart.subtotal - cart.comboDiscount}
             threshold={insideDhaka?.freeShippingThreshold ?? null}
           />
 
@@ -77,6 +78,14 @@ export default async function CartPage() {
               <dt className="text-muted-foreground">Subtotal</dt>
               <dd className="tabular-nums">{formatBDT(cart.subtotal)}</dd>
             </div>
+            {cart.comboDiscount > 0 && (
+              <div className="flex justify-between gap-3 text-sale">
+                <dt>Combo saving ({comboNames(cart.combos).join(", ")})</dt>
+                <dd className="shrink-0 tabular-nums">
+                  −{formatBDT(cart.comboDiscount)}
+                </dd>
+              </div>
+            )}
             {cart.discount > 0 && (
               <div className="flex justify-between text-sale">
                 <dt>Discount</dt>
@@ -90,7 +99,7 @@ export default async function CartPage() {
             <div className="flex justify-between border-t border-hairline pt-3 font-display text-lg">
               <dt>Total so far</dt>
               <dd className="tabular-nums">
-                {formatBDT(cart.subtotal - cart.discount)}
+                {formatBDT(cart.subtotal - cart.comboDiscount - cart.discount)}
               </dd>
             </div>
           </dl>

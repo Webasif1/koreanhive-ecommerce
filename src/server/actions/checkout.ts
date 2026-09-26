@@ -11,7 +11,8 @@ import {
   zoneSlugForDistrict,
 } from "@/lib/bd-districts";
 import type { CheckoutState } from "@/lib/checkout-state";
-import { calcDiscount, calcShipping, type CouponRule } from "@/lib/pricing";
+import { applyCombos } from "@/lib/combo-pricing";
+import { calcTotals, type CouponRule } from "@/lib/pricing";
 import { toTrackItem } from "@/lib/tracking/shared";
 import {
   grantOrderAccess,
@@ -24,6 +25,7 @@ import {
 } from "@/server/cart-cookie";
 import { connectDb, mongoose } from "@/server/db";
 import { Coupon, DeliveryZone, Order, Product } from "@/server/models";
+import { getComboRules } from "@/server/queries/cart";
 import { sendPurchaseToMeta } from "@/server/tracking/meta-capi";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no I/O/0/1
@@ -181,6 +183,14 @@ export async function placeOrderAction(
 
     // prices come from the database, never from the client
     const unitPrice = variant?.price ?? product.price;
+
+    // Clamped exactly as getCart clamps, so the order is what the checkout
+    // page showed. Charging the raw cookie quantity used to fail here with
+    // "adjust your cart" on a line the cart had already hidden.
+    const stock = variant ? variant.stock : product.stock;
+    const quantity = Math.min(item.quantity, Math.max(stock, 0));
+    if (quantity <= 0) return [];
+
     const firstImage = [...(product.images ?? [])].sort(
       (a, b) => a.position - b.position,
     )[0];
@@ -195,8 +205,8 @@ export async function placeOrderAction(
         variantName: variant?.name ?? null,
         imageUrl: firstImage?.url ?? null,
         unitPrice,
-        quantity: item.quantity,
-        lineTotal: unitPrice * item.quantity,
+        quantity,
+        lineTotal: unitPrice * quantity,
       },
     ];
   });
@@ -206,6 +216,17 @@ export async function placeOrderAction(
   }
 
   const subtotal = lines.reduce((sum, l) => sum + l.lineTotal, 0);
+
+  // the same rules and arithmetic the cart page priced with
+  const { comboDiscount, applied: combos } = applyCombos(
+    lines.map((line) => ({
+      slug: line.productSlug,
+      unitPrice: line.unitPrice,
+      quantity: line.quantity,
+    })),
+    await getComboRules(),
+  );
+  const afterCombo = subtotal - comboDiscount;
 
   const couponRow = couponCode ? await Coupon.findOne({ code: couponCode }) : null;
 
@@ -287,7 +308,7 @@ export async function placeOrderAction(
           (!couponRow.startsAt || couponRow.startsAt <= now) &&
           (!couponRow.endsAt || couponRow.endsAt >= now) &&
           (limit === null || couponRow.usedCount < limit) &&
-          (!couponRow.minSubtotal || subtotal >= couponRow.minSubtotal);
+          (!couponRow.minSubtotal || afterCombo >= couponRow.minSubtotal);
 
         if (usable) {
           // guard the limit again at write time
@@ -313,13 +334,16 @@ export async function placeOrderAction(
         }
       }
 
-      const discount = calcDiscount(subtotal, coupon);
-      orderDiscount = discount;
-      const shippingCharge = calcShipping(subtotal, {
-        charge: zone.charge,
-        freeShippingThreshold: zone.freeShippingThreshold ?? null,
+      const { discount, shippingCharge, total } = calcTotals({
+        lines,
+        zone: {
+          charge: zone.charge,
+          freeShippingThreshold: zone.freeShippingThreshold ?? null,
+        },
+        coupon,
+        comboDiscount,
       });
-      const total = subtotal - discount + shippingCharge;
+      orderDiscount = discount;
 
       const number = orderNumber();
 
@@ -340,6 +364,8 @@ export async function placeOrderAction(
             couponId,
             couponCode: coupon?.code ?? null,
             subtotal,
+            comboDiscount,
+            combos: combos.map(({ slug, name, sets }) => ({ slug, name, sets })),
             discount,
             shippingCharge,
             total,
@@ -433,7 +459,7 @@ export async function placeOrderAction(
   if (createdNumber && !duplicateOf) {
     await sendPurchaseToMeta({
       id: createdNumber,
-      itemsTotal: subtotal - orderDiscount,
+      itemsTotal: afterCombo - orderDiscount,
       customer: {
         name: customerName,
         phone: customerPhone,

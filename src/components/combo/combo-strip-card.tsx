@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { ComboAddButton } from "@/components/combo/combo-add-button";
 import {
+  comboLeastStock,
   comboTrackItems,
   type ComboCardData,
 } from "@/components/combo/combo-card";
@@ -96,7 +97,9 @@ export function ComboStripCard({
         <div className="mt-4">
           <ComboAddButton
             comboSlug={combo.slug}
+            comboPrice={combo.price}
             trackItems={comboTrackItems(combo)}
+            disabled={comboLeastStock(combo) <= 0}
           />
         </div>
       </div>

@@ -19,18 +19,24 @@ import { addComboToCartAction } from "@/server/actions/cart";
  */
 export function ComboAddButton({
   comboSlug,
+  comboPrice,
   trackItems,
+  disabled = false,
 }: {
   comboSlug: string;
-  /** Each member at its own price, which is what the cart charges. */
+  /** What the set costs in the cart once its combo saving applies. */
+  comboPrice: number;
+  /** The members, reported at their own prices; the event value is the combo price. */
   trackItems: TrackItem[];
+  /** A member is out of stock, so the set cannot be added. */
+  disabled?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
 
   return (
     <Button
       className="w-full"
-      disabled={pending}
+      disabled={disabled || pending}
       onClick={() =>
         startTransition(async () => {
           const data = new FormData();
@@ -40,7 +46,7 @@ export function ComboAddButton({
 
           if (result.ok) {
             notifyCartChanged();
-            trackEcommerce("add_to_cart", trackItems);
+            trackEcommerce("add_to_cart", trackItems, { value: comboPrice });
             toast.success(result.message);
           } else {
             toast.error(result.message);
@@ -48,7 +54,7 @@ export function ComboAddButton({
         })
       }
     >
-      {pending ? "Adding…" : "Add combo to cart"}
+      {disabled ? "Out of stock" : pending ? "Adding…" : "Add combo to cart"}
     </Button>
   );
 }
