@@ -7,6 +7,7 @@ import { truncateBenefit } from "@/lib/format";
 import { Types } from "mongoose";
 import type { QueryFilter } from "mongoose";
 
+import { COMBO_BY_SLUG } from "@/data/combos";
 import { PER_PAGE } from "@/lib/listing-params";
 import type { FeedProduct } from "@/lib/tracking/feed";
 import {
@@ -21,6 +22,7 @@ import {
   Brand,
   Category,
   Combo,
+  type ComboDoc,
   DeliveryZone,
   Order,
   Product,
@@ -659,6 +661,28 @@ export async function getCombos() {
     .sort({ position: 1 })
     .lean();
 
+  return resolveCombos(combos);
+}
+
+/** One active bundle, for its own page at /combos/[slug]. */
+// cache(): generateMetadata and the page both ask for it in one render
+export const getComboBySlug = cache(async function getComboBySlug(slug: string) {
+  await connectDb();
+
+  const combo = await Combo.findOne({ slug, isActive: true }).lean();
+  if (!combo) return null;
+
+  const [resolved] = await resolveCombos([combo]);
+  return resolved ?? null;
+});
+
+/** Members resolved against the live catalogue, shared by the two above. */
+async function resolveCombos(
+  combos: Pick<
+    ComboDoc,
+    "_id" | "name" | "slug" | "description" | "concern" | "imageUrl" | "price" | "productSlugs"
+  >[],
+) {
   const slugs = [...new Set(combos.flatMap((c) => c.productSlugs))];
 
   const products = await Product.find({ slug: { $in: slugs }, isActive: true })
@@ -675,8 +699,10 @@ export async function getCombos() {
       const members = combo.productSlugs.map((slug) => bySlug.get(slug)!);
 
       // "Bought separately" from today's prices, not the figure stored at the
-      // last combos:sync, so it cannot drift when a member's price changes
+      // last combos:sync, so it cannot drift when a member's price changes —
+      // unless the seed states its own regular price, which is fixed copy
       const separately = members.reduce((sum, product) => sum + product.price, 0);
+      const anchor = COMBO_BY_SLUG.get(combo.slug)?.regularPrice ?? separately;
 
       return {
         id: combo._id.toString(),
@@ -686,7 +712,7 @@ export async function getCombos() {
         concern: combo.concern ?? null,
         imageUrl: combo.imageUrl ?? null,
         price: combo.price,
-        comparePrice: separately > combo.price ? separately : null,
+        comparePrice: anchor > combo.price ? anchor : null,
         products: members.map((product) => {
           const image = [...(product.images ?? [])].sort(
             (a, b) => a.position - b.position,

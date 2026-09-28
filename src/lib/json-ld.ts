@@ -97,6 +97,8 @@ export function articleJsonLd(post: ArticleJsonLdInput) {
 type ProductJsonLdInput = {
   name: string;
   slug: string;
+  /** The page's path when it is not /product/[slug] — a combo's, say. */
+  path?: string;
   description: string | null;
   sku: string | null;
   images: string[];
@@ -121,7 +123,7 @@ const stripMarkdown = (s: string) =>
     .trim();
 
 export function productJsonLd(product: ProductJsonLdInput) {
-  const url = absoluteUrl(`/product/${product.slug}`);
+  const url = absoluteUrl(product.path ?? `/product/${product.slug}`);
   const availability = product.inStock
     ? "https://schema.org/InStock"
     : "https://schema.org/OutOfStock";

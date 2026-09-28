@@ -1,9 +1,10 @@
 import type { MetadataRoute } from "next";
 
 import { POSTS } from "@/data/blog";
+import { COMBO_BY_SLUG } from "@/data/combos";
 import { CONCERNS } from "@/data/concerns";
 import { absoluteUrl } from "@/lib/site";
-import { getSitemapEntries } from "@/server/queries/catalog";
+import { getCombos, getSitemapEntries } from "@/server/queries/catalog";
 
 export const revalidate = 3600;
 
@@ -32,7 +33,10 @@ const STATIC_ROUTES: {
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const { products, categories, brands } = await getSitemapEntries();
+  const [{ products, categories, brands }, combos] = await Promise.all([
+    getSitemapEntries(),
+    getCombos(),
+  ]);
   const now = new Date();
 
   return [
@@ -66,6 +70,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly" as const,
       priority: 0.8,
     })),
+    // only live combos with a page of their own; the rest 404
+    ...combos
+      .filter((combo) => COMBO_BY_SLUG.get(combo.slug)?.page)
+      .map((combo) => ({
+        url: absoluteUrl(`/combos/${combo.slug}`),
+        lastModified: now,
+        changeFrequency: "weekly" as const,
+        priority: 0.7,
+      })),
     ...brands.map((brand) => ({
       url: absoluteUrl(`/brand/${brand.slug}`),
       lastModified: brand.updatedAt,

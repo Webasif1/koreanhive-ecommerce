@@ -95,6 +95,8 @@ export function planCombo(
   );
 
   const price = combo.price as number;
+  // the seed's stated regular price when it has one, else the members' sum
+  const anchor = combo.regularPrice ?? sum;
 
   return {
     status: "publish",
@@ -102,6 +104,6 @@ export function planCombo(
     price,
     // only a saving when the bundle genuinely costs less than its parts; a
     // "was" price that is not higher is a fake discount
-    comparePrice: sum > price ? sum : null,
+    comparePrice: anchor > price ? anchor : null,
   };
 }

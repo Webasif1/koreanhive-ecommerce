@@ -97,7 +97,44 @@ export type ComboSeed = {
    * discount is a pricing bug waiting to happen.
    */
   price: number | null;
+  /**
+   * A fixed "regular price" to strike through, instead of the members' sum.
+   *
+   * Only for a combo whose client copy names its own anchor — the Brightening
+   * Glow Combo is advertised against the three products' regular (compare)
+   * prices, not what they sell for today. The saving at checkout is still
+   * worked out from live prices, so this changes what the card and page say,
+   * never what a customer is charged.
+   */
+  regularPrice?: number;
+  /** Copy for the combo's own page at /combos/[slug]; no page without it. */
+  page?: ComboPage;
   position: number;
+};
+
+export type ComboPageSection = {
+  heading: string;
+  paragraphs?: string[];
+  /** A bold lead-in, then the text; `label` is optional for plain bullets. */
+  items?: { label?: string; text: string }[];
+  ordered?: boolean;
+};
+
+/**
+ * The long-form page for a combo.
+ *
+ * Structured rather than markdown: nothing in the shop renders markdown, and
+ * the client's "## heading / **bold**" copy maps cleanly onto sections and
+ * labelled items.
+ */
+export type ComboPage = {
+  /** The H1 — the client's full product title. */
+  title: string;
+  metaTitle: string;
+  metaDescription: string;
+  shortDescription: string;
+  sections: ComboPageSection[];
+  faqs: { question: string; answer: string }[];
 };
 
 /** Product slugs, in the order the routine is used. */
@@ -341,6 +378,104 @@ export const COMBOS: ComboSeed[] = [
     ],
     price: 3990,
     position: 9,
+  },
+  {
+    name: "Korean Brightening Glow Combo",
+    slug: "korean-brightening-glow-combo",
+    concern: "Dullness · Uneven tone · Dark marks",
+    tag: "Brightening",
+    badge: "3-STEP ROUTINE",
+    description:
+      "A gentle 3-step Korean routine for dull skin, uneven tone and dark marks. Cleanse, brighten, repair. Made light enough for Bangladesh's humid weather.",
+    bestFor: "Dull or uneven skin — oily, combination and sensitive types included.",
+    note: "Tone and dark marks usually improve after 4–8 weeks of daily use. Daytime sunscreen required; not included. Patch test first if your skin reacts easily.",
+    routine:
+      "AM: Cleanse → toner (optional) → ampoule → cream → sunscreen. PM: Cleanse → toner (optional) → ampoule → cream.",
+    imageUrl: `${IMAGE}/01.jpeg`,
+    imageAlt:
+      "Korean Brightening Glow Combo — The Face Shop Rice Water cleanser, SKIN1004 tone ampoule and Dr. Althea 345 cream",
+    steps: [
+      { slug: "the-face-shop-rice-water-bright-cleanser-150ml", name: "The Face Shop Rice Water Bright Cleanser 150ml", role: "Cleanses without tightness", short: "Rice water cleanser" },
+      { slug: "skin1004-madagascar-centella-tone-brightening-capsule-ampoule-30ml", name: "SKIN1004 Madagascar Centella Tone Brightening Capsule Ampoule 30ml", role: "Targets dullness and marks", short: "Brightening ampoule" },
+      { slug: "dralthea-345-relief-cream-50ml", name: "Dr. Althea 345 Relief Cream 50ml", role: "Repairs the moisture barrier", short: "Barrier gel-cream" },
+    ],
+    // ৳4,050 at today's prices, less the client's ৳200 extra discount
+    price: 3850,
+    // the three products' regular prices: ৳1,199 + ৳1,100 + ৳2,750
+    regularPrice: 5049,
+    page: {
+      title:
+        "Korean Brightening Glow Combo – Rice Water Cleanser + Centella Tone Ampoule + Dr. Althea 345 Cream",
+      metaTitle: "Korean Brightening Combo: Rice Water, Centella & Dr. Althea",
+      // The client's draft said "Save ৳460", which matches no price here; the
+      // saving against the regular price is ৳1,199.
+      metaDescription:
+        "3-step Korean brightening routine: Face Shop Rice Water cleanser, SKIN1004 tone ampoule & Dr. Althea 345 cream. Save ৳1,199. Free delivery, COD.",
+      shortDescription:
+        "A gentle 3-step Korean routine for dull skin, uneven tone and dark marks. Cleanse, brighten, repair. Made light enough for Bangladesh's humid weather. 100% authentic, direct from Korea.",
+      sections: [
+        {
+          heading: "Your 3-step Korean glow routine",
+          paragraphs: [
+            "Brightening doesn't need harsh products. This combo pairs a gentle rice water cleanser with a niacinamide + tranexamic acid ampoule and a barrier-repair gel-cream, so your tone evens out while your skin stays calm.",
+          ],
+        },
+        {
+          heading: "What's inside",
+          ordered: true,
+          items: [
+            { label: "The Face Shop Rice Water Bright Cleanser 150ml", text: "Removes oil, sweat and sunscreen without leaving skin tight. Rice water extract helps skin look clearer and brighter." },
+            { label: "SKIN1004 Madagascar Centella Tone Brightening Capsule Ampoule 30ml", text: "Niacinamide and tranexamic acid target dullness, uneven tone and post-acne marks. Centella calms redness." },
+            { label: "Dr. Althea 345 Relief Cream 50ml", text: "Lightweight gel-cream with resveratrol, niacinamide, centella and ceramides. Repairs the moisture barrier and helps fade dark marks without feeling greasy." },
+          ],
+        },
+        {
+          heading: "How to use (morning & night)",
+          ordered: true,
+          items: [
+            { label: "Cleanse", text: "Massage a small amount onto damp skin for 30–60 seconds, rinse." },
+            { label: "Toner", text: "Optional, your own." },
+            { label: "Ampoule", text: "2–3 drops, press gently into the face." },
+            { label: "Cream", text: "A pea-sized amount to seal everything in." },
+            { label: "Morning", text: "Always finish with sunscreen. Tone brightening won't last without sun protection." },
+          ],
+        },
+        {
+          heading: "Who it's for",
+          items: [
+            { text: "Dull, tired-looking skin" },
+            { text: "Uneven tone, dark spots and post-acne marks" },
+            { text: "Oily, combination and sensitive skin" },
+            { text: "Anyone who wants a simple routine that works in hot, humid weather" },
+          ],
+        },
+        {
+          heading: "What to expect",
+          paragraphs: [
+            "Skin feels calmer and more hydrated within the first week. Brighter, more even tone usually shows after 4–8 weeks of daily use. Results vary from person to person.",
+          ],
+        },
+        {
+          heading: "Why Korean Hive",
+          items: [
+            { text: "100% authentic, imported directly from Korea with verifiable batch codes" },
+            { text: "Free delivery all over Bangladesh on this combo" },
+            { text: "Cash on delivery" },
+            { text: "1–2 days in Dhaka, 2–4 days nationwide" },
+          ],
+        },
+      ],
+      faqs: [
+        { question: "When will I see results?", answer: "Hydration and calmer skin come first. Tone and dark marks usually improve after 4–8 weeks of daily use together with sunscreen." },
+        { question: "Is it safe for sensitive or acne-prone skin?", answer: "All three are gentle, non-harsh formulas. Patch-test first if your skin reacts easily." },
+        { question: "Can I use it with vitamin C, retinol or AHA/BHA?", answer: "Use the combo alone for the first 2 weeks. After that, add other actives on alternate nights." },
+        { question: "How long does one combo last?", answer: "Around 6–8 weeks of twice-daily use. The ampoule usually lasts longer." },
+        { question: "Can I use it during pregnancy?", answer: "Please check with your doctor first." },
+        { question: "Are these original?", answer: "Yes. Every item is imported directly from Korea, and the batch codes can be verified." },
+        { question: "Returns?", answer: "7-day returns on unopened products." },
+      ],
+    },
+    position: 10,
   },
 ];
 

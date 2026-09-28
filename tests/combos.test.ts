@@ -121,6 +121,56 @@ describe("combo publication", () => {
     if (plan.status !== "publish") return;
     assert.equal(plan.comparePrice, null);
   });
+
+  it("uses a stated regular price in place of the members' sum", () => {
+    const plan = planCombo(
+      combo({ regularPrice: 2500 }),
+      catalog({ a: live(1000), b: live(800) }),
+    );
+
+    assert.equal(plan.status, "publish");
+    if (plan.status !== "publish") return;
+    assert.equal(plan.comparePrice, 2500);
+  });
+
+  it("drops a stated regular price that is not above the combo price", () => {
+    const plan = planCombo(
+      combo({ regularPrice: 1500 }),
+      catalog({ a: live(1000), b: live(800) }),
+    );
+
+    assert.equal(plan.status, "publish");
+    if (plan.status !== "publish") return;
+    assert.equal(plan.comparePrice, null);
+  });
+});
+
+describe("combo pages", () => {
+  it("gives every combo page usable metadata and an FAQ", () => {
+    for (const entry of COMBOS) {
+      if (!entry.page) continue;
+      const { page } = entry;
+
+      assert.ok(page.metaTitle.length <= 60, `${entry.slug}: meta title too long`);
+      assert.ok(
+        page.metaDescription.length <= 160,
+        `${entry.slug}: meta description is ${page.metaDescription.length} chars`,
+      );
+      assert.ok(page.sections.length > 0, `${entry.slug} has no sections`);
+      assert.ok(page.faqs.length > 0, `${entry.slug} has no FAQ`);
+    }
+  });
+
+  it("states a saving in the meta description that the prices bear out", () => {
+    const glow = COMBOS.find((entry) => entry.slug === "korean-brightening-glow-combo");
+    assert.ok(glow?.page && glow.price && glow.regularPrice);
+
+    const saving = (glow.regularPrice - glow.price).toLocaleString("en-US");
+    assert.ok(
+      glow.page.metaDescription.includes(`Save ৳${saving}`),
+      glow.page.metaDescription,
+    );
+  });
 });
 
 describe("the configured combos", () => {
@@ -259,10 +309,11 @@ describe("comboShelf", () => {
     assert.ok(shelf.some((e) => e.status === "live" && e.combo.slug === "legacy"));
   });
 
-  it("shows all ten configured combos with nothing published", () => {
+  it("shows every configured combo with nothing published", () => {
     const shelf = comboShelf(COMBOS, []);
     assert.equal(shelf.length, COMBOS.length);
-    assert.equal(COMBOS.length, 10);
+    // the content document's ten, plus the Brightening Glow Combo
+    assert.equal(COMBOS.length, 11);
   });
 
   it("names every product in every combo, for the coming-soon list", () => {

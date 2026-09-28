@@ -201,6 +201,10 @@ export function ComboCard({
   freeDeliveryEverywhereAbove: number | null;
 }) {
   const saving = combo.comparePrice ? combo.comparePrice - combo.price : 0;
+  // A stated regular price is not what the members cost today, so the card
+  // neither calls it "bought separately" nor lists prices that would not add
+  // up to it.
+  const statedRegular = seed?.regularPrice !== undefined;
   const perDay = Math.round(combo.price / DAYS_IN_ROUTINE);
   const freeDelivery =
     freeDeliveryEverywhereAbove !== null &&
@@ -232,29 +236,32 @@ export function ComboCard({
           </p>
         )}
 
-        <ol className="mt-5">
-          {combo.products.map((product, index) => {
-            const step = seed?.steps.find(
-              (entry) => entry.slug === product.slug,
-            );
+        {/* A combo with its own page names its products there, and its poster
+            already pictures them, so the card leaves the list out. */}
+        {!seed?.page && (
+          <ol className="mt-5">
+            {combo.products.map((product, index) => {
+              const step = seed?.steps.find(
+                (entry) => entry.slug === product.slug,
+              );
 
-            return (
-              <li
-                key={product.slug}
-                className="flex items-center gap-3.5 border-t border-hairline py-2.5"
-              >
-                {/* Picture first, then the step number — the design reads the
-                    routine down the column of thumbnails, and the number is
-                    the caption to it rather than a bullet before it. */}
-                <span className="relative size-[52px] shrink-0 border border-hairline bg-white">
-                  {product.imageUrl && (
-                    <Image
-                      src={productImage(product.imageUrl)}
-                      alt=""
-                      fill
-                      sizes="52px"
-                      className="object-contain"
-                    />
+              return (
+                <li
+                  key={product.slug}
+                  className="flex items-center gap-3.5 border-t border-hairline py-2.5"
+                >
+                  {/* Picture first, then the step number — the design reads the
+                      routine down the column of thumbnails, and the number is
+                      the caption to it rather than a bullet before it. */}
+                  <span className="relative size-[52px] shrink-0 border border-hairline bg-white">
+                    {product.imageUrl && (
+                      <Image
+                        src={productImage(product.imageUrl)}
+                        alt=""
+                        fill
+                        sizes="52px"
+                        className="object-contain"
+                      />
                   )}
                 </span>
                 <span className="w-6 shrink-0 font-mono text-[10.5px] font-semibold text-mulberry-hover">
@@ -273,20 +280,23 @@ export function ComboCard({
                     </span>
                   )}
                 </span>
-                <span className="shrink-0 text-[12px] text-muted-foreground">
-                  {formatBDT(product.price)}
-                </span>
+                {!statedRegular && (
+                  <span className="shrink-0 text-[12px] text-muted-foreground">
+                    {formatBDT(product.price)}
+                  </span>
+                )}
               </li>
             );
           })}
         </ol>
+        )}
       </div>
 
       {/* -------------------------------------------------------- the price */}
       <div className="flex flex-col border-t border-border bg-cream/60 p-6 md:col-span-2 lg:col-span-1 lg:border-l lg:border-t-0 lg:p-7">
         {combo.comparePrice && (
           <div className="flex items-baseline justify-between text-[12.5px] text-muted-foreground">
-            <span>Bought separately</span>
+            <span>{statedRegular ? "Regular price" : "Bought separately"}</span>
             <span className="line-through">{formatBDT(combo.comparePrice)}</span>
           </div>
         )}
@@ -338,7 +348,13 @@ export function ComboCard({
             disabled={leastStock <= 0}
           />
           <Button variant="outline" className="w-full" asChild>
-            <Link href={`/product/${combo.products[0]?.slug ?? ""}`}>
+            <Link
+              href={
+                seed?.page
+                  ? `/combos/${combo.slug}`
+                  : `/product/${combo.products[0]?.slug ?? ""}`
+              }
+            >
               See what&apos;s inside
             </Link>
           </Button>
