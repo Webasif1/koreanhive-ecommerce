@@ -8,7 +8,7 @@ import type { AdminFormState } from "@/lib/admin-state";
 import { slugify } from "@/lib/slugify";
 import { requireAdmin } from "@/server/admin-guard";
 import { connectDb } from "@/server/db";
-import { Product } from "@/server/models";
+import { Product, Review } from "@/server/models";
 
 function intOrNull(value: FormDataEntryValue | null) {
   const raw = String(value ?? "").trim();
@@ -152,6 +152,38 @@ export async function toggleProductActiveAction(formData: FormData) {
   revalidatePath("/shop");
   revalidatePath(`/product/${product.slug}`);
   revalidateTag("products", "max");
+}
+
+/**
+ * Permanently removes a product and its reviews.
+ *
+ * Past orders are unaffected: every order line snapshots the name, slug,
+ * price and image at the time of sale, so history still reads correctly.
+ * Their productId simply stops resolving, which the restock and best-seller
+ * code already skip.
+ */
+export async function deleteProductAction(formData: FormData) {
+  await requireAdmin();
+  await connectDb();
+
+  const id = String(formData.get("id") ?? "");
+  if (!isValidObjectId(id)) return;
+
+  const product = await Product.findById(id).select("slug").lean();
+  if (!product) return;
+
+  await Promise.all([
+    Product.deleteOne({ _id: id }),
+    Review.deleteMany({ productId: id }),
+  ]);
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/products");
+  revalidatePath("/shop");
+  revalidatePath(`/product/${product.slug}`);
+  revalidateTag("products", "max");
+
+  if (formData.get("redirect") === "list") redirect("/admin/products");
 }
 
 /** Deactivates rather than deletes: order items keep a reference to the

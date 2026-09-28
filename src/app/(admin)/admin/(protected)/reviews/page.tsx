@@ -39,21 +39,21 @@ export default async function AdminReviewsPage() {
       </div>
 
       {pending.length > 0 && (
-        <p className="rounded-xl border bg-card px-4 py-3 text-sm">
+        <p className="rounded-2xl border bg-card px-4 py-3 text-sm">
           <strong>{pending.length}</strong>{" "}
           {pending.length === 1 ? "review is" : "reviews are"} waiting for you.
         </p>
       )}
 
       {reviews.length === 0 ? (
-        <p className="rounded-xl border bg-card px-5 py-10 text-center text-sm text-muted-foreground">
+        <p className="rounded-2xl border bg-card px-5 py-10 text-center text-sm text-muted-foreground">
           No reviews yet. They arrive as customers submit them from
           /reviews after delivery.
         </p>
       ) : (
         <ul className="space-y-4">
           {reviews.map((review) => (
-            <li key={review.id} className="rounded-xl border bg-card p-5">
+            <li key={review.id} className="rounded-2xl border bg-card p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold">{review.productName}</p>

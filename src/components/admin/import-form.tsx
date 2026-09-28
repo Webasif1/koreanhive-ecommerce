@@ -61,7 +61,7 @@ export function ImportForm() {
 
   return (
     <form action={formAction} className="space-y-8">
-      <div className="grid gap-6 rounded-xl border bg-card p-5 md:grid-cols-2">
+      <div className="grid gap-6 rounded-2xl border bg-card p-5 md:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="file">CSV or JSON file</Label>
           <Input id="file" name="file" type="file" accept=".csv,.json,text/csv,application/json" />

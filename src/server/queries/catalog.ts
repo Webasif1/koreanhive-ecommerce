@@ -950,8 +950,13 @@ async function bestSellers(take: number): Promise<ProductCardData[]> {
   await connectDb();
 
   const rows = await Order.aggregate<{ _id: Types.ObjectId; units: number }>([
-    // a cancelled or returned order is not a sale
-    { $match: { status: { $nin: ["CANCELLED", "RETURNED"] } } },
+    // a cancelled, returned or trashed order is not a sale
+    {
+      $match: {
+        status: { $nin: ["CANCELLED", "RETURNED"] },
+        deletedAt: null,
+      },
+    },
     { $unwind: "$items" },
     { $match: { "items.productId": { $ne: null } } },
     {

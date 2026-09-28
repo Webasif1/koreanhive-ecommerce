@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { adminButton } from "@/components/admin/admin-ui";
 import {
   FieldError,
   Input,
@@ -41,9 +41,9 @@ function SubmitButton({ isEdit }: { isEdit: boolean }) {
   const { pending } = useFormStatus();
 
   return (
-    <Button type="submit" size="lg" disabled={pending}>
+    <button type="submit" disabled={pending} className={adminButton("primary", "md", "h-11 px-6")}>
       {pending ? "Saving…" : isEdit ? "Save changes" : "Create product"}
-    </Button>
+    </button>
   );
 }
 
@@ -76,7 +76,7 @@ export function ProductForm({
         </p>
       )}
 
-      <section className="grid gap-4 rounded-xl border bg-card p-5 sm:grid-cols-2">
+      <section className="grid gap-4 rounded-2xl border bg-card p-5 sm:grid-cols-2">
         <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="name">Name</Label>
           <Input
@@ -200,7 +200,7 @@ export function ProductForm({
         </label>
       </section>
 
-      <section className="space-y-4 rounded-xl border bg-card p-5">
+      <section className="space-y-4 rounded-2xl border bg-card p-5">
         <h2 className="font-display font-semibold">Content</h2>
 
         <div className="space-y-1.5">
@@ -255,7 +255,7 @@ export function ProductForm({
         </div>
       </section>
 
-      <section className="grid gap-4 rounded-xl border bg-card p-5 sm:grid-cols-2">
+      <section className="grid gap-4 rounded-2xl border bg-card p-5 sm:grid-cols-2">
         <h2 className="font-display font-semibold sm:col-span-2">SEO</h2>
 
         <div className="space-y-1.5">
@@ -279,9 +279,9 @@ export function ProductForm({
 
       <div className="flex items-center gap-3">
         <SubmitButton isEdit={Boolean(product)} />
-        <Button variant="outline" asChild>
-          <Link href="/admin/products">Cancel</Link>
-        </Button>
+        <Link href="/admin/products" className={adminButton("outline", "md", "h-11 px-6")}>
+          Cancel
+        </Link>
       </div>
     </form>
   );

@@ -430,6 +430,11 @@ export type OrderDoc = {
   /** Set once, the first time this order returns stock. Guards against a
    *  CANCELLED → PENDING → CANCELLED cycle crediting stock twice. */
   restockedAt?: Date | null;
+  /** Set when staff move the order to the admin trash. Trashed orders are
+   *  hidden from every list, report and customer lookup until restored. */
+  deletedAt?: Date | null;
+  /** Where the order came from: the shop checkout or typed in by staff. */
+  source?: "CHECKOUT" | "ADMIN";
   items: OrderItemSub[];
   statusHistory: OrderStatusHistorySub[];
   /** Every order email attempted, and whether Gmail took it. */
@@ -521,6 +526,8 @@ const orderSchema = new Schema<OrderDoc>(
     },
     placedAt: { type: Date, default: Date.now },
     restockedAt: { type: Date, default: null },
+    deletedAt: { type: Date, default: null },
+    source: { type: String, enum: ["CHECKOUT", "ADMIN"], default: "CHECKOUT" },
     items: { type: [orderItemSchema], default: [] },
     statusHistory: { type: [orderStatusHistorySchema], default: [] },
     /**
@@ -552,6 +559,7 @@ orderSchema.index({ status: 1, createdAt: -1 });
 // the admin list sorts on placedAt, not createdAt
 orderSchema.index({ status: 1, placedAt: -1 });
 orderSchema.index({ placedAt: -1 });
+orderSchema.index({ deletedAt: 1, placedAt: -1 });
 
 // -------------------------------------------------- social & saved
 

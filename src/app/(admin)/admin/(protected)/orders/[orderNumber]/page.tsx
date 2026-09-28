@@ -1,7 +1,10 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Badge } from "@/components/ui/badge";
+import { PaymentBadge, StatusBadge, adminButton } from "@/components/admin/admin-ui";
+import { OrderActions } from "@/components/admin/order-actions";
+import { SubmitButton } from "@/components/admin/submit-button";
 import { Button } from "@/components/ui/button";
 import { Label, Select, Textarea } from "@/components/ui/input";
 import { formatBDT, formatDateTime, formatDeliveryWindow } from "@/lib/format";
@@ -45,31 +48,72 @@ export default async function AdminOrderDetailPage({
     url: ratingUrl,
   });
 
+  const deleted = Boolean(order.deletedAt);
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <Link
-          href="/admin/orders"
-          className="text-sm text-muted-foreground hover:text-primary"
-        >
-          ← Orders
-        </Link>
-        <h1 className="font-display text-2xl font-semibold tracking-tight">
-          {order.orderNumber}
-        </h1>
-        <Badge variant="muted">{ORDER_STATUS_LABEL[order.status]}</Badge>
-        <Badge variant={order.paymentStatus === "PAID" ? "success" : "muted"}>
-          {order.paymentStatus}
-        </Badge>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <Link
+            href="/admin/orders"
+            className="mb-1 inline-block text-sm text-muted-foreground hover:text-primary"
+          >
+            ← Orders
+          </Link>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="font-display text-2xl font-semibold tracking-tight">
+              {order.orderNumber}
+            </h1>
+            <StatusBadge status={order.status} />
+            <PaymentBadge status={order.paymentStatus} />
+            {order.source === "ADMIN" && (
+              <span className="rounded-full bg-hairline px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+                Entered by staff
+              </span>
+            )}
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Placed {formatDateTime(order.placedAt.toISOString())} ·{" "}
+            {order.paymentMethod === "COD" ? "Cash on delivery" : order.paymentMethod}
+          </p>
+        </div>
+
+        <OrderActions
+          orderNumber={order.orderNumber}
+          status={order.status}
+          deleted={deleted}
+          size="md"
+          trashRedirect
+        />
       </div>
+
+      {deleted && (
+        <p className="rounded-2xl border border-sale-border bg-sale-bg px-5 py-3 text-sm text-sale">
+          This order is in the trash
+          {order.deletedAt ? ` since ${formatDateTime(order.deletedAt.toISOString())}` : ""}.
+          It is hidden from reports and customer tracking. Restore it to make
+          changes.
+        </p>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="space-y-6">
-          <section className="rounded-xl border bg-card p-5">
+          <section className="rounded-2xl border bg-card p-5">
             <h2 className="font-display font-semibold">Items</h2>
             <ul className="mt-3 divide-y">
               {order.items.map((item) => (
-                <li key={item.id} className="flex gap-3 py-3 text-sm">
+                <li key={item.id} className="flex items-center gap-3 py-3 text-sm">
+                  <div className="relative size-12 shrink-0 overflow-hidden rounded-xl border bg-muted">
+                    {item.imageUrl && (
+                      <Image
+                        src={item.imageUrl}
+                        alt={item.productName}
+                        fill
+                        sizes="48px"
+                        className="object-contain p-1"
+                      />
+                    )}
+                  </div>
                   <div className="flex-1">
                     <p className="font-medium">{item.productName}</p>
                     <p className="text-xs text-muted-foreground">
@@ -116,7 +160,7 @@ export default async function AdminOrderDetailPage({
             </dl>
           </section>
 
-          <section className="rounded-xl border bg-card p-5">
+          <section className="rounded-2xl border bg-card p-5">
             <h2 className="font-display font-semibold">History</h2>
             <ul className="mt-3 space-y-3">
               {order.statusHistory.map((entry) => (
@@ -138,7 +182,7 @@ export default async function AdminOrderDetailPage({
 
           {/* What happened to each email, so "the customer never got it" has
               an answer on this page rather than in a server log. */}
-          <section className="rounded-xl border bg-card p-5">
+          <section className="rounded-2xl border bg-card p-5">
             <h2 className="font-display font-semibold">Emails</h2>
             {order.emailLog.length === 0 ? (
               <p className="mt-3 text-sm text-muted-foreground">
@@ -173,7 +217,7 @@ export default async function AdminOrderDetailPage({
               nothing goes out automatically — and the link carries the order
               number but never the phone. */}
           {order.status === "DELIVERED" && (
-            <section className="rounded-xl border border-primary/30 bg-blush p-5">
+            <section className="rounded-2xl border border-primary/30 bg-blush p-5">
               <h2 className="font-display font-semibold">Ask for a rating</h2>
               <p className="mt-1 text-xs text-muted-foreground">
                 Delivered — a good moment to ask. The customer opens the link,
@@ -200,8 +244,13 @@ export default async function AdminOrderDetailPage({
             </section>
           )}
 
-          <section className="rounded-xl border bg-card p-5">
+          {!deleted && (
+          <>
+          <section className="rounded-2xl border bg-card p-5">
             <h2 className="font-display font-semibold">Update status</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              For anything the buttons above do not cover, or to add a note.
+            </p>
             <form action={updateOrderStatusAction} className="mt-3 space-y-3">
               <input
                 type="hidden"
@@ -229,9 +278,9 @@ export default async function AdminOrderDetailPage({
                 />
               </div>
 
-              <Button type="submit" className="w-full">
+              <SubmitButton className={adminButton("primary", "md", "w-full")} pendingLabel="Saving…">
                 Save status
-              </Button>
+              </SubmitButton>
               <p className="text-xs text-muted-foreground">
                 Cancelling or returning puts the stock back. Marking a COD
                 order delivered also marks it paid.
@@ -245,7 +294,7 @@ export default async function AdminOrderDetailPage({
             </form>
           </section>
 
-          <section className="rounded-xl border bg-card p-5">
+          <section className="rounded-2xl border bg-card p-5">
             <h2 className="font-display font-semibold">Payment</h2>
             <form action={updatePaymentStatusAction} className="mt-3 space-y-3">
               <input
@@ -269,17 +318,19 @@ export default async function AdminOrderDetailPage({
                 </Select>
               </div>
 
-              <Button type="submit" variant="outline" className="w-full">
+              <SubmitButton className={adminButton("outline", "md", "w-full")} pendingLabel="Saving…">
                 Save payment status
-              </Button>
+              </SubmitButton>
               <p className="text-xs text-muted-foreground">
                 Use REFUNDED when money already collected goes back to the
                 customer, e.g. after a return.
               </p>
             </form>
           </section>
+          </>
+          )}
 
-          <section className="space-y-1 rounded-xl border bg-card p-5 text-sm">
+          <section className="space-y-1 rounded-2xl border bg-card p-5 text-sm">
             <h2 className="font-display font-semibold">Customer</h2>
             <p>{order.customerName}</p>
             <p className="text-muted-foreground">{order.customerPhone}</p>

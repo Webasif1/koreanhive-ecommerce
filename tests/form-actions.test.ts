@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 
 /**
  * Guards the bug that made every "Buy Now" button on the site dead.
@@ -18,7 +19,9 @@ import { test } from "node:test";
  * it shipped. So the rule is checked here instead, against the source text.
  */
 
-const SRC = new URL("../src", import.meta.url).pathname;
+// fileURLToPath, not `.pathname`: on Windows the latter is "/D:/…", which
+// join() turned into "D:\D:\…" and the whole guard crashed before running
+const SRC = fileURLToPath(new URL("../src", import.meta.url));
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {

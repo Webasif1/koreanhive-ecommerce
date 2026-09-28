@@ -23,7 +23,7 @@ export default async function AdminCouponsPage() {
 
       <CouponForm />
 
-      <div className="overflow-x-auto rounded-xl border bg-card">
+      <div className="overflow-x-auto rounded-2xl border bg-card">
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/50 text-left">
             <tr>

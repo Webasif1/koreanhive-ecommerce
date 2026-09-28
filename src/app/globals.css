@@ -37,6 +37,18 @@
   --brand-star: #856a0f;
   --brand-chip-border: #e3c5d8;
 
+  /* Admin-only status tints. The storefront never uses these: an order's
+     status needs more distinct colours than the shop's red/green rule
+     allows. Each foreground clears 4.5:1 on its own background. */
+  --admin-warn: #95590a;
+  --admin-warn-bg: #fdf3e1;
+  --admin-info: #2458a8;
+  --admin-info-bg: #e9f0fb;
+  --admin-violet: #6a3d9a;
+  --admin-violet-bg: #f1eafa;
+  --admin-teal: #0d6e78;
+  --admin-teal-bg: #e3f4f5;
+
   /* square corners are a rule of the system, not a preference */
   --radius: 2px;
 
@@ -144,6 +156,15 @@
   --color-success-border: var(--brand-success-border);
   --color-star: var(--brand-star);
   --color-chip-border: var(--brand-chip-border);
+
+  --color-admin-warn: var(--admin-warn);
+  --color-admin-warn-bg: var(--admin-warn-bg);
+  --color-admin-info: var(--admin-info);
+  --color-admin-info-bg: var(--admin-info-bg);
+  --color-admin-violet: var(--admin-violet);
+  --color-admin-violet-bg: var(--admin-violet-bg);
+  --color-admin-teal: var(--admin-teal);
+  --color-admin-teal-bg: var(--admin-teal-bg);
 
   /* Hind Siliguri sits directly after Poppins in every stack, not at the
      end. Font fallback resolves per glyph, so Latin comes from Poppins and

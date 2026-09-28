@@ -2,25 +2,32 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Images, LayoutDashboard, LogOut, Package, ReceiptText, Star, TicketPercent } from "lucide-react";
+import { CalendarDays, Plus } from "lucide-react";
 
 import { auth } from "@/auth";
-import { Button } from "@/components/ui/button";
-import { logoutAction } from "@/server/actions/admin/session";
+import { adminButton } from "@/components/admin/admin-ui";
+import { AdminSidebar } from "@/components/admin/admin-sidebar";
+import { getPendingCount } from "@/server/queries/admin";
 
 export const metadata: Metadata = {
   title: { default: "Admin", template: "%s | Korean Hive Admin" },
   robots: { index: false, follow: false },
 };
 
-const nav = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/orders", label: "Orders", icon: ReceiptText },
-  { href: "/admin/products", label: "Products", icon: Package },
-  { href: "/admin/coupons", label: "Coupons", icon: TicketPercent },
-  { href: "/admin/banners", label: "Banners", icon: Images },
-  { href: "/admin/reviews", label: "Reviews", icon: Star },
-];
+/** The shop runs on Dhaka time, whatever the server's clock says. */
+function greeting(now: Date) {
+  const hour = Number(
+    new Intl.DateTimeFormat("en-GB", {
+      hour: "numeric",
+      hourCycle: "h23",
+      timeZone: "Asia/Dhaka",
+    }).format(now),
+  );
+
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
 
 export default async function AdminLayout({
   children,
@@ -35,65 +42,56 @@ export default async function AdminLayout({
     redirect("/admin/login");
   }
 
+  const pendingCount = await getPendingCount();
+  const now = new Date();
+  const who = session.user.name || session.user.email?.split("@")[0] || "there";
+  const initial = who.charAt(0).toUpperCase();
+  const today = new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Asia/Dhaka",
+  }).format(now);
+
   return (
-    <div className="flex min-h-screen flex-col bg-muted/30">
-      <header className="border-b bg-background">
-        <div className="mx-auto flex w-full max-w-7xl items-center gap-4 px-4 py-3">
-          <Link href="/admin" className="flex items-center gap-2">
-            <span className="grid size-8 place-items-center rounded-full bg-primary font-display text-sm font-bold text-primary-foreground">
-              K
-            </span>
-            <span className="font-display font-semibold">Admin</span>
-          </Link>
+    <div className="min-h-screen bg-background">
+      <div className="lg:pl-64">
+        <header className="sticky top-0 z-20 border-b bg-card/90 backdrop-blur">
+          <div className="flex items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
+            <AdminSidebar pendingCount={pendingCount} />
 
-          <nav className="hidden flex-1 items-center gap-1 md:flex">
-            {nav.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-display text-base font-semibold sm:text-lg">
+                {greeting(now)}, {who}!
+              </p>
+              <p className="hidden truncate text-xs text-muted-foreground sm:block">
+                Here&apos;s what&apos;s happening with your store today
+              </p>
+            </div>
 
-          <div className="ml-auto flex items-center gap-3">
-            <span className="hidden text-xs text-muted-foreground sm:inline">
-              {session.user.email}
+            <span className="hidden items-center gap-2 rounded-xl border bg-card px-3 py-2 text-sm font-medium md:inline-flex">
+              <CalendarDays className="size-4 text-muted-foreground" />
+              {today}
             </span>
-            <Link
-              href="/"
-              className="text-xs text-muted-foreground hover:text-primary"
-            >
-              View shop
+
+            <Link href="/admin/orders/new" className={adminButton("primary", "md", "hidden sm:inline-flex")}>
+              <Plus />
+              New order
             </Link>
-            <form action={logoutAction}>
-              <Button type="submit" variant="outline" size="sm">
-                <LogOut />
-                Sign out
-              </Button>
-            </form>
+
+            <span
+              className="grid size-10 shrink-0 place-items-center rounded-full bg-ink font-display text-sm font-semibold text-white"
+              title={session.user.email ?? undefined}
+            >
+              {initial}
+            </span>
           </div>
-        </div>
+        </header>
 
-        <nav className="flex gap-1 overflow-x-auto border-t px-4 py-2 md:hidden">
-          {nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent"
-            >
-              <item.icon className="size-3.5" />
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-      </header>
-
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
-        {children}
-      </main>
+        <main className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          <div className="mx-auto w-full max-w-[1400px]">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

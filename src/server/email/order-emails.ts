@@ -78,14 +78,20 @@ async function deliver(
 }
 
 /** New order: a heads-up to the shop, a thank-you to the customer. */
-export function queueOrderPlacedEmails(orderNumber: string) {
+export function queueOrderPlacedEmails(
+  orderNumber: string,
+  // staff who typed an order in themselves do not need telling about it
+  { notifyShop = true }: { notifyShop?: boolean } = {},
+) {
   after(async () => {
     const order = await loadOrder(orderNumber);
     if (!order) return;
 
     await Promise.all([
       // replying to the shop copy writes straight to the customer
-      deliver(orderNumber, "shop new order", shopInbox() ?? "(shop inbox not set)", shopNewOrderEmail(order), order.customerEmail),
+      notifyShop
+        ? deliver(orderNumber, "shop new order", shopInbox() ?? "(shop inbox not set)", shopNewOrderEmail(order), order.customerEmail)
+        : null,
       deliver(orderNumber, "customer placed", order.customerEmail, customerOrderEmail(order, "placed")),
     ]);
   });

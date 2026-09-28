@@ -1,6 +1,5 @@
 "use server";
 
-import { randomBytes } from "node:crypto";
 import { redirect } from "next/navigation";
 import { isValidObjectId, Types } from "mongoose";
 
@@ -12,6 +11,7 @@ import {
 } from "@/lib/bd-districts";
 import type { CheckoutState } from "@/lib/checkout-state";
 import { applyCombos } from "@/lib/combo-pricing";
+import { generateOrderNumber } from "@/lib/order-number";
 import { calcTotals, type CouponRule } from "@/lib/pricing";
 import { toTrackItem } from "@/lib/tracking/shared";
 import {
@@ -28,27 +28,6 @@ import { queueOrderPlacedEmails } from "@/server/email/order-emails";
 import { Coupon, DeliveryZone, Order, Product } from "@/server/models";
 import { getLiveCombos } from "@/server/queries/cart";
 import { sendPurchaseToMeta } from "@/server/tracking/meta-capi";
-
-const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no I/O/0/1
-
-function orderNumber() {
-  const now = new Date();
-  const stamp = [
-    String(now.getFullYear()).slice(2),
-    String(now.getMonth() + 1).padStart(2, "0"),
-    String(now.getDate()).padStart(2, "0"),
-  ].join("");
-
-  // crypto, not Math.random: order numbers are handed out in public and
-  // should not be predictable from one another
-  const bytes = randomBytes(5);
-  const random = Array.from(
-    { length: 5 },
-    (_, i) => ALPHABET[bytes[i] % ALPHABET.length],
-  ).join("");
-
-  return `KH-${stamp}-${random}`;
-}
 
 /**
  * Trimmed and length-capped.
@@ -348,7 +327,7 @@ export async function placeOrderAction(
       });
       orderDiscount = discount;
 
-      const number = orderNumber();
+      const number = generateOrderNumber();
 
       await Order.create(
         [

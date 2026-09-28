@@ -97,6 +97,8 @@ export async function findOrderForTracking(
   const order = await Order.findOne({
     orderNumber,
     customerPhone: phone,
+    // an order staff moved to the trash is not one the customer can track
+    deletedAt: null,
   }).lean();
 
   if (!order) return null;
@@ -152,7 +154,7 @@ export async function findOrderForTracking(
 export async function getOrderByNumber(orderNumber: string) {
   await connectDb();
 
-  const order = await Order.findOne({ orderNumber }).lean();
+  const order = await Order.findOne({ orderNumber, deletedAt: null }).lean();
   if (!order) return null;
 
   const zone = await DeliveryZone.findById(order.deliveryZoneId).lean();

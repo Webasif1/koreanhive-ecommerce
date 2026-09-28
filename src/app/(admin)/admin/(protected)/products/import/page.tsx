@@ -33,7 +33,7 @@ export default function ImportProductsPage() {
 
       <ImportForm />
 
-      <details className="rounded-xl border bg-card p-5">
+      <details className="rounded-2xl border bg-card p-5">
         <summary className="cursor-pointer text-sm font-semibold">
           Which columns can I use?
         </summary>

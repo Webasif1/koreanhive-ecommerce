@@ -164,6 +164,7 @@ export async function getReviewableItems(
     orderNumber,
     customerPhone: phone,
     status: "DELIVERED",
+    deletedAt: null,
   }).lean();
 
   if (!order) return null;

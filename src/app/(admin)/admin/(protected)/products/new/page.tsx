@@ -1,3 +1,6 @@
+import Link from "next/link";
+
+import { PageHeader } from "@/components/admin/admin-ui";
 import { ProductForm } from "@/components/admin/product-form";
 import { getProductFormOptions } from "@/server/queries/admin";
 
@@ -10,9 +13,17 @@ export default async function NewProductPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-2xl font-semibold tracking-tight">
-        New product
-      </h1>
+      <PageHeader
+        back={
+          <Link
+            href="/admin/products"
+            className="mb-1 inline-block text-sm text-muted-foreground hover:text-primary"
+          >
+            ← Products
+          </Link>
+        }
+        title="New product"
+      />
       <ProductForm brands={brands} categories={categories} />
     </div>
   );

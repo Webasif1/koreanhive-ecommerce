@@ -1,10 +1,11 @@
 import "server-only";
 
-import { isValidObjectId } from "mongoose";
+import { isValidObjectId, type Types } from "mongoose";
 
 import { requireAdmin } from "@/server/admin-guard";
 import { connectDb } from "@/server/db";
 import { comboNames } from "@/lib/combo-pricing";
+import { percentChange, rangeWindow, type SalesRange } from "@/lib/sales-range";
 import {
   Banner,
   Brand,
@@ -17,50 +18,164 @@ import {
   Review,
 } from "@/server/models";
 
-export async function getDashboardStats() {
+/** Trashed orders are invisible to every admin read except the Trash view. */
+const LIVE = { deletedAt: null };
+
+/** Cancelled and returned orders never became money. */
+const NOT_A_SALE = ["CANCELLED", "RETURNED"];
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** For the sidebar badge, on every admin page. */
+export async function getPendingCount() {
   await requireAdmin();
   await connectDb();
 
-  const since = new Date();
-  since.setDate(since.getDate() - 30);
+  return Order.countDocuments({ ...LIVE, status: "PENDING" });
+}
 
-  const [orderCount, pendingCount, productCount, lowStock, revenueRows, recent] =
-    await Promise.all([
-      Order.countDocuments({}),
-      Order.countDocuments({ status: "PENDING" }),
-      Product.countDocuments({ isActive: true }),
-      Product.countDocuments({ isActive: true, stock: { $lte: 5 } }),
-      // cancelled and returned orders never became money
-      Order.aggregate<{ total: number }>([
-        {
-          $match: {
-            placedAt: { $gte: since },
-            status: { $nin: ["CANCELLED", "RETURNED"] },
-          },
-        },
-        { $group: { _id: null, total: { $sum: "$total" } } },
-      ]),
-      Order.find({})
-        .select("orderNumber customerName total status placedAt")
-        .sort({ placedAt: -1 })
-        .limit(8)
-        .lean(),
+export async function getDashboardStats(range: SalesRange) {
+  await requireAdmin();
+  await connectDb();
+
+  const window = rangeWindow(range);
+  const current = { $gte: window.since };
+  const previous = { $gte: window.previousSince, $lt: window.since };
+
+  const statusCounts = (placedAt: object) =>
+    Order.aggregate<{ _id: string; count: number }>([
+      { $match: { ...LIVE, placedAt } },
+      { $group: { _id: "$status", count: { $sum: 1 } } },
     ]);
 
-  return {
-    orderCount,
-    pendingCount,
+  const revenue = (placedAt: object) =>
+    Order.aggregate<{ total: number }>([
+      { $match: { ...LIVE, placedAt, status: { $nin: NOT_A_SALE } } },
+      { $group: { _id: null, total: { $sum: "$total" } } },
+    ]);
+
+  const [
+    nowCounts,
+    beforeCounts,
+    nowRevenue,
+    beforeRevenue,
+    series,
     productCount,
     lowStock,
-    revenue30d: revenueRows[0]?.total ?? 0,
+    recent,
+    topRows,
+  ] = await Promise.all([
+    statusCounts(current),
+    statusCounts(previous),
+    revenue(current),
+    revenue(previous),
+    Order.aggregate<{ _id: string; revenue: number; orders: number }>([
+      { $match: { ...LIVE, placedAt: current, status: { $nin: NOT_A_SALE } } },
+      {
+        $group: {
+          _id: {
+            $dateToString: {
+              format: window.bucketFormat,
+              date: "$placedAt",
+              timezone: "Asia/Dhaka",
+            },
+          },
+          revenue: { $sum: "$total" },
+          orders: { $sum: 1 },
+        },
+      },
+    ]),
+    Product.countDocuments({ isActive: true }),
+    Product.countDocuments({ isActive: true, stock: { $lte: 5 } }),
+    Order.find(LIVE)
+      .select("orderNumber customerName customerPhone total status paymentStatus placedAt items._id")
+      .sort({ placedAt: -1 })
+      .limit(8)
+      .lean(),
+    Order.aggregate<{ _id: Types.ObjectId; units: number }>([
+      { $match: { ...LIVE, placedAt: current, status: { $nin: NOT_A_SALE } } },
+      { $unwind: "$items" },
+      { $match: { "items.productId": { $ne: null } } },
+      { $group: { _id: "$items.productId", units: { $sum: "$items.quantity" } } },
+      { $sort: { units: -1, _id: -1 } },
+      { $limit: 5 },
+    ]),
+  ]);
+
+  const count = (rows: { _id: string; count: number }[], status?: string) =>
+    rows
+      .filter((row) => !status || row._id === status)
+      .reduce((sum, row) => sum + row.count, 0);
+
+  const kpi = (
+    rows: [typeof nowCounts, typeof beforeCounts],
+    status?: string,
+  ) => {
+    const value = count(rows[0], status);
+    return { value, change: percentChange(value, count(rows[1], status)) };
+  };
+
+  const both: [typeof nowCounts, typeof beforeCounts] = [nowCounts, beforeCounts];
+  const revenueNow = nowRevenue[0]?.total ?? 0;
+  const revenueBefore = beforeRevenue[0]?.total ?? 0;
+
+  const byBucket = new Map(series.map((row) => [row._id, row]));
+
+  const topProducts = await Product.find({
+    _id: { $in: topRows.map((row) => row._id) },
+  })
+    .select("name slug images")
+    .lean();
+  const productById = new Map(topProducts.map((p) => [p._id.toString(), p]));
+
+  return {
+    range,
+    orders: kpi(both),
+    delivered: kpi(both, "DELIVERED"),
+    cancelled: kpi(both, "CANCELLED"),
+    pending: count(nowCounts, "PENDING"),
+    productCount,
+    lowStock,
+    revenue: {
+      value: revenueNow,
+      difference: revenueNow - revenueBefore,
+      change: percentChange(revenueNow, revenueBefore),
+    },
+    chart: window.buckets.map((bucket) => ({
+      key: bucket.key,
+      label: bucket.label,
+      revenue: byBucket.get(bucket.key)?.revenue ?? 0,
+      orders: byBucket.get(bucket.key)?.orders ?? 0,
+    })),
     recent: recent.map((order) => ({
       id: order._id.toString(),
       orderNumber: order.orderNumber,
       customerName: order.customerName,
+      customerPhone: order.customerPhone,
       total: order.total,
       status: order.status,
+      paymentStatus: order.paymentStatus,
       placedAt: order.placedAt,
+      itemCount: order.items.length,
     })),
+    topProducts: topRows.flatMap((row) => {
+      const product = productById.get(row._id.toString());
+      if (!product) return [];
+      const image = [...(product.images ?? [])].sort(
+        (a, b) => a.position - b.position,
+      )[0];
+      return [
+        {
+          id: product._id.toString(),
+          name: product.name,
+          slug: product.slug,
+          imageUrl: image?.url ?? null,
+          units: row.units,
+        },
+      ];
+    }),
   };
 }
 
@@ -74,19 +189,43 @@ export const ADMIN_PAGE_SIZE = 50;
  * loses sight of its own history in a month. The product list had no limit at
  * all and pulled whole documents, descriptions and images included.
  */
-export async function getAdminOrders(status?: string, page = 1) {
+export async function getAdminOrders({
+  status,
+  page = 1,
+  q,
+}: {
+  /** a status, "ALL", or "TRASH" for the soft-deleted orders */
+  status?: string;
+  page?: number;
+  q?: string;
+}) {
   await requireAdmin();
   await connectDb();
 
-  const filter =
-    status && status !== "ALL" ? { status: status as OrderDoc["status"] } : {};
+  const search = (q ?? "").trim().slice(0, 80);
+  const filter: Record<string, unknown> =
+    status === "TRASH" ? { deletedAt: { $ne: null } } : { ...LIVE };
+
+  if (status && status !== "ALL" && status !== "TRASH") {
+    filter.status = status as OrderDoc["status"];
+  }
+
+  if (search) {
+    const pattern = new RegExp(escapeRegex(search), "i");
+    filter.$or = [
+      { orderNumber: pattern },
+      { customerName: pattern },
+      // phones are stored normalised, so match on the digits typed
+      { customerPhone: new RegExp(escapeRegex(search.replace(/\D/g, "") || search)) },
+    ];
+  }
 
   const current = Number.isInteger(page) && page > 0 ? page : 1;
 
   const [orders, total] = await Promise.all([
     Order.find(filter)
       .select(
-        "orderNumber customerName customerPhone district total status paymentStatus placedAt items._id",
+        "orderNumber customerName customerPhone district total status paymentStatus placedAt deletedAt source items._id",
       )
       .sort({ placedAt: -1, _id: -1 })
       .skip((current - 1) * ADMIN_PAGE_SIZE)
@@ -106,6 +245,8 @@ export async function getAdminOrders(status?: string, page = 1) {
       status: order.status,
       paymentStatus: order.paymentStatus,
       placedAt: order.placedAt,
+      deletedAt: order.deletedAt ?? null,
+      source: order.source ?? "CHECKOUT",
       _count: { items: order.items.length },
     })),
     page: current,
@@ -145,9 +286,13 @@ export async function getAdminOrder(orderNumber: string) {
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
     placedAt: order.placedAt,
+    deletedAt: order.deletedAt ?? null,
+    source: order.source ?? "CHECKOUT",
     items: order.items.map((item) => ({
       id: item._id.toString(),
       productName: item.productName,
+      productSlug: item.productSlug,
+      imageUrl: item.imageUrl ?? null,
       variantName: item.variantName ?? null,
       unitPrice: item.unitPrice,
       quantity: item.quantity,
@@ -181,13 +326,31 @@ export async function getAdminOrder(orderNumber: string) {
   };
 }
 
-export async function getAdminProducts() {
+export const PRODUCT_FILTERS = ["ALL", "ACTIVE", "HIDDEN", "LOW"] as const;
+export type ProductFilter = (typeof PRODUCT_FILTERS)[number];
+
+export async function getAdminProducts({
+  q,
+  filter = "ALL",
+}: { q?: string; filter?: ProductFilter } = {}) {
   await requireAdmin();
   await connectDb();
 
+  const search = (q ?? "").trim().slice(0, 80);
+  const where: Record<string, unknown> = {};
+
+  if (filter === "ACTIVE") where.isActive = true;
+  if (filter === "HIDDEN") where.isActive = false;
+  if (filter === "LOW") Object.assign(where, { isActive: true, stock: { $lte: 5 } });
+
+  if (search) {
+    const pattern = new RegExp(escapeRegex(search), "i");
+    where.$or = [{ name: pattern }, { sku: pattern }, { slug: pattern }];
+  }
+
   const [products, brands, categories] = await Promise.all([
-    Product.find({})
-      .select("name slug price stock isActive isFeatured brandId categoryId images")
+    Product.find(where)
+      .select("name slug sku price comparePrice stock isActive isFeatured brandId categoryId images")
       .sort({ updatedAt: -1 })
       .limit(500)
       .lean(),
@@ -209,7 +372,9 @@ export async function getAdminProducts() {
       id: product._id.toString(),
       name: product.name,
       slug: product.slug,
+      sku: product.sku ?? null,
       price: product.price,
+      comparePrice: product.comparePrice ?? null,
       stock: product.stock,
       isActive: product.isActive,
       isFeatured: product.isFeatured,
@@ -281,6 +446,57 @@ export async function getProductFormOptions() {
   };
 }
 
+export type OrderFormProduct = {
+  /** productId, or productId:variantId for a variant */
+  value: string;
+  label: string;
+  price: number;
+  stock: number;
+};
+
+/** Everything that can go on a manual order: each active product, and each
+ *  of its variants as its own line, with today's price and stock. */
+export async function getOrderFormProducts(): Promise<OrderFormProduct[]> {
+  await requireAdmin();
+  await connectDb();
+
+  const products = await Product.find({ isActive: true })
+    .select("name price stock variants")
+    .sort({ name: 1 })
+    .lean();
+
+  return products.flatMap((product) => {
+    const id = product._id.toString();
+
+    if (product.variants?.length) {
+      return product.variants.map((variant) => ({
+        value: `${id}:${variant._id.toString()}`,
+        label: `${product.name} — ${variant.name}`,
+        price: variant.price ?? product.price,
+        stock: variant.stock,
+      }));
+    }
+
+    return [{ value: id, label: product.name, price: product.price, stock: product.stock }];
+  });
+}
+
+/** For the manual order form's delivery estimate. */
+export async function getDeliveryZonesForForm() {
+  await requireAdmin();
+  await connectDb();
+
+  const zones = await DeliveryZone.find({ isActive: true })
+    .select("slug charge freeShippingThreshold")
+    .lean();
+
+  return zones.map((zone) => ({
+    slug: zone.slug,
+    charge: zone.charge,
+    freeShippingThreshold: zone.freeShippingThreshold ?? null,
+  }));
+}
+
 export async function getAdminCoupons() {
   await requireAdmin();
   await connectDb();
@@ -288,7 +504,7 @@ export async function getAdminCoupons() {
   const [coupons, rows] = await Promise.all([
     Coupon.find({}).sort({ createdAt: -1 }).lean(),
     Order.aggregate<{ _id: unknown; count: number }>([
-      { $match: { couponId: { $ne: null } } },
+      { $match: { couponId: { $ne: null }, ...LIVE } },
       { $group: { _id: "$couponId", count: { $sum: 1 } } },
     ]),
   ]);

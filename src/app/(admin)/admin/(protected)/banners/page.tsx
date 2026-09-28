@@ -28,7 +28,7 @@ export default async function AdminBannersPage() {
       <BannerForm />
 
       {banners.length === 0 ? (
-        <p className="rounded-xl border bg-card px-5 py-10 text-center text-sm text-muted-foreground">
+        <p className="rounded-2xl border bg-card px-5 py-10 text-center text-sm text-muted-foreground">
           No banners yet.
         </p>
       ) : (
@@ -36,7 +36,7 @@ export default async function AdminBannersPage() {
           {banners.map((banner) => (
             <li
               key={banner.id}
-              className="overflow-hidden rounded-xl border bg-card"
+              className="overflow-hidden rounded-2xl border bg-card"
             >
               <div className="relative aspect-[3/1] bg-muted">
                 <Image

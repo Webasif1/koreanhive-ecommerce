@@ -30,7 +30,7 @@ export function BannerForm() {
   return (
     <form
       action={formAction}
-      className="grid gap-4 rounded-xl border bg-card p-5 sm:grid-cols-2"
+      className="grid gap-4 rounded-2xl border bg-card p-5 sm:grid-cols-2"
     >
       <h2 className="font-display font-semibold sm:col-span-2">New banner</h2>
 
