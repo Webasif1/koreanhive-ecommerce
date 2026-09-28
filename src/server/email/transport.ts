@@ -5,23 +5,31 @@ import nodemailer, { type Transporter } from "nodemailer";
 import { siteConfig } from "@/lib/site";
 
 /**
- * Gmail over SMTP, with the shop account's app password.
+ * Order email over SMTP.
  *
- * GOOGLE_USER_PASSWORD is a Google *app password* (Account → Security →
- * 2-Step Verification → App passwords), never the account's real password —
- * Gmail refuses a plain password over SMTP.
+ * Two setups:
  *
- * Shared cPanel hosts often block one of Gmail's two SMTP ports, so unless
- * SMTP_PORT pins one, a connection failure on 465 (implicit TLS) retries on
- * 587 (STARTTLS). Timeouts are short so a blocked port fails in seconds with
- * a clear reason rather than hanging for minutes.
+ *   Gmail (the default): GOOGLE_USER_EMAIL + GOOGLE_USER_PASSWORD, where the
+ *   password is a Google *app password*. Works from a laptop, but the live
+ *   cPanel server's firewall refuses every outbound connection to Gmail
+ *   (ECONNREFUSED on 465 and 587), so nothing leaves production this way.
+ *
+ *   The host's own mail server: SMTP_HOST=localhost with SMTP_USER/SMTP_PASS
+ *   for a cPanel mailbox such as orders@koreanhive.com. The firewall allows
+ *   it, and the domain's SPF and DKIM already vouch for this server, so the
+ *   mail lands in inboxes rather than spam. SMTP_TLS_SERVERNAME names the
+ *   certificate to expect, since "localhost" is not on it.
+ *
+ * Unless SMTP_PORT pins one, a connection failure on 465 (implicit TLS)
+ * retries on 587 (STARTTLS). Timeouts are short so a blocked port fails in
+ * seconds with a clear reason rather than hanging for minutes.
  */
 
 const transporters = new Map<number, Transporter>();
 
 function credentials() {
-  const user = process.env.GOOGLE_USER_EMAIL?.trim();
-  const pass = process.env.GOOGLE_USER_PASSWORD?.replace(/\s+/g, "");
+  const user = (process.env.SMTP_USER || process.env.GOOGLE_USER_EMAIL)?.trim();
+  const pass = (process.env.SMTP_PASS || process.env.GOOGLE_USER_PASSWORD)?.replace(/\s+/g, "");
   return user && pass ? { user, pass } : null;
 }
 
@@ -29,12 +37,14 @@ function transporterFor(port: number, auth: { user: string; pass: string }) {
   let transport = transporters.get(port);
 
   if (!transport) {
+    const servername = process.env.SMTP_TLS_SERVERNAME?.trim();
     transport = nodemailer.createTransport({
       host: process.env.SMTP_HOST?.trim() || "smtp.gmail.com",
       port,
       secure: port === 465,
       requireTLS: port !== 465,
       auth,
+      ...(servername ? { tls: { servername } } : {}),
       connectionTimeout: 10_000,
       greetingTimeout: 10_000,
       socketTimeout: 20_000,
@@ -74,7 +84,12 @@ export function describeEmailError(error: unknown) {
   };
 
   if (code === "EAUTH" || responseCode === 535) {
-    return "Gmail rejected the login — check GOOGLE_USER_EMAIL and that GOOGLE_USER_PASSWORD is an app password";
+    return process.env.SMTP_USER
+      ? "the mail server rejected the login — check SMTP_USER and SMTP_PASS"
+      : "Gmail rejected the login — check GOOGLE_USER_EMAIL and that GOOGLE_USER_PASSWORD is an app password";
+  }
+  if (code === "ECONNREFUSED" || /ECONNREFUSED/.test(message ?? "")) {
+    return `${message?.slice(0, 160)} — this server's firewall blocks the connection; send through the host's own mail server (SMTP_HOST=localhost)`;
   }
   return [code, responseCode, message?.slice(0, 200)].filter(Boolean).join(" · ") || "unknown error";
 }
@@ -84,6 +99,7 @@ export function shopInbox() {
   return (
     process.env.ORDER_NOTIFY_EMAIL?.trim() ||
     process.env.GOOGLE_USER_EMAIL?.trim() ||
+    process.env.SMTP_USER?.trim() ||
     null
   );
 }
@@ -102,7 +118,8 @@ export async function sendMail(message: {
   if (!auth) {
     return {
       ok: false,
-      error: "not configured — GOOGLE_USER_EMAIL / GOOGLE_USER_PASSWORD are not set on this server",
+      error:
+        "not configured — set SMTP_USER / SMTP_PASS (or GOOGLE_USER_EMAIL / GOOGLE_USER_PASSWORD) on this server",
     };
   }
 
@@ -116,7 +133,9 @@ export async function sendMail(message: {
         subject: message.subject,
         html: message.html,
         text: message.text,
-        replyTo: message.replyTo ?? undefined,
+        // a customer who hits Reply should reach the shop inbox, not the
+        // sending mailbox, which nobody may read
+        replyTo: message.replyTo ?? shopInbox() ?? undefined,
       });
 
       if (info.rejected.length > 0) {

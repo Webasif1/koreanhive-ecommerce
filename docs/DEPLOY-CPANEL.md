@@ -99,12 +99,25 @@ Then **Add Variable** for each of these:
 | `GOOGLE_USER_EMAIL` | The shop Gmail that sends order emails (koreanhives@gmail.com) |
 | `GOOGLE_USER_PASSWORD` | That account's 16-letter **app password**, not its real password |
 
-Without the two `GOOGLE_USER_*` variables the shop still takes orders, but
-no order email is sent. Some shared hosts block outbound SMTP to Gmail
-(WHM's "SMTP Restrictions"): if emails arrive when you order locally but
-not from the live site, ask the host to allow outbound port 465, or add
-`SMTP_PORT` = `587`. Optional: `ORDER_NOTIFY_EMAIL` sends the shop copies
-to a different inbox.
+**This server blocks outbound SMTP to Gmail** (confirmed 2026-09-28: the
+email log showed `ECONNREFUSED` on both 465 and 587), so the live site sends
+through the host's own mail server instead:
+
+1. cPanel → **Email Accounts** → create `orders@koreanhive.com` with a
+   strong password.
+2. Add these variables, then **Restart** the app:
+
+| Variable | Value |
+|---|---|
+| `SMTP_HOST` | `localhost` |
+| `SMTP_USER` | `orders@koreanhive.com` |
+| `SMTP_PASS` | that mailbox's password |
+| `SMTP_TLS_SERVERNAME` | `mail.koreanhive.com` |
+| `ORDER_NOTIFY_EMAIL` | `koreanhives@gmail.com` (shop copies and customer replies go here) |
+
+The domain's SPF and DKIM already cover this server, so the mail is
+authenticated. Every attempt is recorded on the order — the admin order page
+shows "Sent" or the exact failure under **Emails**.
 
 `NEXT_PUBLIC_SITE_URL` is inlined into the client bundle **at build time**, so
 it must also be set in CI (as a repository *variable*, not a secret). Setting it
