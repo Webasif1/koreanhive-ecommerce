@@ -561,6 +561,52 @@ orderSchema.index({ status: 1, placedAt: -1 });
 orderSchema.index({ placedAt: -1 });
 orderSchema.index({ deletedAt: 1, placedAt: -1 });
 
+/**
+ * Everyone who has ordered, keyed by phone — the one thing every order has
+ * and the customer reliably gives the same way. Saved automatically when an
+ * order is placed, and kept when orders are later deleted, so the shop keeps
+ * its customer list. Order counts and spend are not stored here: they are
+ * worked out from the orders, so they can never drift.
+ */
+export type CustomerDoc = {
+  _id: Types.ObjectId;
+  /** normalised, 01XXXXXXXXX */
+  phone: string;
+  name: string;
+  email?: string | null;
+  addressLine?: string | null;
+  area?: string | null;
+  district?: string | null;
+  postalCode?: string | null;
+  /** staff-only notes, never shown to the customer */
+  note?: string | null;
+  firstOrderAt: Date;
+  lastOrderAt: Date;
+  source: "CHECKOUT" | "ADMIN";
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+const customerSchema = new Schema<CustomerDoc>(
+  {
+    phone: { type: String, required: true, unique: true },
+    name: { type: String, required: true },
+    email: { type: String, default: null },
+    addressLine: { type: String, default: null },
+    area: { type: String, default: null },
+    district: { type: String, default: null },
+    postalCode: { type: String, default: null },
+    note: { type: String, default: null },
+    firstOrderAt: { type: Date, required: true },
+    lastOrderAt: { type: Date, required: true },
+    source: { type: String, enum: ["CHECKOUT", "ADMIN"], default: "CHECKOUT" },
+  },
+  { timestamps: true },
+);
+
+customerSchema.index({ lastOrderAt: -1 });
+customerSchema.index({ firstOrderAt: -1 });
+
 // -------------------------------------------------- social & saved
 
 /**
@@ -732,6 +778,7 @@ export const Product = compile("Product", productSchema);
 export const DeliveryZone = compile("DeliveryZone", deliveryZoneSchema);
 export const Coupon = compile("Coupon", couponSchema);
 export const Order = compile("Order", orderSchema);
+export const Customer = compile("Customer", customerSchema);
 export const Review = compile("Review", reviewSchema);
 export const WishlistItem = compile("WishlistItem", wishlistItemSchema);
 export const Banner = compile("Banner", bannerSchema);

@@ -11,6 +11,8 @@ import {
   Brand,
   Category,
   Coupon,
+  Customer,
+  type CustomerDoc,
   DeliveryZone,
   Order,
   type OrderDoc,
@@ -479,6 +481,209 @@ export async function getOrderFormProducts(): Promise<OrderFormProduct[]> {
 
     return [{ value: id, label: product.name, price: product.price, stock: product.stock }];
   });
+}
+
+export const CUSTOMER_FILTERS = ["ALL", "REPEAT", "NEW"] as const;
+export type CustomerFilter = (typeof CUSTOMER_FILTERS)[number];
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Orders and spend per customer, worked out from the live orders so they
+ *  can never drift from what is actually there. */
+const customerStatsLookup = [
+  {
+    $lookup: {
+      from: Order.collection.name,
+      let: { phone: "$phone" },
+      pipeline: [
+        { $match: { $expr: { $eq: ["$customerPhone", "$$phone"] }, deletedAt: null } },
+        {
+          $group: {
+            _id: null,
+            orders: { $sum: 1 },
+            spent: {
+              $sum: { $cond: [{ $in: ["$status", NOT_A_SALE] }, 0, "$total"] },
+            },
+          },
+        },
+      ],
+      as: "stats",
+    },
+  },
+  {
+    $addFields: {
+      orderCount: { $ifNull: [{ $first: "$stats.orders" }, 0] },
+      totalSpent: { $ifNull: [{ $first: "$stats.spent" }, 0] },
+    },
+  },
+];
+
+export async function getAdminCustomers({
+  q,
+  filter = "ALL",
+  page = 1,
+}: {
+  q?: string;
+  filter?: CustomerFilter;
+  page?: number;
+}) {
+  await requireAdmin();
+  await connectDb();
+
+  const search = (q ?? "").trim().slice(0, 80);
+  const match: Record<string, unknown> = {};
+
+  if (search) {
+    const pattern = new RegExp(escapeRegex(search), "i");
+    const digits = search.replace(/\D/g, "");
+    match.$or = [
+      { name: pattern },
+      { email: pattern },
+      { phone: new RegExp(escapeRegex(digits || search)) },
+    ];
+  }
+  if (filter === "NEW") {
+    match.firstOrderAt = { $gte: new Date(Date.now() - 30 * DAY_MS) };
+  }
+
+  const current = Number.isInteger(page) && page > 0 ? page : 1;
+
+  const [result] = await Customer.aggregate<{
+    rows: (CustomerDoc & { orderCount: number; totalSpent: number })[];
+    total: { count: number }[];
+  }>([
+    { $match: match },
+    ...customerStatsLookup,
+    ...(filter === "REPEAT" ? [{ $match: { orderCount: { $gte: 2 } } }] : []),
+    { $sort: { lastOrderAt: -1, _id: -1 } },
+    {
+      $facet: {
+        rows: [
+          { $skip: (current - 1) * ADMIN_PAGE_SIZE },
+          { $limit: ADMIN_PAGE_SIZE },
+          { $project: { stats: 0 } },
+        ],
+        total: [{ $count: "count" }],
+      },
+    },
+  ]);
+
+  const total = result?.total[0]?.count ?? 0;
+
+  return {
+    customers: (result?.rows ?? []).map((customer) => ({
+      id: customer._id.toString(),
+      name: customer.name,
+      phone: customer.phone,
+      email: customer.email ?? null,
+      district: customer.district ?? null,
+      area: customer.area ?? null,
+      firstOrderAt: customer.firstOrderAt,
+      lastOrderAt: customer.lastOrderAt,
+      orderCount: customer.orderCount,
+      totalSpent: customer.totalSpent,
+      note: customer.note ?? null,
+    })),
+    page: current,
+    total,
+    totalPages: Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE)),
+  };
+}
+
+/** The strip above the customer table. */
+export async function getCustomerSummary() {
+  await requireAdmin();
+  await connectDb();
+
+  const [total, newThisMonth, repeatRows, unsyncedRows] = await Promise.all([
+    Customer.countDocuments({}),
+    Customer.countDocuments({ firstOrderAt: { $gte: new Date(Date.now() - 30 * DAY_MS) } }),
+    Order.aggregate<{ count: number }>([
+      { $match: LIVE },
+      { $group: { _id: "$customerPhone", orders: { $sum: 1 } } },
+      { $match: { orders: { $gte: 2 } } },
+      { $count: "count" },
+    ]),
+    // phones in the order history with no customer record yet
+    Order.aggregate<{ count: number }>([
+      { $group: { _id: "$customerPhone" } },
+      {
+        $lookup: {
+          from: Customer.collection.name,
+          localField: "_id",
+          foreignField: "phone",
+          as: "customer",
+        },
+      },
+      { $match: { customer: { $size: 0 } } },
+      { $count: "count" },
+    ]),
+  ]);
+
+  return {
+    total,
+    newThisMonth,
+    repeat: repeatRows[0]?.count ?? 0,
+    unsynced: unsyncedRows[0]?.count ?? 0,
+  };
+}
+
+export async function getAdminCustomer(id: string) {
+  await requireAdmin();
+  if (!isValidObjectId(id)) return null;
+  await connectDb();
+
+  const customer = await Customer.findById(id).lean();
+  if (!customer) return null;
+
+  const orders = await Order.find({ customerPhone: customer.phone, ...LIVE })
+    .select("orderNumber total status paymentStatus placedAt items._id source")
+    .sort({ placedAt: -1 })
+    .limit(200)
+    .lean();
+
+  const sales = orders.filter((order) => !NOT_A_SALE.includes(order.status));
+
+  return {
+    id: customer._id.toString(),
+    name: customer.name,
+    phone: customer.phone,
+    email: customer.email ?? null,
+    addressLine: customer.addressLine ?? null,
+    area: customer.area ?? null,
+    district: customer.district ?? null,
+    postalCode: customer.postalCode ?? null,
+    note: customer.note ?? null,
+    source: customer.source,
+    firstOrderAt: customer.firstOrderAt,
+    lastOrderAt: customer.lastOrderAt,
+    orderCount: orders.length,
+    totalSpent: sales.reduce((sum, order) => sum + order.total, 0),
+    averageOrder: sales.length
+      ? Math.round(sales.reduce((sum, order) => sum + order.total, 0) / sales.length)
+      : 0,
+    delivered: orders.filter((order) => order.status === "DELIVERED").length,
+    cancelled: orders.filter((order) => NOT_A_SALE.includes(order.status)).length,
+    orders: orders.map((order) => ({
+      id: order._id.toString(),
+      orderNumber: order.orderNumber,
+      total: order.total,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      placedAt: order.placedAt,
+      itemCount: order.items.length,
+      source: order.source ?? "CHECKOUT",
+    })),
+  };
+}
+
+/** For the order page's "View customer" link. */
+export async function getCustomerIdByPhone(phone: string) {
+  await requireAdmin();
+  await connectDb();
+
+  const customer = await Customer.findOne({ phone }).select("_id").lean();
+  return customer?._id.toString() ?? null;
 }
 
 /** For the manual order form's delivery estimate. */

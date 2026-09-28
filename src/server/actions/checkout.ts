@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { isValidObjectId, Types } from "mongoose";
 
 import {
@@ -23,6 +24,7 @@ import {
   writeCartCookie,
   writeCouponCookie,
 } from "@/server/cart-cookie";
+import { upsertCustomerFromOrder } from "@/server/customer-sync";
 import { connectDb, mongoose } from "@/server/db";
 import { queueOrderPlacedEmails } from "@/server/email/order-emails";
 import { Coupon, DeliveryZone, Order, Product } from "@/server/models";
@@ -454,6 +456,10 @@ export async function placeOrderAction(
   if (createdNumber && !duplicateOf) {
     // the shop's heads-up and the customer's thank-you, after the redirect
     queueOrderPlacedEmails(createdNumber);
+    // and onto the Customers list — after the response, and never able to
+    // fail the order (upsertCustomerFromOrder swallows its own errors)
+    const orderForCustomer = createdNumber;
+    after(() => upsertCustomerFromOrder(orderForCustomer));
 
     await sendPurchaseToMeta({
       id: createdNumber,

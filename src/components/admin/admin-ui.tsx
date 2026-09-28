@@ -69,12 +69,23 @@ export function PageHeader({
 export function Panel({
   className,
   children,
+  glass = false,
 }: {
   className?: string;
   children: ReactNode;
+  /** frosted instead of solid white — for the few feature surfaces */
+  glass?: boolean;
 }) {
   return (
-    <section className={cn("rounded-2xl border bg-card", className)}>{children}</section>
+    <section
+      className={cn(
+        "admin-shadow rounded-2xl border",
+        glass ? "admin-glass" : "bg-card",
+        className,
+      )}
+    >
+      {children}
+    </section>
   );
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -16,6 +16,7 @@ import {
   ShoppingBag,
   Star,
   TicketPercent,
+  Users,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -74,6 +75,7 @@ function SidebarBody({
       items: [
         { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
         { href: "/admin/orders", label: "Orders", icon: ReceiptText, badge: pendingCount },
+        { href: "/admin/customers", label: "Customers", icon: Users },
         { href: "/admin/products", label: "Products", icon: Package },
         { href: "/admin/reviews", label: "Reviews", icon: Star },
       ],
@@ -144,24 +146,51 @@ function SidebarBody({
   );
 }
 
+const DrawerContext = createContext<{
+  open: boolean;
+  setOpen: (open: boolean) => void;
+}>({ open: false, setOpen: () => {} });
+
+/**
+ * Shares the mobile drawer's state between the menu button (in the header)
+ * and the drawer itself (at the layout root).
+ *
+ * They are split on purpose: the header is frosted glass, and a
+ * backdrop-filter makes an element the containing block for position:fixed
+ * children. A sidebar or drawer rendered inside the header got pinned to the
+ * header's 70px instead of the viewport.
+ */
+export function AdminNavProvider({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <DrawerContext.Provider value={{ open, setOpen }}>{children}</DrawerContext.Provider>
+  );
+}
+
+export function AdminMenuButton() {
+  const { setOpen } = useContext(DrawerContext);
+
+  return (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className="grid size-10 shrink-0 place-items-center rounded-xl border bg-card/70 lg:hidden"
+      aria-label="Open menu"
+    >
+      <Menu className="size-5" />
+    </button>
+  );
+}
+
 export function AdminSidebar({ pendingCount }: { pendingCount: number }) {
   // every link in the drawer closes it via onNavigate
-  const [open, setOpen] = useState(false);
+  const { open, setOpen } = useContext(DrawerContext);
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r bg-card lg:block">
+      <aside className="admin-glass fixed inset-y-0 left-0 z-30 hidden w-64 border-r lg:block">
         <SidebarBody pendingCount={pendingCount} />
       </aside>
-
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="grid size-10 place-items-center rounded-xl border bg-card lg:hidden"
-        aria-label="Open menu"
-      >
-        <Menu className="size-5" />
-      </button>
 
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">

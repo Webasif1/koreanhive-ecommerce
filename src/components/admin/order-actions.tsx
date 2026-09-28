@@ -8,6 +8,7 @@ import { ORDER_ACTION_TONE, quickActionsFor } from "@/lib/admin-order-style";
 import type { OrderStatusValue } from "@/lib/order-status";
 import { cn } from "@/lib/utils";
 import {
+  deleteOrderForeverAction,
   restoreOrderAction,
   trashOrderAction,
   updateOrderStatusAction,
@@ -41,13 +42,29 @@ export function OrderActions({
 
   if (deleted) {
     return (
-      <form action={restoreOrderAction}>
-        <input type="hidden" name="orderNumber" value={orderNumber} />
-        <SubmitButton className={adminButton("info", size)} pendingLabel="Restoring…">
-          <ArchiveRestore />
-          Restore
-        </SubmitButton>
-      </form>
+      <div className="flex flex-wrap items-center justify-end gap-1.5">
+        <form action={restoreOrderAction}>
+          <input type="hidden" name="orderNumber" value={orderNumber} />
+          <SubmitButton className={adminButton("info", size)} pendingLabel="Restoring…">
+            <ArchiveRestore />
+            Restore
+          </SubmitButton>
+        </form>
+        <ConfirmAction
+          action={deleteOrderForeverAction}
+          fields={{ orderNumber, ...(trashRedirect ? { redirect: "list" } : {}) }}
+          trigger={
+            <>
+              <Trash2 />
+              Delete forever
+            </>
+          }
+          triggerClassName={adminButton("danger", size)}
+          title={`Delete ${orderNumber} forever?`}
+          description="The order is removed from the database and cannot be recovered. The customer's record stays in Customers."
+          confirmLabel="Delete forever"
+        />
+      </div>
     );
   }
 

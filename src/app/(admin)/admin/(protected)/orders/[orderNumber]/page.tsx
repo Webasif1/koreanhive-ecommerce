@@ -19,7 +19,7 @@ import {
   updateOrderStatusAction,
   updatePaymentStatusAction,
 } from "@/server/actions/admin/orders";
-import { getAdminOrder } from "@/server/queries/admin";
+import { getAdminOrder, getCustomerIdByPhone } from "@/server/queries/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +40,8 @@ export default async function AdminOrderDetailPage({
   const order = await getAdminOrder(orderNumber);
 
   if (!order) notFound();
+
+  const customerId = await getCustomerIdByPhone(order.customerPhone);
 
   const ratingUrl = absoluteUrl(ratingRequestPath(order.orderNumber));
   const ratingWhatsapp = whatsappRatingLink({
@@ -331,7 +333,17 @@ export default async function AdminOrderDetailPage({
           )}
 
           <section className="space-y-1 rounded-2xl border bg-card p-5 text-sm">
-            <h2 className="font-display font-semibold">Customer</h2>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-display font-semibold">Customer</h2>
+              {customerId && (
+                <Link
+                  href={`/admin/customers/${customerId}`}
+                  className="text-xs font-semibold text-primary hover:underline"
+                >
+                  View profile →
+                </Link>
+              )}
+            </div>
             <p>{order.customerName}</p>
             <p className="text-muted-foreground">{order.customerPhone}</p>
             {order.customerEmail && (

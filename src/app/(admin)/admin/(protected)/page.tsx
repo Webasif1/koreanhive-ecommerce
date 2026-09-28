@@ -73,7 +73,7 @@ function StatCard({
   hint?: string;
 }) {
   return (
-    <Panel className="flex items-center gap-4 p-5">
+    <Panel glass className="flex items-center gap-4 p-5 transition-shadow hover:shadow-md">
       <span className="grid size-12 shrink-0 place-items-center rounded-full bg-blush text-primary">
         <Icon className="size-5" />
       </span>
@@ -134,7 +134,7 @@ export default async function AdminDashboardPage({
         />
       </div>
 
-      <Panel className="p-5 sm:p-6">
+      <Panel glass className="p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="font-display text-lg font-semibold">Your sales report</h2>
@@ -257,7 +257,7 @@ export default async function AdminDashboardPage({
           )}
         </Panel>
 
-        <section className="flex min-h-[380px] flex-col overflow-hidden rounded-2xl border border-chip-border bg-gradient-to-br from-blush to-card">
+        <section className="flex min-h-[380px] flex-col overflow-hidden admin-glass admin-shadow rounded-2xl border">
           <div className="px-5 pt-5">
             <h2 className="font-display text-lg font-semibold">Best sellers 🎉</h2>
             <p className="mt-1 text-xs text-muted-foreground">

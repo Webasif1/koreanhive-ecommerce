@@ -43,7 +43,13 @@ const FIELD = "h-11 rounded-[10px] bg-card";
  */
 export function OrderForm(
   props:
-    | { mode: "create"; products: ProductOption[]; zones: Zone[] }
+    | {
+        mode: "create";
+        products: ProductOption[];
+        zones: Zone[];
+        /** a saved customer's details, for "New order" from their profile */
+        prefill?: Omit<OrderFormCustomer, "orderNumber"> | null;
+      }
     | { mode: "edit"; order: OrderFormCustomer },
 ) {
   const isCreate = props.mode === "create";
@@ -54,13 +60,14 @@ export function OrderForm(
   useActionToast(state);
 
   const order = props.mode === "edit" ? props.order : null;
+  const initial = order ?? (props.mode === "create" ? props.prefill : null) ?? null;
   const products = useMemo(
     () => (props.mode === "create" ? props.products : []),
     [props],
   );
   const zones = props.mode === "create" ? props.zones : [];
 
-  const [district, setDistrict] = useState(order?.district ?? "Dhaka");
+  const [district, setDistrict] = useState(initial?.district ?? "Dhaka");
   const [lines, setLines] = useState<Line[]>([{ key: 1, value: "", qty: 1 }]);
   const [discount, setDiscount] = useState(0);
 
@@ -199,7 +206,7 @@ export function OrderForm(
             <Input
               id="customerName"
               name="customerName"
-              defaultValue={order?.customerName}
+              defaultValue={initial?.customerName}
               required
               className={FIELD}
               aria-invalid={Boolean(err.customerName)}
@@ -214,7 +221,7 @@ export function OrderForm(
               name="customerPhone"
               type="tel"
               placeholder="01XXXXXXXXX"
-              defaultValue={order?.customerPhone}
+              defaultValue={initial?.customerPhone}
               required
               className={FIELD}
               aria-invalid={Boolean(err.customerPhone)}
@@ -230,7 +237,7 @@ export function OrderForm(
               id="customerEmail"
               name="customerEmail"
               type="email"
-              defaultValue={order?.customerEmail ?? ""}
+              defaultValue={initial?.customerEmail ?? ""}
               className={FIELD}
               aria-invalid={Boolean(err.customerEmail)}
             />
@@ -243,7 +250,7 @@ export function OrderForm(
               id="addressLine"
               name="addressLine"
               placeholder="House, road, block"
-              defaultValue={order?.addressLine}
+              defaultValue={initial?.addressLine}
               required
               className={FIELD}
               aria-invalid={Boolean(err.addressLine)}
@@ -256,7 +263,7 @@ export function OrderForm(
             <Input
               id="area"
               name="area"
-              defaultValue={order?.area}
+              defaultValue={initial?.area}
               required
               className={FIELD}
               aria-invalid={Boolean(err.area)}
@@ -290,7 +297,7 @@ export function OrderForm(
             <Input
               id="postalCode"
               name="postalCode"
-              defaultValue={order?.postalCode ?? ""}
+              defaultValue={initial?.postalCode ?? ""}
               className={FIELD}
             />
           </div>
@@ -302,7 +309,7 @@ export function OrderForm(
             <Textarea
               id="note"
               name="note"
-              defaultValue={order?.note ?? ""}
+              defaultValue={initial?.note ?? ""}
               className="rounded-[10px] bg-card"
               placeholder="Delivery instructions, call before coming…"
             />

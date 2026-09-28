@@ -9,7 +9,9 @@ import {
   adminButton,
   chipClass,
 } from "@/components/admin/admin-ui";
+import { ConfirmAction } from "@/components/admin/confirm-action";
 import { OrderActions } from "@/components/admin/order-actions";
+import { emptyTrashAction } from "@/server/actions/admin/orders";
 import { ORDER_STATUS_STYLE } from "@/lib/admin-order-style";
 import { formatBDT, formatDateTime } from "@/lib/format";
 import { ORDER_FLOW, ORDER_STATUS_LABEL, type OrderStatusValue } from "@/lib/order-status";
@@ -57,10 +59,28 @@ export default async function AdminOrdersPage({
             : "Confirm, pack, ship and track every order."
         }
         actions={
-          <Link href="/admin/orders/new" className={adminButton("primary")}>
-            <Plus />
-            New order
-          </Link>
+          <>
+            {trash && total > 0 && (
+              <ConfirmAction
+                action={emptyTrashAction}
+                fields={{}}
+                trigger={
+                  <>
+                    <Trash2 />
+                    Empty trash
+                  </>
+                }
+                triggerClassName={adminButton("danger")}
+                title={`Delete all ${total} trashed ${total === 1 ? "order" : "orders"} forever?`}
+                description="Every order in the trash is removed from the database and cannot be recovered. Customer records stay in Customers."
+                confirmLabel="Empty trash"
+              />
+            )}
+            <Link href="/admin/orders/new" className={adminButton("primary")}>
+              <Plus />
+              New order
+            </Link>
+          </>
         }
       />
 

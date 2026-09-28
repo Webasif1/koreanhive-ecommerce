@@ -535,3 +535,22 @@ body {
 header:has(.kh-nav[open]) {
   z-index: 80;
 }
+
+/* ---------------------------------------------------------------
+   Admin surfaces. Frosted glass over the soft brand-tinted backdrop
+   the admin layout paints, and one quiet shadow. Never used in the
+   shop. Do not pair admin-glass with a bg-* utility: it sets the
+   background itself.
+   --------------------------------------------------------------- */
+@utility admin-glass {
+  background-color: rgb(255 255 255 / 0.62);
+  border-color: rgb(255 255 255 / 0.75);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+}
+
+@utility admin-shadow {
+  box-shadow:
+    0 1px 2px rgb(36 26 36 / 0.04),
+    0 10px 30px -14px rgb(123 42 107 / 0.18);
+}

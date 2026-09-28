@@ -6,7 +6,11 @@ import { CalendarDays, Plus } from "lucide-react";
 
 import { auth } from "@/auth";
 import { adminButton } from "@/components/admin/admin-ui";
-import { AdminSidebar } from "@/components/admin/admin-sidebar";
+import {
+  AdminMenuButton,
+  AdminNavProvider,
+  AdminSidebar,
+} from "@/components/admin/admin-sidebar";
 import { getPendingCount } from "@/server/queries/admin";
 
 export const metadata: Metadata = {
@@ -54,15 +58,24 @@ export default async function AdminLayout({
   }).format(now);
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="lg:pl-64">
-        {/* No backdrop-blur here: a backdrop-filter makes the header the
-            containing block for position:fixed children, which pinned the
-            sidebar (rendered inside it) to the header's 70px instead of the
-            viewport. */}
-        <header className="sticky top-0 z-20 border-b bg-card">
+    <AdminNavProvider>
+    <div className="relative min-h-screen bg-background">
+      {/* Soft brand-tinted light for the frosted surfaces to pick up. Fixed
+          and behind everything, so it never scrolls or catches a click. */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        <div className="absolute -right-32 -top-40 size-[520px] rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -left-24 top-1/3 size-[420px] rounded-full bg-chip-border/50 blur-3xl" />
+        <div className="absolute -bottom-40 right-1/4 size-[480px] rounded-full bg-blush blur-3xl" />
+      </div>
+
+      {/* At the root, never inside the header: the header is frosted, and a
+          backdrop-filter traps position:fixed children inside it. */}
+      <AdminSidebar pendingCount={pendingCount} />
+
+      <div className="relative lg:pl-64">
+        <header className="admin-glass sticky top-0 z-20 border-b">
           <div className="flex items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
-            <AdminSidebar pendingCount={pendingCount} />
+            <AdminMenuButton />
 
             <div className="min-w-0 flex-1">
               <p className="truncate font-display text-base font-semibold sm:text-lg">
@@ -97,5 +110,6 @@ export default async function AdminLayout({
         </main>
       </div>
     </div>
+    </AdminNavProvider>
   );
 }

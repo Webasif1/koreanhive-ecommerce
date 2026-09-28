@@ -15,6 +15,7 @@ import { generateOrderNumber } from "@/lib/order-number";
 import { ORDER_STATUS_LABEL, type OrderStatusValue } from "@/lib/order-status";
 import { calcTotals } from "@/lib/pricing";
 import { requireAdmin } from "@/server/admin-guard";
+import { upsertCustomerFromOrder } from "@/server/customer-sync";
 import { connectDb, mongoose } from "@/server/db";
 import {
   queueOrderPlacedEmails,
@@ -457,6 +458,8 @@ export async function createAdminOrderAction(
   }
 
   queueOrderPlacedEmails(number, { notifyShop: false });
+  await upsertCustomerFromOrder(number);
+  revalidatePath("/admin/customers");
 
   revalidateOrder(number);
   revalidatePath("/admin/products");
@@ -521,6 +524,10 @@ export async function updateOrderDetailsAction(
 
   console.info(`[admin] ${admin.email ?? "admin"} edited order ${orderNumber}`);
 
+  // the corrected details are the customer's latest
+  await upsertCustomerFromOrder(orderNumber);
+  revalidatePath("/admin/customers");
+
   revalidateOrder(orderNumber);
   redirect(`/admin/orders/${orderNumber}`);
 }
@@ -578,6 +585,36 @@ export async function trashOrderAction(formData: FormData) {
   revalidateTag("products", "max");
 
   if (formData.get("redirect") === "list") redirect("/admin/orders");
+}
+
+/**
+ * Removes a trashed order from the database for good. Only an order already
+ * in the trash qualifies — a live order has to be trashed first, which is
+ * also the step that put its stock back. The customer record is kept.
+ */
+export async function deleteOrderForeverAction(formData: FormData) {
+  await requireAdmin();
+  await connectDb();
+
+  const orderNumber = String(formData.get("orderNumber") ?? "").trim();
+  if (!orderNumber) return;
+
+  await Order.deleteOne({ orderNumber, deletedAt: { $ne: null } });
+
+  revalidateOrder(orderNumber);
+
+  if (formData.get("redirect") === "list") redirect("/admin/orders?status=TRASH");
+}
+
+/** Every trashed order, gone for good. */
+export async function emptyTrashAction() {
+  await requireAdmin();
+  await connectDb();
+
+  await Order.deleteMany({ deletedAt: { $ne: null } });
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/orders");
 }
 
 /**
