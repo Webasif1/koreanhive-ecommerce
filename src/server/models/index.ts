@@ -423,8 +423,20 @@ export type OrderDoc = {
   restockedAt?: Date | null;
   items: OrderItemSub[];
   statusHistory: OrderStatusHistorySub[];
+  /** Every order email attempted, and whether Gmail took it. */
+  emailLog?: OrderEmailLogSub[];
   createdAt: Date;
   updatedAt: Date;
+};
+
+export type OrderEmailLogSub = {
+  /** e.g. "shop new order", "customer confirmed" */
+  kind: string;
+  to: string;
+  ok: boolean;
+  /** why it failed, or null when it went through */
+  error?: string | null;
+  at: Date;
 };
 
 const orderSchema = new Schema<OrderDoc>(
@@ -496,6 +508,27 @@ const orderSchema = new Schema<OrderDoc>(
     restockedAt: { type: Date, default: null },
     items: { type: [orderItemSchema], default: [] },
     statusHistory: { type: [orderStatusHistorySchema], default: [] },
+    /**
+     * What happened to each order email. Written after the send, so a
+     * missing email can be explained from the admin page — "Gmail rejected
+     * the login", "port blocked" — instead of guessed at from a server log
+     * nobody can reach on shared hosting.
+     */
+    emailLog: {
+      type: [
+        new Schema(
+          {
+            kind: { type: String, required: true },
+            to: { type: String, required: true },
+            ok: { type: Boolean, required: true },
+            error: { type: String, default: null },
+            at: { type: Date, default: Date.now },
+          },
+          { _id: false },
+        ),
+      ],
+      default: [],
+    },
   },
   { timestamps: true },
 );

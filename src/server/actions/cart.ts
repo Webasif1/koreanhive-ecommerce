@@ -251,6 +251,64 @@ export async function clearCouponAction(): Promise<CartResult> {
   return { ok: true, message: "Coupon removed" };
 }
 
+/** "Add combo to cart", one or more sets; see addComboSets below. */
+export async function addComboToCartAction(
+  formData: FormData,
+): Promise<CartResult> {
+  const result = await addComboSets(
+    String(formData.get("comboSlug") ?? "").trim(),
+    sanitizeQuantity(formData.get("quantity")),
+  );
+
+  if (result.ok) {
+    revalidatePath("/cart");
+    revalidatePath("/checkout");
+  }
+
+  return result;
+}
+
+/** Buy Now on a combo: add the sets, then straight to checkout. */
+export async function buyComboNowAction(formData: FormData) {
+  const result = await addComboSets(
+    String(formData.get("comboSlug") ?? "").trim(),
+    sanitizeQuantity(formData.get("quantity")),
+  );
+
+  revalidatePath("/cart");
+  redirect(result.ok ? "/checkout" : "/cart");
+}
+
+/** Sets the number of a combo's sets in the cart; 0 removes the combo. */
+export async function updateComboQuantityAction(
+  formData: FormData,
+): Promise<CartResult> {
+  const slug = String(formData.get("comboSlug") ?? "").trim();
+  const raw = Number(formData.get("quantity") ?? 0);
+  const target = Number.isFinite(raw)
+    ? Math.min(MAX_QUANTITY_PER_LINE, Math.max(0, Math.floor(raw)))
+    : 0;
+
+  const cart = await getCart();
+  const current = cart.comboLines.find((line) => line.slug === slug)?.sets ?? 0;
+  const delta = target - current;
+
+  if (delta > 0) {
+    const result = await addComboSets(slug, delta);
+    if (!result.ok) return result;
+  } else if (delta < 0) {
+    await removeComboSets(slug, -delta);
+  }
+
+  revalidatePath("/cart");
+  revalidatePath("/checkout");
+
+  return {
+    ok: true,
+    message: target === 0 ? "Removed from cart" : "Cart updated",
+  };
+}
+
 /**
  * Add every product in a bundle, in one click.
  *
@@ -262,14 +320,13 @@ export async function clearCouponAction(): Promise<CartResult> {
  *
  * All or nothing. The combo price only applies to a complete set (see
  * lib/combo-pricing.ts), so adding some members would quietly charge them at
- * full price. If any member is unpublished or cannot cover one more unit, the
- * cart is left alone and the message names the product.
+ * full price. If any member is unpublished or cannot cover the sets, the cart
+ * is left alone and the message names the product.
  */
-export async function addComboToCartAction(
-  formData: FormData,
-): Promise<CartResult> {
-  const slug = String(formData.get("comboSlug") ?? "").trim();
-  if (!slug) return { ok: false, message: "That combo is no longer available." };
+async function addComboSets(slug: string, sets: number): Promise<CartResult> {
+  if (!slug || sets <= 0) {
+    return { ok: false, message: "That combo is no longer available." };
+  }
 
   await connectDb();
 
@@ -294,7 +351,7 @@ export async function addComboToCartAction(
     return { ok: false, message: `${combo.name} is not available right now.` };
   }
 
-  // stock has to cover what the cart already holds plus this set
+  // stock has to cover what the cart already holds plus these sets
   const items = await readCartCookie();
   for (const productSlug of combo.productSlugs) {
     const product = bySlug.get(productSlug)!;
@@ -302,10 +359,14 @@ export async function addComboToCartAction(
       .filter((item) => item.productId === product._id.toString() && !item.variantId)
       .reduce((sum, item) => sum + item.quantity, 0);
 
-    if (product.stock < inCart + 1) {
+    if (product.stock < inCart + sets) {
+      const left = Math.max(0, product.stock - inCart);
       return {
         ok: false,
-        message: `${product.name} is out of stock, so ${combo.name} cannot be added.`,
+        message:
+          left > 0
+            ? `Only ${left} more ${combo.name} can be added — ${product.name} is running low.`
+            : `${product.name} is out of stock, so ${combo.name} cannot be added.`,
       };
     }
   }
@@ -314,11 +375,35 @@ export async function addComboToCartAction(
   // so running them together would have the last write win and drop the rest
   for (const productSlug of combo.productSlugs) {
     const productId = bySlug.get(productSlug)!._id.toString();
-    await mergeIntoCart({ productId, variantId: null, quantity: 1 });
+    await mergeIntoCart({ productId, variantId: null, quantity: sets });
   }
 
-  revalidatePath("/cart");
-  revalidatePath("/checkout");
-
   return { ok: true, message: `${combo.name} added to cart` };
+}
+
+/**
+ * Takes sets of a combo back out.
+ *
+ * Only the sets: a cleanser the shopper added on its own, beside the combo,
+ * stays in the cart.
+ */
+async function removeComboSets(slug: string, sets: number) {
+  await connectDb();
+
+  const combo = await Combo.findOne({ slug }).select("productSlugs").lean();
+  if (!combo) return;
+
+  const products = await Product.find({ slug: { $in: combo.productSlugs } })
+    .select("_id")
+    .lean();
+  const ids = new Set(products.map((product) => product._id.toString()));
+
+  const items = await readCartCookie();
+  const next = items.flatMap((item) => {
+    if (!ids.has(item.productId) || item.variantId) return [item];
+    const quantity = item.quantity - sets;
+    return quantity > 0 ? [{ ...item, quantity }] : [];
+  });
+
+  await writeCartCookie(next);
 }

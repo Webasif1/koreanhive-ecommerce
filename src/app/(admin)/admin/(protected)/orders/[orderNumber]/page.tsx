@@ -135,6 +135,36 @@ export default async function AdminOrderDetailPage({
               ))}
             </ul>
           </section>
+
+          {/* What happened to each email, so "the customer never got it" has
+              an answer on this page rather than in a server log. */}
+          <section className="rounded-xl border bg-card p-5">
+            <h2 className="font-display font-semibold">Emails</h2>
+            {order.emailLog.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">
+                No email has been attempted for this order.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-3">
+                {order.emailLog.map((entry) => (
+                  <li key={`${entry.kind}-${entry.at.toISOString()}`} className="text-sm">
+                    <p className="font-medium">
+                      <span className={entry.ok ? "text-success" : "text-destructive"}>
+                        {entry.ok ? "Sent" : "Failed"}
+                      </span>{" "}
+                      · {entry.kind} → {entry.to}
+                    </p>
+                    {entry.error && (
+                      <p className="break-words text-xs text-destructive">{entry.error}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {formatDateTime(entry.at.toISOString())}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </div>
 
         <aside className="space-y-6">

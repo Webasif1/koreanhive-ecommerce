@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { TrackBeginCheckout } from "@/components/tracking/trackers";
-import { comboNames } from "@/lib/combo-pricing";
 import { formatBDT } from "@/lib/format";
 import { productImage } from "@/lib/product-image";
 import { cartTrackItems } from "@/lib/tracking/shared";
@@ -37,7 +36,38 @@ export default async function CheckoutPage() {
       </p>
 
       <ul className="mt-6 divide-y rounded-xl border bg-card px-4">
-        {cart.lines.map((line) => (
+        {/* a combo is one line at its combo price, as the cart shows it */}
+        {cart.comboLines.map((line) => (
+          <li key={line.key} className="flex items-center gap-3 py-3">
+            <Link
+              href={`/combos/${line.slug}`}
+              className="relative size-12 shrink-0 overflow-hidden rounded-lg border bg-white"
+            >
+              {line.imageUrl && (
+                <Image
+                  src={line.imageUrl}
+                  alt={line.name}
+                  fill
+                  sizes="48px"
+                  className="object-contain"
+                />
+              )}
+            </Link>
+            <div className="flex-1 text-sm">
+              <p className="line-clamp-1 font-medium">{line.name}</p>
+              <p className="text-xs text-muted-foreground">
+                Combo · {line.sets} × {formatBDT(line.unitPrice)}
+                {line.comparePrice && (
+                  <span className="ml-1.5 line-through">
+                    {formatBDT(line.comparePrice)}
+                  </span>
+                )}
+              </p>
+            </div>
+            <p className="text-sm tabular-nums">{formatBDT(line.lineTotal)}</p>
+          </li>
+        ))}
+        {cart.itemLines.map((line) => (
           <li key={line.key} className="flex items-center gap-3 py-3">
             <Link
               href={`/product/${line.slug}`}
@@ -82,9 +112,11 @@ export default async function CheckoutPage() {
             minDays: z.minDays,
             maxDays: z.maxDays,
           }))}
-          subtotal={cart.subtotal}
-          comboDiscount={cart.comboDiscount}
-          comboLabel={comboNames(cart.combos).join(", ")}
+          // combo lines above are already at the combo price, so the
+          // summary starts after the saving rather than listing it again
+          subtotal={cart.subtotal - cart.comboDiscount}
+          comboDiscount={0}
+          comboLabel=""
           discount={cart.discount}
           trackItems={trackItems}
         />

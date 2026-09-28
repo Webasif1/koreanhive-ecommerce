@@ -2,16 +2,24 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import {
+  CreditCard,
+  Globe,
+  Layers,
+  Package,
+  ShieldCheck,
+  Truck,
+} from "lucide-react";
 
+import { ComboBuyBox } from "@/components/combo/combo-buy-box";
 import {
   comboLeastStock,
   comboTrackItems,
 } from "@/components/combo/combo-card";
-import { ComboAddButton } from "@/components/combo/combo-add-button";
 import { FaqAccordion } from "@/components/home/faq-accordion";
 import { JsonLd } from "@/components/seo/json-ld";
 import { Badge } from "@/components/ui/badge";
-import { COMBO_BY_SLUG, COMBOS } from "@/data/combos";
+import { COMBO_BY_SLUG, COMBOS, type ComboPageSection } from "@/data/combos";
 import { discountPercent, formatBDT } from "@/lib/format";
 import { breadcrumbJsonLd, faqJsonLd, productJsonLd } from "@/lib/json-ld";
 import { absoluteUrl, withSiteSuffix } from "@/lib/site";
@@ -60,6 +68,36 @@ export async function generateMetadata({
   };
 }
 
+/** One section of the long description, as the body of an accordion item. */
+function SectionBody({ section }: { section: ComboPageSection }) {
+  const List = section.ordered ? "ol" : "ul";
+
+  return (
+    <div className="pb-5 pr-2 text-[14.5px] leading-relaxed text-muted-foreground sm:pr-10">
+      {section.paragraphs?.map((paragraph) => (
+        <p key={paragraph} className="mt-1 first:mt-0">
+          {paragraph}
+        </p>
+      ))}
+      {section.items && (
+        <List
+          className={`space-y-2 pl-5 ${section.ordered ? "list-decimal" : "list-disc"}`}
+        >
+          {section.items.map((item) => (
+            <li key={item.label ?? item.text}>
+              {item.label && (
+                <span className="font-semibold text-foreground">{item.label}</span>
+              )}
+              {item.label && " – "}
+              {item.text}
+            </li>
+          ))}
+        </List>
+      )}
+    </div>
+  );
+}
+
 export default async function ComboDetailPage({ params }: ComboPageProps) {
   const { slug } = await params;
   const seed = COMBO_BY_SLUG.get(slug);
@@ -75,8 +113,6 @@ export default async function ComboDetailPage({ params }: ComboPageProps) {
   if (!combo) notFound();
 
   const { page } = seed;
-
-  const saving = combo.comparePrice ? combo.comparePrice - combo.price : 0;
   const off = discountPercent(combo.price, combo.comparePrice);
 
   // Same rule as the /combos cards: free delivery is promised only when the
@@ -88,19 +124,33 @@ export default async function ComboDetailPage({ params }: ComboPageProps) {
     thresholds.length === zones.length &&
     thresholds.length > 0 &&
     combo.price >= Math.max(...thresholds);
+  const cheapestCharge = Math.min(...zones.map((zone) => zone.charge));
 
   const leastStock = comboLeastStock(combo);
   const inStock = leastStock > 0;
-  const stockLine = !inStock
-    ? "Out of stock"
-    : leastStock <= 5
-      ? `Only ${leastStock} left`
-      : "In stock · ships today";
 
   const crumbs = [
     { name: "Home", path: "/" },
     { name: "Combo Offers", path: "/combos" },
     { name: seed.name, path: `/combos/${slug}` },
+  ];
+
+  // the product-page facts, as the design lays them out
+  const facts = [
+    { icon: Package, label: "In the box", value: `${combo.products.length} full-size products` },
+    { icon: Layers, label: "Routine", value: `${combo.products.length}-step · AM & PM` },
+    { icon: Globe, label: "Origin", value: "Korea" },
+    {
+      icon: Truck,
+      label: "Delivery",
+      value: freeDelivery
+        ? "Free all over Bangladesh"
+        : Number.isFinite(cheapestCharge)
+          ? `From ${formatBDT(cheapestCharge)}`
+          : "Nationwide",
+    },
+    { icon: CreditCard, label: "Payment", value: "Cash on delivery" },
+    { icon: ShieldCheck, label: "Status", value: null },
   ];
 
   return (
@@ -143,7 +193,7 @@ export default async function ComboDetailPage({ params }: ComboPageProps) {
         </ol>
       </nav>
 
-      <section className="mt-4 grid gap-6 sm:mt-6 sm:gap-10 lg:grid-cols-2 lg:gap-14">
+      <section className="mt-4 grid gap-6 border border-border bg-white p-4 sm:mt-6 sm:p-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-10 lg:p-8">
         {/* The poster has the name and routine printed on it, so it keeps
             its square, whole — object-contain, never cropped. */}
         <div className="relative lg:sticky lg:top-37.5 lg:self-start">
@@ -153,129 +203,113 @@ export default async function ComboDetailPage({ params }: ComboPageProps) {
               alt={seed.imageAlt}
               fill
               priority
-              sizes="(min-width: 1024px) 50vw, 100vw"
+              sizes="(min-width: 1024px) 40vw, 100vw"
               className="object-contain"
             />
           </div>
-          <div className="pointer-events-none absolute left-3.5 top-3.5 z-10 flex flex-col items-start gap-2">
-            {off !== null && <Badge variant="sale">−{off}%</Badge>}
-          </div>
+          {off !== null && (
+            <span className="absolute right-0 top-0 bg-primary px-3 py-2 text-center text-[13px] font-bold leading-tight text-white">
+              {off}%
+              <br />
+              OFF
+            </span>
+          )}
         </div>
 
-        <div>
+        <div className="min-w-0">
           <p className="eyebrow">{seed.concern}</p>
-          <h1 className="mt-3 font-display text-[26px] leading-tight tracking-[-0.01em] sm:text-[30px] md:text-[36px]">
+          <h1 className="mt-2.5 font-display text-[24px] leading-tight tracking-[-0.01em] text-primary sm:text-[28px] md:text-[32px]">
             {page.title}
           </h1>
-          <p className="mt-3.5 max-w-[560px] text-[15.5px] leading-relaxed text-muted-foreground">
+
+          {/* ---------------------------------------------- the facts grid */}
+          <dl className="mt-5 grid grid-cols-2 gap-2 border border-border bg-cream/50 p-2 sm:grid-cols-3">
+            {facts.map(({ icon: Icon, label, value }) => (
+              <div key={label} className="flex gap-2.5 bg-white p-3">
+                <Icon className="mt-0.5 size-4 shrink-0 text-mulberry-hover" aria-hidden />
+                <div className="min-w-0">
+                  <dt className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                    {label}
+                  </dt>
+                  <dd className="mt-1 text-[13px] font-semibold leading-snug">
+                    {value ?? (
+                      <Badge variant={inStock ? "verified" : "muted"} size="sm">
+                        {inStock
+                          ? leastStock <= 5
+                            ? `Only ${leastStock} left`
+                            : "In stock"
+                          : "Out of stock"}
+                      </Badge>
+                    )}
+                  </dd>
+                </div>
+              </div>
+            ))}
+          </dl>
+
+          {/* ------------------------------------------------ the buy box */}
+          <div className="mt-6">
+            <ComboBuyBox
+              comboSlug={combo.slug}
+              price={combo.price}
+              comparePrice={combo.comparePrice}
+              maxSets={leastStock}
+              trackItems={comboTrackItems(combo)}
+            />
+          </div>
+
+          <p className="mt-5 text-[14.5px] leading-relaxed text-muted-foreground">
             {page.shortDescription}
           </p>
-
-          {/* ------------------------------------------------ the price */}
-          <div className="mt-6 border border-border bg-cream/60 p-6">
-            {combo.comparePrice && (
-              <div className="flex items-baseline justify-between text-[13px] text-muted-foreground">
-                <span>Regular price</span>
-                <span className="line-through">
-                  {formatBDT(combo.comparePrice)}
-                </span>
-              </div>
-            )}
-            <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-hairline pt-3">
-              <span className="text-[13px] font-semibold">Combo price</span>
-              <span className="font-display text-[34px] leading-none">
-                {formatBDT(combo.price)}
-              </span>
-            </div>
-            {saving > 0 && (
-              <p className="mt-3 text-[13px] font-semibold text-sale">
-                You save {formatBDT(saving)}
-                {off !== null && ` (${off}% OFF)`}
-              </p>
-            )}
-            {freeDelivery && (
-              <p className="mt-3.5 bg-success-bg px-3 py-2.5 text-[12.5px] font-bold text-success">
-                FREE delivery all over Bangladesh
-              </p>
-            )}
-
-            <div className="mt-5">
-              <ComboAddButton
-                comboSlug={combo.slug}
-                comboPrice={combo.price}
-                trackItems={comboTrackItems(combo)}
-                disabled={!inStock}
-              />
-            </div>
-            <p className="mt-2.5 text-center text-[11.5px] text-muted-foreground">
-              {stockLine} · Cash on delivery
-            </p>
-          </div>
-
-          {/* ------------------------------------------- what's in the box */}
-          <div className="mt-6">
-            <p className="eyebrow">In this combo</p>
-            {/* Names only — the poster already pictures the three products. */}
-            <ul className="mt-3 list-disc space-y-1.5 pl-5 text-[14px] leading-snug">
-              {combo.products.map((product) => (
-                <li key={product.slug}>{product.name}</li>
-              ))}
-            </ul>
-          </div>
+          <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
+            <span className="font-semibold text-foreground">Includes:</span>{" "}
+            {combo.products.map((product) => product.name).join(" · ")}
+          </p>
         </div>
       </section>
 
-      {/* ------------------------------------------------ long description */}
-      <section className="mt-10 border border-border bg-white lg:mt-16">
-        <div className="max-w-3xl p-8 lg:p-12">
-          {page.sections.map((section, index) => {
-            const List = section.ordered ? "ol" : "ul";
-
-            return (
-              <div key={section.heading} className={index > 0 ? "mt-10" : undefined}>
-                <h2 className="font-display text-2xl leading-snug md:text-[28px]">
-                  {section.heading}
-                </h2>
-                {section.paragraphs?.map((paragraph) => (
-                  <p
-                    key={paragraph}
-                    className="mt-3.5 text-[15px] leading-relaxed text-muted-foreground"
-                  >
-                    {paragraph}
-                  </p>
-                ))}
-                {section.items && (
-                  <List
-                    className={`mt-3.5 space-y-2.5 pl-5 text-[15px] leading-relaxed text-muted-foreground ${
-                      section.ordered ? "list-decimal" : "list-disc"
-                    }`}
-                  >
-                    {section.items.map((item) => (
-                      <li key={item.label ?? item.text}>
-                        {item.label && (
-                          <span className="font-semibold text-foreground">
-                            {item.label}
-                          </span>
-                        )}
-                        {item.label && " – "}
-                        {item.text}
-                      </li>
-                    ))}
-                  </List>
-                )}
-              </div>
-            );
-          })}
-
-          <p className="mt-10 border-t border-hairline pt-4 text-[13px] leading-relaxed text-muted-foreground">
+      {/* ----------------------------------------------- details, folded */}
+      <section className="mt-10 grid gap-8 lg:mt-14 lg:grid-cols-[1fr_1.6fr] lg:gap-14">
+        <div>
+          <p className="eyebrow">Combo details</p>
+          <h2 className="mt-3 font-display text-[26px] leading-tight tracking-[-0.01em] md:text-[34px]">
+            Everything about this routine
+          </h2>
+          <p className="mt-4 border-t border-hairline pt-4 text-[13px] leading-relaxed text-muted-foreground">
             <span className="font-semibold text-foreground">Please note:</span>{" "}
             {seed.note}
           </p>
         </div>
+
+        {/* <details>, like the FAQ: no JavaScript, and the text stays in the
+            page for search engines while it is folded. The first is open so
+            the page does not land on a wall of closed rows. */}
+        <div>
+          {page.sections.map((section, index) => (
+            <details
+              key={section.heading}
+              open={index === 0}
+              className="group border-t border-hairline last:border-b"
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-4 [&::-webkit-details-marker]:hidden">
+                <h3 className="text-[16px] font-semibold leading-snug">
+                  {section.heading}
+                </h3>
+                <span
+                  aria-hidden
+                  className="shrink-0 text-[18px] leading-none text-primary transition-transform duration-200 group-open:rotate-45"
+                >
+                  +
+                </span>
+              </summary>
+              <SectionBody section={section} />
+            </details>
+          ))}
+        </div>
       </section>
 
       {/* ---------------------------------------------------------- faq */}
-      <section className="mt-10 grid gap-8 lg:mt-16 lg:grid-cols-[1fr_1.1fr] lg:gap-14">
+      <section className="mt-10 grid gap-8 lg:mt-16 lg:grid-cols-[1fr_1.6fr] lg:gap-14">
         <div>
           <p className="eyebrow">Combo questions</p>
           <h2 className="mt-3 font-display text-[26px] leading-tight tracking-[-0.01em] md:text-[34px]">

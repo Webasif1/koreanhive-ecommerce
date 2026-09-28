@@ -12,7 +12,12 @@ import {
 } from "@/lib/email/templates";
 import type { OrderStatusValue } from "@/lib/order-status";
 import { connectDb } from "@/server/db";
-import { sendMail, shopInbox } from "@/server/email/transport";
+import {
+  describeEmailError,
+  sendMail,
+  shopInbox,
+  type SendResult,
+} from "@/server/email/transport";
 import { Order } from "@/server/models";
 
 /**
@@ -30,12 +35,45 @@ async function loadOrder(orderNumber: string): Promise<EmailOrder | null> {
   return Order.findOne({ orderNumber }).lean<EmailOrder>();
 }
 
-async function deliver(label: string, to: string | null | undefined, email: Email, replyTo?: string | null) {
+/**
+ * Sends one email and writes the outcome onto the order's emailLog, so the
+ * admin page can say what happened to it.
+ */
+async function deliver(
+  orderNumber: string,
+  kind: string,
+  to: string | null | undefined,
+  email: Email,
+  replyTo?: string | null,
+) {
   if (!to) return;
+
+  let result: SendResult;
   try {
-    await sendMail({ to, ...email, replyTo });
+    result = await sendMail({ to, ...email, replyTo });
   } catch (error) {
-    console.error(`[email] ${label} failed`, error);
+    result = { ok: false, error: describeEmailError(error) };
+  }
+
+  if (!result.ok) console.error(`[email] ${kind} to ${to} failed: ${result.error}`);
+
+  try {
+    await Order.updateOne(
+      { orderNumber },
+      {
+        $push: {
+          emailLog: {
+            kind,
+            to,
+            ok: result.ok,
+            error: result.ok ? null : result.error,
+            at: new Date(),
+          },
+        },
+      },
+    );
+  } catch (error) {
+    console.error("[email] could not record the outcome", error);
   }
 }
 
@@ -47,8 +85,8 @@ export function queueOrderPlacedEmails(orderNumber: string) {
 
     await Promise.all([
       // replying to the shop copy writes straight to the customer
-      deliver("shop new order", shopInbox(), shopNewOrderEmail(order), order.customerEmail),
-      deliver("customer placed", order.customerEmail, customerOrderEmail(order, "placed")),
+      deliver(orderNumber, "shop new order", shopInbox() ?? "(shop inbox not set)", shopNewOrderEmail(order), order.customerEmail),
+      deliver(orderNumber, "customer placed", order.customerEmail, customerOrderEmail(order, "placed")),
     ]);
   });
 }
@@ -73,10 +111,10 @@ export function queueStatusEmails(
 
     await Promise.all([
       notifyShop
-        ? deliver("shop confirmed", shopInbox(), shopConfirmedEmail(order, changedBy), order.customerEmail)
+        ? deliver(orderNumber, "shop confirmed", shopInbox() ?? "(shop inbox not set)", shopConfirmedEmail(order, changedBy), order.customerEmail)
         : null,
       customerKind
-        ? deliver(`customer ${customerKind}`, order.customerEmail, customerOrderEmail(order, customerKind))
+        ? deliver(orderNumber, `customer ${customerKind}`, order.customerEmail, customerOrderEmail(order, customerKind))
         : null,
     ]);
   });

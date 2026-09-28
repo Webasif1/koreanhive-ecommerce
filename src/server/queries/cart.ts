@@ -5,6 +5,12 @@ import {
   type AppliedCombo,
   type ComboRule,
 } from "@/lib/combo-pricing";
+import { COMBO_BY_SLUG } from "@/data/combos";
+import {
+  groupCartLines,
+  type ComboCartLine,
+  type ComboDisplay,
+} from "@/lib/cart-groups";
 import { calcTotals, type CouponRule } from "@/lib/pricing";
 import { readCartCookie, readCouponCookie } from "@/server/cart-cookie";
 import { connectDb } from "@/server/db";
@@ -89,10 +95,20 @@ async function resolveCoupon(
 /** Live combos as pricing rules. The cart and checkout both read them from
  *  here, so the two can never price a combo differently. */
 export async function getComboRules(): Promise<ComboRule[]> {
+  return (await getLiveCombos()).map(({ slug, name, price, productSlugs }) => ({
+    slug,
+    name,
+    price,
+    productSlugs,
+  }));
+}
+
+/** Live combos with what the cart needs to show one as a single line. */
+async function getLiveCombos(): Promise<ComboDisplay[]> {
   await connectDb();
 
   const combos = await Combo.find({ isActive: true })
-    .select("slug name price productSlugs")
+    .select("slug name price productSlugs imageUrl")
     .lean();
 
   return combos.map((combo) => ({
@@ -100,6 +116,8 @@ export async function getComboRules(): Promise<ComboRule[]> {
     name: combo.name,
     price: combo.price,
     productSlugs: combo.productSlugs,
+    imageUrl: combo.imageUrl ?? null,
+    regularPrice: COMBO_BY_SLUG.get(combo.slug)?.regularPrice ?? null,
   }));
 }
 
@@ -114,6 +132,8 @@ export async function getCart(zoneSlug?: string) {
   if (items.length === 0) {
     return {
       lines: [] as CartLine[],
+      comboLines: [] as ComboCartLine[],
+      itemLines: [] as CartLine[],
       itemCount: 0,
       subtotal: 0,
       comboDiscount: 0,
@@ -186,7 +206,11 @@ export async function getCart(zoneSlug?: string) {
   }
 
   const subtotal = lines.reduce((sum, l) => sum + l.lineTotal, 0);
-  const { comboDiscount, applied } = applyCombos(lines, await getComboRules());
+  const liveCombos = await getLiveCombos();
+  const { comboDiscount, applied } = applyCombos(lines, liveCombos);
+  // each complete set shown once, at the combo price; `lines` keeps the
+  // products themselves for tracking and anything else that needs them
+  const { comboLines, itemLines } = groupCartLines(lines, applied, liveCombos);
   // the coupon applies to what is left after the combo saving
   const { coupon, error } = await resolveCoupon(
     couponCode,
@@ -206,7 +230,12 @@ export async function getCart(zoneSlug?: string) {
 
   return {
     lines,
-    itemCount: lines.reduce((sum, l) => sum + l.quantity, 0),
+    comboLines,
+    itemLines,
+    // a combo counts as one item, the way the cart shows it
+    itemCount:
+      comboLines.reduce((sum, l) => sum + l.sets, 0) +
+      itemLines.reduce((sum, l) => sum + l.quantity, 0),
     ...totals,
     combos: applied,
     couponCode: coupon?.code ?? null,

@@ -163,6 +163,16 @@ export async function getAdminOrder(orderNumber: string) {
         createdBy: entry.createdBy ?? null,
         createdAt: entry.createdAt,
       })),
+    // newest first, like the history above it
+    emailLog: [...(order.emailLog ?? [])]
+      .sort((a, b) => b.at.getTime() - a.at.getTime())
+      .map((entry) => ({
+        kind: entry.kind,
+        to: entry.to,
+        ok: entry.ok,
+        error: entry.error ?? null,
+        at: entry.at,
+      })),
     deliveryZone: {
       name: zone?.name ?? "Delivery",
       minDays: zone?.minDays ?? 1,

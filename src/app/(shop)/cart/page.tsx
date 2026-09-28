@@ -3,13 +3,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CartLineRow } from "@/components/cart/cart-line-row";
+import { ComboCartLineRow } from "@/components/cart/combo-cart-line-row";
 import { CartRecommendations } from "@/components/cart/cart-recommendations";
 import { CouponForm } from "@/components/cart/coupon-form";
 import { FreeDeliveryBar } from "@/components/cart/free-delivery-bar";
 import { TrackViewCart } from "@/components/tracking/trackers";
 import { Button } from "@/components/ui/button";
 import { ProductGridSkeleton } from "@/components/ui/skeleton";
-import { comboNames } from "@/lib/combo-pricing";
 import { formatBDT } from "@/lib/format";
 import { cartTrackItems } from "@/lib/tracking/shared";
 import { getCart } from "@/server/queries/cart";
@@ -23,6 +23,14 @@ export const metadata: Metadata = {
 export default async function CartPage() {
   const [cart, zones] = await Promise.all([getCart(), getDeliveryZones()]);
   const insideDhaka = zones.find((z) => z.slug === "inside-dhaka") ?? zones[0];
+  // combos are already at their combo price on their own line, so the
+  // summary starts from what is actually charged
+  const subtotal = cart.subtotal - cart.comboDiscount;
+  const comboSaving = cart.comboLines.reduce(
+    (sum, line) =>
+      sum + (line.comparePrice ? (line.comparePrice - line.unitPrice) * line.sets : 0),
+    0,
+  );
 
   if (cart.lines.length === 0) {
     return (
@@ -58,7 +66,10 @@ export default async function CartPage() {
 
       <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_380px]">
         <ul className="divide-y divide-border border-y border-border">
-          {cart.lines.map((line) => (
+          {cart.comboLines.map((line) => (
+            <ComboCartLineRow key={line.key} line={line} />
+          ))}
+          {cart.itemLines.map((line) => (
             <CartLineRow key={line.key} line={line} />
           ))}
         </ul>
@@ -67,7 +78,7 @@ export default async function CartPage() {
           <h2 className="font-display text-xl">Order summary</h2>
 
           <FreeDeliveryBar
-            subtotal={cart.subtotal - cart.comboDiscount}
+            subtotal={subtotal}
             threshold={insideDhaka?.freeShippingThreshold ?? null}
           />
 
@@ -75,17 +86,11 @@ export default async function CartPage() {
 
           <dl className="space-y-2.5 border-t border-hairline pt-4 text-sm">
             <div className="flex justify-between">
-              <dt className="text-muted-foreground">Subtotal</dt>
-              <dd className="tabular-nums">{formatBDT(cart.subtotal)}</dd>
+              <dt className="text-muted-foreground">
+                Subtotal ({cart.itemCount} {cart.itemCount === 1 ? "item" : "items"})
+              </dt>
+              <dd className="tabular-nums">{formatBDT(subtotal)}</dd>
             </div>
-            {cart.comboDiscount > 0 && (
-              <div className="flex justify-between gap-3 text-sale">
-                <dt>Combo saving ({comboNames(cart.combos).join(", ")})</dt>
-                <dd className="shrink-0 tabular-nums">
-                  −{formatBDT(cart.comboDiscount)}
-                </dd>
-              </div>
-            )}
             {cart.discount > 0 && (
               <div className="flex justify-between text-sale">
                 <dt>Discount</dt>
@@ -99,10 +104,16 @@ export default async function CartPage() {
             <div className="flex justify-between border-t border-hairline pt-3 font-display text-lg">
               <dt>Total so far</dt>
               <dd className="tabular-nums">
-                {formatBDT(cart.subtotal - cart.comboDiscount - cart.discount)}
+                {formatBDT(subtotal - cart.discount)}
               </dd>
             </div>
           </dl>
+
+          {comboSaving > 0 && (
+            <p className="bg-success-bg px-3 py-2.5 text-[12.5px] font-bold text-success">
+              You&apos;re saving {formatBDT(comboSaving)} on this order
+            </p>
+          )}
 
           <Button size="lg" className="w-full" asChild>
             <Link href="/checkout">Proceed to Checkout</Link>
