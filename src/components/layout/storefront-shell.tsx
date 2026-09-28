@@ -5,6 +5,7 @@ import { FirstVisitLoader } from "@/components/layout/first-visit-loader";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { WhatsAppButton } from "@/components/layout/whatsapp-button";
 import { WishlistProvider } from "@/components/product/wishlist-provider";
 import { JsonLd } from "@/components/seo/json-ld";
 import { deliveryPromise } from "@/lib/delivery-promise";
@@ -31,6 +32,7 @@ export async function StorefrontShell({ children }: { children: ReactNode }) {
         <main className="flex-1">{children}</main>
         <SiteFooter deliveryLine={deliveryLine} />
         <MobileBottomNav />
+        <WhatsAppButton />
         <ChatWidget />
       </WishlistProvider>
     </div>
