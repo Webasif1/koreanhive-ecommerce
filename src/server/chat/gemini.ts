@@ -41,10 +41,24 @@ export function geminiEnabled() {
 
 type GeminiPart = { text?: string };
 
-async function callGemini(
+/**
+ * Limits for a caller that is not a shopper waiting on the website. The
+ * WhatsApp bot answers after the webhook has returned, so it can afford a
+ * longer wait and a longer reply.
+ */
+export type GeminiOptions = {
+  timeoutMs?: number;
+  maxOutputTokens?: number;
+  /** Skip 2.5 Flash's thinking step — a rewrite does not need it, and its
+   *  tokens would otherwise count against maxOutputTokens. */
+  noThinking?: boolean;
+};
+
+export async function callGemini(
   systemInstruction: string,
   userText: string,
   json: boolean,
+  options: GeminiOptions = {},
 ): Promise<string | null> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
@@ -55,7 +69,7 @@ async function callGemini(
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        signal: AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_MS),
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemInstruction }] },
           // the shopper's text is the only user content, and it is data to be
@@ -63,8 +77,9 @@ async function callGemini(
           contents: [{ role: "user", parts: [{ text: userText }] }],
           generationConfig: {
             temperature: json ? 0 : 0.4,
-            maxOutputTokens: MAX_OUTPUT_TOKENS,
+            maxOutputTokens: options.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
             ...(json ? { responseMimeType: "application/json" } : {}),
+            ...(options.noThinking ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
           },
         }),
       },

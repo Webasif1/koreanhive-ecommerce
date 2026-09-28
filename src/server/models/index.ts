@@ -764,6 +764,93 @@ const comboSchema = new Schema<ComboDoc>(
 
 comboSchema.index({ isActive: 1, position: 1 });
 
+// ------------------------------------------------------------ whatsapp
+
+export type WhatsAppTurnSub = {
+  role: "customer" | "bot";
+  text: string;
+  at: Date;
+};
+
+/**
+ * One WhatsApp conversation, keyed by the customer's WhatsApp ID (their number
+ * in international form). Holds where the sales script has got to — see
+ * lib/whatsapp/sales.ts — and a short transcript, so the bot can phrase a reply
+ * in context and staff get the recent messages in a hand-off email.
+ */
+export type WhatsAppChatDoc = {
+  _id: Types.ObjectId;
+  waId: string;
+  name?: string | null;
+  language?: "en" | "banglish" | "bn" | null;
+  stage: "idle" | "qualifying" | "offered" | "awaiting_details";
+  focusSlug?: string | null;
+  priceAsks: number;
+  qualified: boolean;
+  misses: number;
+  slots?: Record<string, unknown> | null;
+  history: WhatsAppTurnSub[];
+  /** Message IDs already answered — Meta retries a webhook it thinks failed. */
+  processedIds: string[];
+  /** IDs of messages the bot sent, so an echo of one is not taken for staff. */
+  sentIds: string[];
+  lastCustomerAt?: Date | null;
+  lastBotAt?: Date | null;
+  followUpSentAt?: Date | null;
+  /** While in the future, a person is handling the chat and the bot is quiet. */
+  handoffUntil?: Date | null;
+  handoffAt?: Date | null;
+  handoffReason?: string | null;
+  /** The owner last replied by hand from the WhatsApp Business app. */
+  lastStaffAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+const whatsAppChatSchema = new Schema<WhatsAppChatDoc>(
+  {
+    waId: { type: String, required: true, unique: true },
+    name: { type: String, default: null },
+    language: { type: String, enum: ["en", "banglish", "bn", null], default: null },
+    stage: {
+      type: String,
+      enum: ["idle", "qualifying", "offered", "awaiting_details"],
+      default: "idle",
+    },
+    focusSlug: { type: String, default: null },
+    priceAsks: { type: Number, default: 0 },
+    qualified: { type: Boolean, default: false },
+    misses: { type: Number, default: 0 },
+    slots: { type: Schema.Types.Mixed, default: null },
+    history: {
+      type: [
+        new Schema<WhatsAppTurnSub>(
+          {
+            role: { type: String, enum: ["customer", "bot"], required: true },
+            text: { type: String, required: true },
+            at: { type: Date, default: Date.now },
+          },
+          { _id: false },
+        ),
+      ],
+      default: [],
+    },
+    processedIds: { type: [String], default: [] },
+    sentIds: { type: [String], default: [] },
+    lastCustomerAt: { type: Date, default: null },
+    lastBotAt: { type: Date, default: null },
+    followUpSentAt: { type: Date, default: null },
+    handoffUntil: { type: Date, default: null },
+    handoffAt: { type: Date, default: null },
+    handoffReason: { type: String, default: null },
+    lastStaffAt: { type: Date, default: null },
+  },
+  { timestamps: true },
+);
+
+// the follow-up sweep reads a window of lastCustomerAt
+whatsAppChatSchema.index({ lastCustomerAt: 1 });
+
 // Reuse the compiled model across hot reloads, otherwise Mongoose throws
 // OverwriteModelError on the second evaluation of this module.
 function compile<T>(name: string, schema: Schema<T>): Model<T> {
@@ -783,3 +870,4 @@ export const Review = compile("Review", reviewSchema);
 export const WishlistItem = compile("WishlistItem", wishlistItemSchema);
 export const Banner = compile("Banner", bannerSchema);
 export const Combo = compile("Combo", comboSchema);
+export const WhatsAppChat = compile("WhatsAppChat", whatsAppChatSchema);
