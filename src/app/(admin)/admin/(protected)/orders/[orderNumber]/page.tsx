@@ -206,6 +206,12 @@ export default async function AdminOrderDetailPage({
                 Cancelling or returning puts the stock back. Marking a COD
                 order delivered also marks it paid.
               </p>
+              <p className="text-xs text-muted-foreground">
+                {order.customerEmail
+                  ? `Confirmed, On the way and Delivered email ${order.customerEmail}.`
+                  : "No customer email on file — status changes send no email."}{" "}
+                Confirming also emails the shop inbox.
+              </p>
             </form>
           </section>
 

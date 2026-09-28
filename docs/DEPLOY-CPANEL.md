@@ -96,6 +96,15 @@ Then **Add Variable** for each of these:
 | `SHEET_CSV_URL` | Your Google Sheet link |
 | `TRUSTED_PROXY_HOPS` | `1` — cPanel puts Apache in front of the app. **Not optional**; see the QA report §4 |
 | `NODE_ENV` | `production` |
+| `GOOGLE_USER_EMAIL` | The shop Gmail that sends order emails (koreanhives@gmail.com) |
+| `GOOGLE_USER_PASSWORD` | That account's 16-letter **app password**, not its real password |
+
+Without the two `GOOGLE_USER_*` variables the shop still takes orders, but
+no order email is sent. Some shared hosts block outbound SMTP to Gmail
+(WHM's "SMTP Restrictions"): if emails arrive when you order locally but
+not from the live site, ask the host to allow outbound port 465, or add
+`SMTP_PORT` = `587`. Optional: `ORDER_NOTIFY_EMAIL` sends the shop copies
+to a different inbox.
 
 `NEXT_PUBLIC_SITE_URL` is inlined into the client bundle **at build time**, so
 it must also be set in CI (as a repository *variable*, not a secret). Setting it

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { ORDER_STATUS_LABEL, type OrderStatusValue } from "@/lib/order-status";
 import { requireAdmin } from "@/server/admin-guard";
 import { connectDb, mongoose } from "@/server/db";
+import { queueStatusEmails } from "@/server/email/order-emails";
 import { ORDER_STATUSES, Order, Product } from "@/server/models";
 
 const RESTOCKING_STATUSES = new Set<OrderStatusValue>(["CANCELLED", "RETURNED"]);
@@ -113,6 +114,10 @@ export async function updateOrderStatusAction(formData: FormData) {
   } finally {
     await session.endSession();
   }
+
+  // only after the commit, and at most once per status: saving the status an
+  // order already has returned early above
+  queueStatusEmails(orderNumber, status, admin.email ?? "admin");
 
   revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${orderNumber}`);

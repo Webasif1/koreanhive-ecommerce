@@ -24,6 +24,7 @@ import {
   writeCouponCookie,
 } from "@/server/cart-cookie";
 import { connectDb, mongoose } from "@/server/db";
+import { queueOrderPlacedEmails } from "@/server/email/order-emails";
 import { Coupon, DeliveryZone, Order, Product } from "@/server/models";
 import { getComboRules } from "@/server/queries/cart";
 import { sendPurchaseToMeta } from "@/server/tracking/meta-capi";
@@ -457,6 +458,9 @@ export async function placeOrderAction(
   // Only for the order this request created: a lost race's winner already
   // sent its own. Queued with after(), so the redirect does not wait on Meta.
   if (createdNumber && !duplicateOf) {
+    // the shop's heads-up and the customer's thank-you, after the redirect
+    queueOrderPlacedEmails(createdNumber);
+
     await sendPurchaseToMeta({
       id: createdNumber,
       itemsTotal: afterCombo - orderDiscount,
