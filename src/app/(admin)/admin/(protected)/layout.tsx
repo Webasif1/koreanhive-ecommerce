@@ -56,7 +56,11 @@ export default async function AdminLayout({
   return (
     <div className="min-h-screen bg-background">
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 border-b bg-card/90 backdrop-blur">
+        {/* No backdrop-blur here: a backdrop-filter makes the header the
+            containing block for position:fixed children, which pinned the
+            sidebar (rendered inside it) to the header's 70px instead of the
+            viewport. */}
+        <header className="sticky top-0 z-20 border-b bg-card">
           <div className="flex items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
             <AdminSidebar pendingCount={pendingCount} />
 
