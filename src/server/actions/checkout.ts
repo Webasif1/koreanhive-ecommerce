@@ -26,7 +26,7 @@ import {
 import { connectDb, mongoose } from "@/server/db";
 import { queueOrderPlacedEmails } from "@/server/email/order-emails";
 import { Coupon, DeliveryZone, Order, Product } from "@/server/models";
-import { getComboRules } from "@/server/queries/cart";
+import { getLiveCombos } from "@/server/queries/cart";
 import { sendPurchaseToMeta } from "@/server/tracking/meta-capi";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no I/O/0/1
@@ -219,13 +219,15 @@ export async function placeOrderAction(
   const subtotal = lines.reduce((sum, l) => sum + l.lineTotal, 0);
 
   // the same rules and arithmetic the cart page priced with
+  const liveCombos = await getLiveCombos();
+  const comboBySlug = new Map(liveCombos.map((combo) => [combo.slug, combo]));
   const { comboDiscount, applied: combos } = applyCombos(
     lines.map((line) => ({
       slug: line.productSlug,
       unitPrice: line.unitPrice,
       quantity: line.quantity,
     })),
-    await getComboRules(),
+    liveCombos,
   );
   const afterCombo = subtotal - comboDiscount;
 
@@ -366,7 +368,20 @@ export async function placeOrderAction(
             couponCode: coupon?.code ?? null,
             subtotal,
             comboDiscount,
-            combos: combos.map(({ slug, name, sets }) => ({ slug, name, sets })),
+            // with the price each set sold at, so the order can be shown as
+            // "Combo × 1" later without trusting today's combo price
+            combos: combos.map(({ slug, name, sets }) => {
+              const combo = comboBySlug.get(slug);
+              return {
+                slug,
+                name,
+                sets,
+                price: combo?.price ?? null,
+                regularPrice: combo?.regularPrice ?? null,
+                productSlugs: combo?.productSlugs ?? [],
+                imageUrl: combo?.imageUrl ?? null,
+              };
+            }),
             discount,
             shippingCharge,
             total,

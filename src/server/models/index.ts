@@ -409,7 +409,16 @@ export type OrderDoc = {
   /** Saving from complete combo sets in the order; 0 on older orders. */
   comboDiscount?: number;
   /** The combos the saving came from, so staff know what to pack. */
-  combos?: { slug: string; name: string; sets: number }[];
+  combos?: {
+    slug: string;
+    name: string;
+    sets: number;
+    /** combo price per set when ordered; absent on older orders */
+    price?: number | null;
+    regularPrice?: number | null;
+    productSlugs?: string[];
+    imageUrl?: string | null;
+  }[];
   /** Coupon discount, applied after comboDiscount. */
   discount: number;
   shippingCharge: number;
@@ -483,6 +492,12 @@ const orderSchema = new Schema<OrderDoc>(
             slug: { type: String, required: true },
             name: { type: String, required: true },
             sets: { type: Number, required: true, min: 1 },
+            // snapshotted so the order can still show "Combo × 1 at ৳3,850"
+            // after the combo's price or contents change
+            price: { type: Number, default: null, min: 0 },
+            regularPrice: { type: Number, default: null, min: 0 },
+            productSlugs: { type: [String], default: undefined },
+            imageUrl: { type: String, default: null },
           },
           { _id: false },
         ),

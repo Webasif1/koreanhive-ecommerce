@@ -104,7 +104,7 @@ export async function getComboRules(): Promise<ComboRule[]> {
 }
 
 /** Live combos with what the cart needs to show one as a single line. */
-async function getLiveCombos(): Promise<ComboDisplay[]> {
+export async function getLiveCombos(): Promise<ComboDisplay[]> {
   await connectDb();
 
   const combos = await Combo.find({ isActive: true })

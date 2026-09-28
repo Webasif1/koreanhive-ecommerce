@@ -2,6 +2,7 @@ import "server-only";
 
 import { normalizeBdPhone } from "@/lib/bd-districts";
 import { comboNames } from "@/lib/combo-pricing";
+import { groupOrderLines, type OrderComboLine } from "@/lib/order-lines";
 import type { OrderStatusValue } from "@/lib/order-status";
 import { connectDb } from "@/server/db";
 import { DeliveryZone, Order } from "@/server/models";
@@ -25,16 +26,17 @@ export type TrackedOrder = {
   couponCode: string | null;
   shippingCharge: number;
   total: number;
-  items: {
-    id: string;
-    productName: string;
-    productSlug: string;
-    variantName: string | null;
-    imageUrl: string | null;
-    unitPrice: number;
-    quantity: number;
-    lineTotal: number;
-  }[];
+  items: TrackedItem[];
+  /** each combo as one line, the way the cart showed it */
+  comboLines: OrderComboLine[];
+  /** products not part of a combo */
+  itemLines: TrackedItem[];
+  /** combo lines at the combo price plus the rest */
+  displaySubtotal: number;
+  /** a combo saving the combo lines could not absorb (older orders only) */
+  remainingComboDiscount: number;
+  /** saving against the combos' regular prices */
+  regularSaving: number;
   history: {
     id: string;
     status: OrderStatusValue;
@@ -42,6 +44,38 @@ export type TrackedOrder = {
     createdAt: string;
   }[];
 };
+
+type TrackedItem = {
+  id: string;
+  productName: string;
+  productSlug: string;
+  variantName: string | null;
+  imageUrl: string | null;
+  unitPrice: number;
+  quantity: number;
+  lineTotal: number;
+};
+
+/** The display grouping every order view shares. */
+function grouped<T extends { productSlug: string; productName: string; unitPrice: number; quantity: number; lineTotal: number }>(
+  order: { subtotal: number; comboDiscount?: number | null; combos?: Parameters<typeof groupOrderLines>[0]["combos"] },
+  items: T[],
+) {
+  const result = groupOrderLines({
+    items,
+    combos: order.combos,
+    subtotal: order.subtotal,
+    comboDiscount: order.comboDiscount,
+  });
+
+  return {
+    comboLines: result.comboLines,
+    itemLines: result.itemLines,
+    displaySubtotal: result.subtotal,
+    remainingComboDiscount: result.remainingComboDiscount,
+    regularSaving: result.regularSaving,
+  };
+}
 
 export function normalizeOrderNumber(input: string) {
   return input.trim().toUpperCase().replace(/\s+/g, "");
@@ -73,6 +107,17 @@ export async function findOrderForTracking(
     (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
   );
 
+  const items = order.items.map((item) => ({
+    id: item._id.toString(),
+    productName: item.productName,
+    productSlug: item.productSlug,
+    variantName: item.variantName ?? null,
+    imageUrl: item.imageUrl ?? null,
+    unitPrice: item.unitPrice,
+    quantity: item.quantity,
+    lineTotal: item.lineTotal,
+  }));
+
   return {
     orderNumber: order.orderNumber,
     status: order.status,
@@ -92,16 +137,8 @@ export async function findOrderForTracking(
     couponCode: order.couponCode ?? null,
     shippingCharge: order.shippingCharge,
     total: order.total,
-    items: order.items.map((item) => ({
-      id: item._id.toString(),
-      productName: item.productName,
-      productSlug: item.productSlug,
-      variantName: item.variantName ?? null,
-      imageUrl: item.imageUrl ?? null,
-      unitPrice: item.unitPrice,
-      quantity: item.quantity,
-      lineTotal: item.lineTotal,
-    })),
+    items,
+    ...grouped(order, items),
     history: history.map((entry) => ({
       id: entry._id.toString(),
       status: entry.status,
@@ -120,6 +157,17 @@ export async function getOrderByNumber(orderNumber: string) {
 
   const zone = await DeliveryZone.findById(order.deliveryZoneId).lean();
 
+  const items = order.items.map((item) => ({
+    id: item._id.toString(),
+    productName: item.productName,
+    productSlug: item.productSlug,
+    sku: item.sku ?? null,
+    variantName: item.variantName ?? null,
+    unitPrice: item.unitPrice,
+    quantity: item.quantity,
+    lineTotal: item.lineTotal,
+  }));
+
   return {
     orderNumber: order.orderNumber,
     customerName: order.customerName,
@@ -133,16 +181,8 @@ export async function getOrderByNumber(orderNumber: string) {
     couponCode: order.couponCode ?? null,
     shippingCharge: order.shippingCharge,
     total: order.total,
-    items: order.items.map((item) => ({
-      id: item._id.toString(),
-      productName: item.productName,
-      productSlug: item.productSlug,
-      sku: item.sku ?? null,
-      variantName: item.variantName ?? null,
-      unitPrice: item.unitPrice,
-      quantity: item.quantity,
-      lineTotal: item.lineTotal,
-    })),
+    items,
+    ...grouped(order, items),
     deliveryZone: {
       name: zone?.name ?? "Delivery",
       minDays: zone?.minDays ?? 1,

@@ -83,7 +83,40 @@ export function TrackedOrder({ order }: { order: TrackedOrderData }) {
           <div className="rounded-xl border bg-card p-5">
             <h2 className="font-display font-semibold">Items</h2>
             <ul className="mt-3 divide-y">
-              {order.items.map((item) => (
+              {/* a combo is one line, as the cart showed it */}
+              {order.comboLines.map((line) => (
+                <li key={line.key} className="flex items-center gap-3 py-3">
+                  <Link
+                    href={`/combos/${line.slug}`}
+                    className="relative size-12 shrink-0 overflow-hidden rounded-lg border bg-white"
+                  >
+                    {line.imageUrl && (
+                      <Image
+                        src={line.imageUrl}
+                        alt={line.name}
+                        fill
+                        sizes="48px"
+                        className="object-contain"
+                      />
+                    )}
+                  </Link>
+                  <div className="flex-1 text-sm">
+                    <Link
+                      href={`/combos/${line.slug}`}
+                      className="line-clamp-1 font-medium hover:text-primary"
+                    >
+                      {line.name}
+                    </Link>
+                    <p className="text-xs text-muted-foreground">
+                      Combo · {line.sets} × {formatBDT(line.unitPrice)}
+                    </p>
+                  </div>
+                  <p className="text-sm tabular-nums">
+                    {formatBDT(line.lineTotal)}
+                  </p>
+                </li>
+              ))}
+              {order.itemLines.map((item) => (
                 <li key={item.id} className="flex items-center gap-3 py-3">
                   <Link
                     href={`/product/${item.productSlug}`}
@@ -121,13 +154,15 @@ export function TrackedOrder({ order }: { order: TrackedOrderData }) {
             <dl className="mt-3 space-y-2 border-t pt-3 text-sm">
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Subtotal</dt>
-                <dd className="tabular-nums">{formatBDT(order.subtotal)}</dd>
+                <dd className="tabular-nums">
+                  {formatBDT(order.displaySubtotal)}
+                </dd>
               </div>
-              {order.comboDiscount > 0 && (
+              {order.remainingComboDiscount > 0 && (
                 <div className="flex justify-between text-success">
                   <dt>Combo saving ({order.comboNames.join(", ")})</dt>
                   <dd className="tabular-nums">
-                    −{formatBDT(order.comboDiscount)}
+                    −{formatBDT(order.remainingComboDiscount)}
                   </dd>
                 </div>
               )}

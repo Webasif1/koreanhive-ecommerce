@@ -1,5 +1,6 @@
 import { comboNames } from "@/lib/combo-pricing";
 import { formatBDT } from "@/lib/format";
+import { groupOrderLines, type OrderComboSnapshot } from "@/lib/order-lines";
 import {
   ORDER_STATUS_HINT,
   ORDER_STATUS_LABEL,
@@ -31,7 +32,7 @@ export type EmailOrder = {
   note?: string | null;
   subtotal: number;
   comboDiscount?: number;
-  combos?: { name: string; sets: number }[];
+  combos?: OrderComboSnapshot[];
   couponCode?: string | null;
   discount: number;
   shippingCharge: number;
@@ -39,11 +40,54 @@ export type EmailOrder = {
   placedAt: Date;
   items: {
     productName: string;
+    productSlug: string;
     variantName?: string | null;
+    unitPrice: number;
     quantity: number;
     lineTotal: number;
   }[];
 };
+
+/**
+ * The order as the email lists it: each combo as one line at its combo
+ * price, like the cart and the confirmation page — not the products in it.
+ * Staff copies add a small "Pack:" line under a combo so the shop still sees
+ * what goes in the parcel.
+ */
+function emailLines(order: EmailOrder, { forStaff = false } = {}) {
+  const grouped = groupOrderLines(order);
+
+  const lines = [
+    ...grouped.comboLines.map((line) => ({
+      name: line.name,
+      detail: forStaff
+        ? `Combo · Pack: ${comboContents(order, line.slug).join(" · ")}`
+        : "Combo",
+      quantity: line.sets,
+      total: line.lineTotal,
+      compare: line.comparePrice ? line.comparePrice * line.sets : null,
+    })),
+    ...grouped.itemLines.map((item) => ({
+      name: item.productName,
+      detail: item.variantName ?? null,
+      quantity: item.quantity,
+      total: item.lineTotal,
+      compare: null as number | null,
+    })),
+  ];
+
+  return { ...grouped, lines };
+}
+
+/** The product names inside a combo on this order, for the staff copy. */
+function comboContents(order: EmailOrder, slug: string) {
+  const combo = order.combos?.find((entry) => entry.slug === slug);
+  const slugs = new Set(combo?.productSlugs ?? []);
+  const names = order.items
+    .filter((item) => slugs.size === 0 || slugs.has(item.productSlug))
+    .map((item) => item.productName);
+  return [...new Set(names)];
+}
 
 export type Email = { subject: string; html: string; text: string };
 
@@ -146,15 +190,17 @@ function addressLines(order: EmailOrder) {
 }
 
 function summaryRows(order: EmailOrder) {
+  const grouped = groupOrderLines(order);
   const rows: { label: string; value: string; tone?: "sale" | "success" }[] = [
-    { label: "Subtotal", value: formatBDT(order.subtotal) },
+    { label: "Subtotal", value: formatBDT(grouped.subtotal) },
   ];
 
-  if (order.comboDiscount && order.comboDiscount > 0) {
+  // only for older orders whose combo could not be shown as one line
+  if (grouped.remainingComboDiscount > 0) {
     const names = comboNames(order.combos);
     rows.push({
       label: names.length ? `Combo saving (${names.join(", ")})` : "Combo saving",
-      value: `−${formatBDT(order.comboDiscount)}`,
+      value: `−${formatBDT(grouped.remainingComboDiscount)}`,
       tone: "sale",
     });
   }
@@ -174,25 +220,40 @@ function summaryRows(order: EmailOrder) {
   return rows;
 }
 
-function itemsTable(order: EmailOrder) {
-  const items = order.items
+function itemsTable(order: EmailOrder, options: { forStaff?: boolean } = {}) {
+  const view = emailLines(order, options);
+  const items = view.lines
     .map(
-      (item) => `
+      (line) => `
       <tr>
         <td style="padding:10px 0;border-bottom:1px solid ${HAIRLINE};font-size:14px;color:${INK};">
-          ${escapeHtml(item.productName)}${
-            item.variantName
-              ? `<br><span style="font-size:12px;color:${MUTED};">${escapeHtml(item.variantName)}</span>`
+          ${escapeHtml(line.name)}
+          <span style="color:${MUTED};"> × ${line.quantity}</span>${
+            line.detail
+              ? `<br><span style="font-size:12px;color:${MUTED};">${escapeHtml(line.detail)}</span>`
               : ""
           }
-          <span style="color:${MUTED};"> × ${item.quantity}</span>
         </td>
-        <td align="right" style="padding:10px 0;border-bottom:1px solid ${HAIRLINE};font-size:14px;color:${INK};white-space:nowrap;">
-          ${formatBDT(item.lineTotal)}
+        <td align="right" style="padding:10px 0;border-bottom:1px solid ${HAIRLINE};font-size:14px;color:${INK};white-space:nowrap;vertical-align:top;">
+          ${formatBDT(line.total)}${
+            line.compare
+              ? `<br><span style="font-size:12px;color:${MUTED};text-decoration:line-through;">${formatBDT(line.compare)}</span>`
+              : ""
+          }
         </td>
       </tr>`,
     )
     .join("");
+
+  const saved =
+    view.regularSaving > 0
+      ? `
+      <tr>
+        <td colspan="2" style="padding:14px 0 0;">
+          <div style="background:#e7f4ec;padding:10px 12px;text-align:center;font-size:13px;font-weight:700;color:${SUCCESS};">You saved ${formatBDT(view.regularSaving)} with the combo</div>
+        </td>
+      </tr>`
+      : "";
 
   const summary = summaryRows(order)
     .map(
@@ -213,6 +274,7 @@ function itemsTable(order: EmailOrder) {
         <td style="padding:12px 0 0;border-top:2px solid ${INK};font-size:16px;font-weight:700;color:${INK};">Total (cash on delivery)</td>
         <td align="right" style="padding:12px 0 0;border-top:2px solid ${INK};font-size:18px;font-weight:700;color:${INK};white-space:nowrap;">${formatBDT(order.total)}</td>
       </tr>
+      ${saved}
     </table>`;
 }
 
@@ -294,14 +356,20 @@ function trackingBox(orderNumber: string) {
     </table>`;
 }
 
-function textSummary(order: EmailOrder) {
+function textSummary(order: EmailOrder, options: { forStaff?: boolean } = {}) {
+  const view = emailLines(order, options);
   return [
-    ...order.items.map(
-      (item) =>
-        `- ${item.productName}${item.variantName ? ` (${item.variantName})` : ""} × ${item.quantity}  ${formatBDT(item.lineTotal)}`,
+    ...view.lines.map(
+      (line) =>
+        `- ${line.name}${line.detail ? ` (${line.detail})` : ""} × ${line.quantity}  ${formatBDT(line.total)}${
+          line.compare ? ` (regular ${formatBDT(line.compare)})` : ""
+        }`,
     ),
     ...summaryRows(order).map((row) => `${row.label}: ${row.value}`),
     `Total (cash on delivery): ${formatBDT(order.total)}`,
+    ...(view.regularSaving > 0
+      ? [`You saved ${formatBDT(view.regularSaving)} with the combo`]
+      : []),
   ].join("\n");
 }
 
@@ -412,7 +480,7 @@ function shopEmail({
     <p style="margin:10px 0 0;font-size:14px;line-height:1.6;color:${MUTED};">${escapeHtml(lead)}</p>
     ${shopDetails(order)}
     <div style="margin:26px 0 8px;font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:${MULBERRY};">Items</div>
-    ${itemsTable(order)}
+    ${itemsTable(order, { forStaff: true })}
     <div style="margin-top:28px;">${button(adminLink, "Open in admin")}</div>`;
 
   const text = [
@@ -425,7 +493,7 @@ function shopEmail({
     `Address: ${addressLines(order).join(", ")}`,
     `Note: ${order.note || "—"}`,
     "",
-    textSummary(order),
+    textSummary(order, { forStaff: true }),
     "",
     `Admin: ${adminLink}`,
   ].join("\n");

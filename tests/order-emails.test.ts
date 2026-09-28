@@ -28,18 +28,41 @@ const order = (over: Partial<EmailOrder> = {}): EmailOrder => ({
   note: null,
   subtotal: 4050,
   comboDiscount: 200,
-  combos: [{ name: "Korean Brightening Glow Combo", sets: 1 }],
+  combos: [
+    {
+      slug: "korean-brightening-glow-combo",
+      name: "Korean Brightening Glow Combo",
+      sets: 1,
+      price: 3850,
+      regularPrice: 5049,
+      productSlugs: ["cleanser", "ampoule", "cream"],
+    },
+  ],
   couponCode: null,
   discount: 0,
   shippingCharge: 0,
   total: 3850,
   placedAt: new Date("2026-09-28T10:00:00Z"),
   items: [
-    { productName: "The Face Shop Rice Water Bright Cleanser 150ml", quantity: 1, lineTotal: 950 },
-    { productName: "Dr.Althea 345 Relief Cream 50ml", quantity: 1, lineTotal: 2200 },
+    { productName: "The Face Shop Rice Water Bright Cleanser 150ml", productSlug: "cleanser", unitPrice: 950, quantity: 1, lineTotal: 950 },
+    { productName: "SKIN1004 Tone Brightening Ampoule 30ml", productSlug: "ampoule", unitPrice: 900, quantity: 1, lineTotal: 900 },
+    { productName: "Dr.Althea 345 Relief Cream 50ml", productSlug: "cream", unitPrice: 2200, quantity: 1, lineTotal: 2200 },
   ],
   ...over,
 });
+
+/** An order with no combo: two plain products. */
+const plainOrder = () =>
+  order({
+    subtotal: 1850,
+    comboDiscount: 0,
+    combos: [],
+    total: 1850,
+    items: [
+      { productName: "The Face Shop Rice Water Bright Cleanser 150ml", productSlug: "cleanser", unitPrice: 950, quantity: 1, lineTotal: 950 },
+      { productName: "SKIN1004 Tone Brightening Ampoule 30ml", productSlug: "ampoule", unitPrice: 900, quantity: 1, lineTotal: 900 },
+    ],
+  });
 
 const KINDS = ["placed", "confirmed", "shipped", "delivered"] as const;
 
@@ -91,10 +114,33 @@ describe("customer order emails", () => {
     );
   });
 
-  it("names the combo saving", () => {
-    const { text } = customerOrderEmail(order(), "placed");
-    assert.ok(text.includes("Combo saving (Korean Brightening Glow Combo): −৳200"), text);
-    assert.ok(text.includes("৳3,850"));
+  it("shows a combo as one line at its combo price, not its products", () => {
+    const { html, text } = customerOrderEmail(order(), "placed");
+
+    assert.ok(text.includes("Korean Brightening Glow Combo (Combo) × 1  ৳3,850 (regular ৳5,049)"), text);
+    assert.ok(text.includes("Subtotal: ৳3,850"), text);
+    assert.ok(text.includes("You saved ৳1,199 with the combo"), text);
+    for (const product of ["Rice Water Bright Cleanser", "Tone Brightening Ampoule", "345 Relief Cream"]) {
+      assert.ok(!html.includes(product), `customer email lists ${product}`);
+      assert.ok(!text.includes(product), `customer text lists ${product}`);
+    }
+    assert.ok(!text.includes("−৳200"), "the combo saving is already in the combo line");
+  });
+
+  it("lists products normally when the order has no combo", () => {
+    const { text } = customerOrderEmail(plainOrder(), "placed");
+    assert.ok(text.includes("The Face Shop Rice Water Bright Cleanser 150ml × 1  ৳950"), text);
+    assert.ok(text.includes("Subtotal: ৳1,850"), text);
+    assert.ok(!text.includes("You saved"), text);
+  });
+
+  it("regroups an older order that has no combo price stored", () => {
+    const { text } = customerOrderEmail(
+      order({ combos: [{ slug: "korean-brightening-glow-combo", name: "Korean Brightening Glow Combo", sets: 1, productSlugs: ["cleanser", "ampoule", "cream"] }] }),
+      "placed",
+    );
+    assert.ok(text.includes("Korean Brightening Glow Combo (Combo) × 1  ৳3,850"), text);
+    assert.ok(!text.includes("Combo saving"), text);
   });
 
   it("emails the customer only on placed, confirmed, shipped and delivered", () => {
@@ -115,6 +161,9 @@ describe("shop order emails", () => {
     for (const expected of ["Nusrat Jahan", "01712345678", "Dhanmondi", "Call after 5pm", "/admin/orders/KH-260928-AB2CD"]) {
       assert.ok(text.includes(expected), expected);
     }
+    // the combo as one line, with what goes in the parcel beside it
+    assert.ok(text.includes("Korean Brightening Glow Combo (Combo · Pack:"), text);
+    assert.ok(text.includes("Dr.Althea 345 Relief Cream 50ml"), text);
   });
 
   it("say who confirmed the order", () => {

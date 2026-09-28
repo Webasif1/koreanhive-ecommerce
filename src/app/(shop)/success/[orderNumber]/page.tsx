@@ -71,7 +71,26 @@ export default async function OrderSuccessPage({ params }: OrderPageProps) {
         </div>
 
         <ul className="mt-8 divide-y rounded-xl border bg-card px-4">
-          {order.items.map((item) => (
+          {/* a combo is one line, as the cart showed it */}
+          {order.comboLines.map((line) => (
+            <li key={line.key} className="flex items-center gap-3 py-3 text-sm">
+              <div className="flex-1">
+                <p className="font-medium">{line.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  Combo · {line.sets} × {formatBDT(line.unitPrice)}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="tabular-nums">{formatBDT(line.lineTotal)}</p>
+                {line.comparePrice && (
+                  <p className="text-xs text-muted-foreground line-through tabular-nums">
+                    {formatBDT(line.comparePrice * line.sets)}
+                  </p>
+                )}
+              </div>
+            </li>
+          ))}
+          {order.itemLines.map((item) => (
             <li key={item.id} className="flex items-center gap-3 py-3 text-sm">
               <div className="flex-1">
                 <p className="font-medium">{item.productName}</p>
@@ -88,12 +107,14 @@ export default async function OrderSuccessPage({ params }: OrderPageProps) {
         <dl className="mt-4 space-y-2 rounded-xl border bg-card p-4 text-sm">
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Subtotal</dt>
-            <dd className="tabular-nums">{formatBDT(order.subtotal)}</dd>
+            <dd className="tabular-nums">{formatBDT(order.displaySubtotal)}</dd>
           </div>
-          {order.comboDiscount > 0 && (
+          {order.remainingComboDiscount > 0 && (
             <div className="flex justify-between text-success">
               <dt>Combo saving ({order.comboNames.join(", ")})</dt>
-              <dd className="tabular-nums">−{formatBDT(order.comboDiscount)}</dd>
+              <dd className="tabular-nums">
+                −{formatBDT(order.remainingComboDiscount)}
+              </dd>
             </div>
           )}
           {order.discount > 0 && (
@@ -116,6 +137,11 @@ export default async function OrderSuccessPage({ params }: OrderPageProps) {
             <dt>Total due on delivery</dt>
             <dd className="tabular-nums">{formatBDT(order.total)}</dd>
           </div>
+          {order.regularSaving > 0 && (
+            <p className="rounded-lg bg-success-bg px-3 py-2 text-center text-[13px] font-bold text-success">
+              You saved {formatBDT(order.regularSaving)} with the combo
+            </p>
+          )}
         </dl>
 
         <div className="mt-4 space-y-2 rounded-xl border bg-card p-4 text-sm">
