@@ -125,6 +125,10 @@ jobs:
           # Inlined into the client bundle at build time, so it has to be the
           # real public URL here — it cannot be corrected at runtime.
           NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+          # Same reason: the floating WhatsApp button and the contact page's
+          # WhatsApp link are built with this number. Setting it only in cPanel
+          # does nothing. Unset, the button simply does not render.
+          NEXT_PUBLIC_WHATSAPP_NUMBER: ${{ vars.NEXT_PUBLIC_WHATSAPP_NUMBER }}
           NODE_ENV: production
         run: npm run build
 
