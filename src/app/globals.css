@@ -284,60 +284,25 @@ html.kh-welcome-out .kh-welcome-screen {
   gap: 1.75rem;
 }
 
-/* --- the hive ------------------------------------------------- */
+/* --- the icon ------------------------------------------------ */
 
-.kh-hive {
-  overflow: visible;
-}
-
-.kh-hive use {
-  fill: var(--brand-mulberry);
-}
-
-/* six cells settle in around the centre, one after another */
-.kh-hex-ring use {
+/* fades up, then breathes gently while the page loads */
+.kh-welcome-icon {
+  width: 7rem;
+  height: auto;
   opacity: 0;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: kh-cell-settle 1.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
-  animation-delay: calc(var(--i) * 110ms);
+  animation:
+    kh-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) forwards,
+    kh-breathe 2s 520ms ease-in-out infinite;
 }
 
-.kh-hex-core {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: kh-core-pulse 1.6s ease-in-out infinite;
-}
-
-/* The lattice tiles exactly, so the cells would touch at scale 1. Holding
-   the settled state just under it leaves the thin gap that makes a honeycomb
-   read as a honeycomb rather than a solid blob. */
-@keyframes kh-cell-settle {
-  0% {
-    opacity: 0;
-    transform: scale(0.3);
-  }
-  22%,
-  55% {
-    opacity: 0.9;
-    transform: scale(0.93);
-  }
-  85%,
-  100% {
-    opacity: 0.12;
-    transform: scale(0.84);
-  }
-}
-
-@keyframes kh-core-pulse {
+@keyframes kh-breathe {
   0%,
   100% {
-    opacity: 0.18;
-    transform: scale(0.84);
+    transform: scale(1);
   }
-  45% {
-    opacity: 1;
-    transform: scale(0.96);
+  50% {
+    transform: scale(1.05);
   }
 }
 
@@ -396,20 +361,14 @@ html.kh-welcome-out .kh-welcome-screen {
    reduced-motion preference, but if the class is ever set another
    way, hold everything still. */
 @media (prefers-reduced-motion: reduce) {
-  .kh-hex-ring use,
-  .kh-hex-core,
+  .kh-welcome-icon,
   .kh-welcome-mark,
   .kh-welcome-bar > span {
     animation: none;
     opacity: 1;
   }
 
-  /* the still frame keeps the same gap the animated one settles to */
-  .kh-hex-ring use,
-  .kh-hex-core {
-    transform: scale(0.93);
-  }
-
+  .kh-welcome-icon,
   .kh-welcome-mark {
     transform: none;
   }

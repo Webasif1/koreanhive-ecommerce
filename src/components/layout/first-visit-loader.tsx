@@ -24,14 +24,15 @@ import Image from "next/image";
  * runs, the CSS animation ends on `forwards` with the overlay transparent and
  * `pointer-events: none`, so the page underneath is fully usable regardless.
  *
- * The honeycomb is drawn from six hexagons settling around a seventh — the
- * hive filling. It is our own mark, not a spinner.
+ * The icon is our own mark, breathing gently while the page loads — not a
+ * spinner.
  */
 
 const MIN_VISIBLE_MS = 900;
 const MAX_VISIBLE_MS = 2200;
 const SESSION_KEY = "kh-welcomed";
 const WELCOME_MARK = "/brand/logo.webp";
+const WELCOME_ICON = "/brand/icon.webp";
 
 /**
  * Runs synchronously, before the body renders.
@@ -55,13 +56,15 @@ const GATE_SCRIPT = `
   var root = document.documentElement;
   root.classList.add("kh-welcome");
 
-  // the wordmark's preload, issued only when the overlay is really shown
-  var mark = document.createElement("link");
-  mark.rel = "preload";
-  mark.as = "image";
-  mark.href = ${JSON.stringify(WELCOME_MARK)};
-  mark.setAttribute("fetchpriority", "high");
-  document.head.appendChild(mark);
+  // the artwork's preloads, issued only when the overlay is really shown
+  [${JSON.stringify(WELCOME_ICON)}, ${JSON.stringify(WELCOME_MARK)}].forEach(function (href) {
+    var link = document.createElement("link");
+    link.rel = "preload";
+    link.as = "image";
+    link.href = href;
+    link.setAttribute("fetchpriority", "high");
+    document.head.appendChild(link);
+  });
 
   var started = Date.now();
   var done = false;
@@ -93,33 +96,15 @@ export function FirstVisitLoader() {
           in the DOM underneath, not this */}
       <div className="kh-welcome-screen" aria-hidden>
         <div className="kh-welcome-inner">
-          <svg
-            className="kh-hive"
-            viewBox="0 0 120 108"
-            width="112"
-            height="101"
-            focusable="false"
-            aria-hidden
-          >
-            {/* one flat-top hexagon, reused seven times */}
-            <defs>
-              <polygon
-                id="kh-hex"
-                points="18,0 36,10.4 36,31.2 18,41.6 0,31.2 0,10.4"
-              />
-            </defs>
-
-            <g className="kh-hex-ring">
-              <use href="#kh-hex" x="42" y="0" style={{ "--i": 1 } as never} />
-              <use href="#kh-hex" x="78" y="21" style={{ "--i": 2 } as never} />
-              <use href="#kh-hex" x="78" y="62" style={{ "--i": 3 } as never} />
-              <use href="#kh-hex" x="42" y="83" style={{ "--i": 4 } as never} />
-              <use href="#kh-hex" x="6" y="62" style={{ "--i": 5 } as never} />
-              <use href="#kh-hex" x="6" y="21" style={{ "--i": 6 } as never} />
-            </g>
-
-            <use className="kh-hex-core" href="#kh-hex" x="42" y="41" />
-          </svg>
+          {/* lazy for the same reason as the wordmark below */}
+          <Image
+            className="kh-welcome-icon"
+            src={WELCOME_ICON}
+            alt=""
+            width={240}
+            height={236}
+            fetchPriority="high"
+          />
 
           <Image
             className="kh-welcome-mark"
