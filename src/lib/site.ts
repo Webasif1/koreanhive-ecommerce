@@ -7,8 +7,10 @@ export const siteConfig = {
   currency: "BDT",
   country: "BD",
   social: {
-    facebook: process.env.NEXT_PUBLIC_FACEBOOK_URL ?? "https://facebook.com",
-    instagram: process.env.NEXT_PUBLIC_INSTAGRAM_URL ?? "https://instagram.com",
+    facebook:
+      process.env.NEXT_PUBLIC_FACEBOOK_URL || "https://www.facebook.com/koreanhive",
+    instagram:
+      process.env.NEXT_PUBLIC_INSTAGRAM_URL || "https://www.instagram.com/koreanhive/",
   },
   /**
    * Support channels, read from the environment so nothing is published that

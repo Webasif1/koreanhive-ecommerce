@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Banknote, ShieldCheck, Truck } from "lucide-react";
 
 import { footerNav } from "@/lib/navigation";
+import { siteConfig } from "@/lib/site";
 
 /* lucide-react v1 no longer ships brand icons, so these are inlined. */
 function FacebookIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -55,20 +56,24 @@ export function SiteFooter({ deliveryLine }: { deliveryLine: string }) {
           </p>
           {/* 44px tap targets on touch; desktop keeps the bare icons */}
           <div className="-ml-2.5 flex gap-1 pt-1 lg:ml-0 lg:gap-3">
-            <Link
-              href="https://facebook.com"
+            <a
+              href={siteConfig.social.facebook}
+              target="_blank"
+              rel="noopener noreferrer"
               aria-label="Korean Hive on Facebook"
               className="p-2.5 text-light transition-colors hover:text-white lg:p-0"
             >
               <FacebookIcon className="size-5" />
-            </Link>
-            <Link
-              href="https://instagram.com"
+            </a>
+            <a
+              href={siteConfig.social.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
               aria-label="Korean Hive on Instagram"
               className="p-2.5 text-light transition-colors hover:text-white lg:p-0"
             >
               <InstagramIcon className="size-5" />
-            </Link>
+            </a>
           </div>
         </div>
 
