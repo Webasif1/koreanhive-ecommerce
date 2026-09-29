@@ -391,7 +391,7 @@ export const COMBOS: ComboSeed[] = [
     note: "Tone and dark marks usually improve after 4–8 weeks of daily use. Daytime sunscreen required; not included. Patch test first if your skin reacts easily.",
     routine:
       "AM: Cleanse → toner (optional) → ampoule → cream → sunscreen. PM: Cleanse → toner (optional) → ampoule → cream.",
-    imageUrl: `${IMAGE}/01.jpeg`,
+    imageUrl: `${IMAGE}/Korean%20Brightening%20Glow%20Combo.jpeg`,
     imageAlt:
       "Korean Brightening Glow Combo — The Face Shop Rice Water cleanser, SKIN1004 tone ampoule and Dr. Althea 345 cream",
     steps: [
