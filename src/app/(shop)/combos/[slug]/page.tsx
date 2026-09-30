@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -17,13 +16,25 @@ import {
   comboTrackItems,
 } from "@/components/combo/combo-card";
 import { FaqAccordion } from "@/components/home/faq-accordion";
+import { ProductCard } from "@/components/product/product-card";
+import { ProductGallery } from "@/components/product/product-gallery";
 import { JsonLd } from "@/components/seo/json-ld";
 import { Badge } from "@/components/ui/badge";
-import { COMBO_BY_SLUG, COMBOS, type ComboPageSection } from "@/data/combos";
+import { ScrollCarousel } from "@/components/ui/scroll-carousel";
+import {
+  COMBO_BY_SLUG,
+  COMBOS,
+  type ComboPageSection,
+  type ComboSeed,
+} from "@/data/combos";
 import { discountPercent, formatBDT } from "@/lib/format";
 import { breadcrumbJsonLd, faqJsonLd, productJsonLd } from "@/lib/json-ld";
 import { absoluteUrl, withSiteSuffix } from "@/lib/site";
-import { getComboBySlug, getDeliveryZones } from "@/server/queries/catalog";
+import {
+  getCartRecommendations,
+  getComboBySlug,
+  getDeliveryZones,
+} from "@/server/queries/catalog";
 
 type ComboPageProps = {
   params: Promise<{ slug: string }>;
@@ -57,7 +68,7 @@ export async function generateMetadata({
       url: absoluteUrl(`/combos/${slug}`),
       title: page.title,
       description: page.shortDescription,
-      images: [{ url: seed.imageUrl, alt: seed.imageAlt }],
+      images: comboImages(seed).map((url) => ({ url, alt: seed.imageAlt })),
     },
     twitter: {
       card: "summary_large_image",
@@ -66,6 +77,11 @@ export async function generateMetadata({
       images: [seed.imageUrl],
     },
   };
+}
+
+/** The page's photos, primary first. */
+function comboImages(seed: ComboSeed) {
+  return [seed.imageUrl, ...(seed.moreImages ?? [])];
 }
 
 /** One section of the long description, as the body of an accordion item. */
@@ -112,7 +128,16 @@ export default async function ComboDetailPage({ params }: ComboPageProps) {
 
   if (!combo) notFound();
 
+  // The cart's suggestions: the members' categories, members left out, so the
+  // row never offers what is already in the box. Eight, as on the product
+  // page, so the slider has somewhere to go on a desktop.
+  const related = await getCartRecommendations(
+    combo.products.map((product) => product.id),
+    8,
+  );
+
   const { page } = seed;
+  const images = comboImages(seed);
   const off = discountPercent(combo.price, combo.comparePrice);
 
   // Same rule as the /combos cards: free delivery is promised only when the
@@ -162,7 +187,7 @@ export default async function ComboDetailPage({ params }: ComboPageProps) {
           path: `/combos/${slug}`,
           description: page.shortDescription,
           sku: null,
-          images: [seed.imageUrl],
+          images,
           price: combo.price,
           comparePrice: combo.comparePrice,
           inStock,
@@ -197,16 +222,16 @@ export default async function ComboDetailPage({ params }: ComboPageProps) {
         {/* The poster has the name and routine printed on it, so it keeps
             its square, whole — object-contain, never cropped. */}
         <div className="relative lg:sticky lg:top-37.5 lg:self-start">
-          <div className="relative aspect-square w-full border border-border bg-blush">
-            <Image
-              src={seed.imageUrl}
-              alt={seed.imageAlt}
-              fill
-              priority
-              sizes="(min-width: 1024px) 40vw, 100vw"
-              className="object-contain"
-            />
-          </div>
+          <ProductGallery
+            images={images.map((url, index) => ({
+              id: url,
+              url,
+              alt: index === 0 ? seed.imageAlt : `${seed.imageAlt} — photo ${index + 1}`,
+            }))}
+            productName={seed.name}
+            normalise={false}
+            frameClassName="rounded-none border-border bg-blush"
+          />
           {off !== null && (
             <span className="absolute right-0 top-0 bg-primary px-3 py-2 text-center text-[13px] font-bold leading-tight text-white">
               {off}%
@@ -318,6 +343,28 @@ export default async function ComboDetailPage({ params }: ComboPageProps) {
         </div>
         <FaqAccordion items={page.faqs} />
       </section>
+
+      {related.length > 0 && (
+        <section className="mt-10 lg:mt-16">
+          <ScrollCarousel
+            label="Pairs well with this routine"
+            itemLabel="product"
+            slideClassName="basis-[calc((100%-1rem)/2)] sm:basis-[calc((100%-2rem)/3)] lg:basis-[calc((100%-3rem)/4)]"
+            heading={
+              <>
+                <p className="eyebrow">You may also like</p>
+                <h2 className="mt-3 font-display text-[26px] tracking-[-0.01em] sm:text-[30px] md:text-[38px]">
+                  Pairs well with this routine
+                </h2>
+              </>
+            }
+          >
+            {related.map((item) => (
+              <ProductCard key={item.id} product={item} />
+            ))}
+          </ScrollCarousel>
+        </section>
+      )}
     </div>
   );
 }

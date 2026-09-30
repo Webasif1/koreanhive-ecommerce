@@ -87,6 +87,13 @@ export type ComboSeed = {
   routine: string;
   imageUrl: string;
   imageAlt: string;
+  /**
+   * Further photos for the combo's own page, shown after `imageUrl`.
+   *
+   * `imageUrl` stays the one photo everywhere else — the /combos card, the
+   * cart and the order — so only the page gets the gallery.
+   */
+  moreImages?: string[];
   /** Product slugs in routine order, with the role each plays. */
   steps: ComboStep[];
   /**
@@ -391,9 +398,13 @@ export const COMBOS: ComboSeed[] = [
     note: "Tone and dark marks usually improve after 4–8 weeks of daily use. Daytime sunscreen required; not included. Patch test first if your skin reacts easily.",
     routine:
       "AM: Cleanse → toner (optional) → ampoule → cream → sunscreen. PM: Cleanse → toner (optional) → ampoule → cream.",
-    imageUrl: `${IMAGE}/Korean%20Brightening%20Glow%20Combo.jpeg`,
+    imageUrl: `${IMAGE}/01.jpeg?updatedAt=1790588407781`,
     imageAlt:
       "Korean Brightening Glow Combo — The Face Shop Rice Water cleanser, SKIN1004 tone ampoule and Dr. Althea 345 cream",
+    moreImages: [
+      `${IMAGE}/Korean%20Brightening%20Glow%20Combo.jpeg`,
+      `${IMAGE}/Korean%20Brightening%20Glow%20Combo1.jpeg`,
+    ],
     steps: [
       { slug: "the-face-shop-rice-water-bright-cleanser-150ml", name: "The Face Shop Rice Water Bright Cleanser 150ml", role: "Cleanses without tightness", short: "Rice water cleanser" },
       { slug: "skin1004-madagascar-centella-tone-brightening-capsule-ampoule-30ml", name: "SKIN1004 Madagascar Centella Tone Brightening Capsule Ampoule 30ml", role: "Targets dullness and marks", short: "Brightening ampoule" },

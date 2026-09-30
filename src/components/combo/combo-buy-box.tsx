@@ -27,7 +27,7 @@ function BuyNowButton({ disabled }: { disabled: boolean }) {
       size="lg"
       variant="dark"
       disabled={disabled || pending}
-      className="h-12 flex-1"
+      className="h-12 w-full sm:w-auto sm:flex-1"
     >
       {pending ? "Opening checkout…" : "Buy Now"}
     </Button>
@@ -132,13 +132,14 @@ export function ComboBuyBox({
         </div>
       </div>
 
-      <div className="mt-3 flex gap-2.5">
+      {/* Stacked on a phone: side by side, "Add to Cart" ran off the edge. */}
+      <div className="mt-3 flex flex-col gap-2.5 sm:flex-row">
         <BuyNowButton disabled={outOfStock} />
         <Button
           type="button"
           size="lg"
           disabled={outOfStock || isAdding}
-          className="h-12 flex-1"
+          className="h-12 w-full sm:w-auto sm:flex-1"
           onClick={addToCart}
         >
           <ShoppingBag className="size-4" aria-hidden />

@@ -16,9 +16,19 @@ type GalleryImage = {
 export function ProductGallery({
   images,
   productName,
+  normalise = true,
+  frameClassName,
 }: {
   images: GalleryImage[];
   productName: string;
+  /**
+   * Trim and re-pad each photo to the catalogue's packshot scale. Off for
+   * designed posters (the combos), which have text printed to their edges and
+   * must be shown whole.
+   */
+  normalise?: boolean;
+  /** Overrides for the main image frame. */
+  frameClassName?: string;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [zoomed, setZoomed] = useState(false);
@@ -26,6 +36,7 @@ export function ProductGallery({
   const touchStartX = useRef<number | null>(null);
 
   const active = images[activeIndex];
+  const imageSrc = normalise ? productImage : (url: string) => url;
 
   if (!active) {
     return (
@@ -82,11 +93,14 @@ export function ProductGallery({
             setZoomed((z) => !z);
           }
         }}
-        className="relative aspect-square cursor-zoom-in overflow-hidden rounded-xl border bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className={cn(
+          "relative aspect-square cursor-zoom-in overflow-hidden rounded-xl border bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          frameClassName,
+        )}
       >
         <Image
           key={active.id}
-          src={productImage(active.url)}
+          src={imageSrc(active.url)}
           alt={active.alt ?? productName}
           fill
           priority
@@ -95,7 +109,8 @@ export function ProductGallery({
           className={cn(
             // contain so the whole product is visible at a consistent scale,
             // matching the grid cards; cover cropped the taller packshots
-            "object-contain p-2 transition-transform duration-200",
+            "object-contain transition-transform duration-200",
+            normalise && "p-2",
             zoomed ? "scale-[2]" : "scale-100",
           )}
         />
@@ -118,7 +133,7 @@ export function ProductGallery({
               )}
             >
               <Image
-                src={productImage(image.url)}
+                src={imageSrc(image.url)}
                 alt=""
                 fill
                 sizes="64px"

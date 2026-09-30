@@ -234,11 +234,13 @@ describe("the configured combos", () => {
 
   it("points every image at the combo folder on ImageKit", () => {
     for (const entry of COMBOS) {
-      assert.match(
-        entry.imageUrl,
-        /^https:\/\/ik\.imagekit\.io\/koreanhive\/combo\//,
-        `${entry.slug}: ${entry.imageUrl}`,
-      );
+      for (const url of [entry.imageUrl, ...(entry.moreImages ?? [])]) {
+        assert.match(
+          url,
+          /^https:\/\/ik\.imagekit\.io\/koreanhive\/combo\//,
+          `${entry.slug}: ${url}`,
+        );
+      }
       assert.ok(entry.imageAlt.trim().length > 0, `${entry.slug} has no alt`);
     }
   });
