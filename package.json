@@ -17,7 +17,8 @@
     "catalogue:verify": "tsx scripts/verify-catalogue.ts",
     "ratings:rebuild": "tsx scripts/rebuild-ratings.ts",
     "combos:sync": "tsx scripts/sync-combos.ts",
-    "customers:sync": "tsx scripts/sync-customers.ts"
+    "customers:sync": "tsx scripts/sync-customers.ts",
+    "data:clear-test": "tsx scripts/clear-test-data.ts"
   },
   "dependencies": {
     "@radix-ui/react-slider": "^1.4.7",
