@@ -1,0 +1,23 @@
+# Keeps dependencies patched. Routine version bumps are grouped into one weekly
+# PR so they do not flood the list; security updates arrive separately as soon
+# as an advisory is published (enable "Dependabot security updates" in
+# Settings -> Code security).
+#
+# Every Dependabot PR runs through CI, so lint, typecheck, tests and the build
+# all have to pass before one is worth merging.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

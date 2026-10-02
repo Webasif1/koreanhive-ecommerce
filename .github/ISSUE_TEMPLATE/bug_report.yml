@@ -1,0 +1,50 @@
+name: Bug report
+description: Something on the site is not working as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. **Do not report security issues here** —
+        see SECURITY.md. Never include passwords, phone numbers, addresses or
+        other personal data.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you see, and what did you expect to see instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to ...
+        2. Click ...
+        3. See error
+    validations:
+      required: true
+  - type: input
+    id: page
+    attributes:
+      label: Page URL
+      placeholder: https://koreanhive.com/...
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device
+      options:
+        - Mobile
+        - Desktop
+        - Tablet
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      placeholder: Chrome, Safari on iPhone, ...
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or error messages
+      description: Blur out any personal details before uploading.

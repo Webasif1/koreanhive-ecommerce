@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/Webasif1/koreanhive-ecommerce/security/advisories/new
+    about: Please report security issues privately, not as a public issue.
+  - name: Order or delivery question
+    url: https://koreanhive.com/contact
+    about: For questions about an order, please contact the shop directly.

@@ -10,6 +10,12 @@ on:
   pull_request:
     branches: ["**"]
 
+# Least privilege for GITHUB_TOKEN. No job writes to the repository: deploys
+# go out over FTPS with their own credentials, and artifacts use the runtime
+# token, not this one.
+permissions:
+  contents: read
+
 concurrency:
   # a new push to the same branch cancels the run in flight
   group: ci-${{ github.ref }}
