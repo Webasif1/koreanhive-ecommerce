@@ -176,7 +176,7 @@ jobs:
       # every path beginning with a dot, and it does so silently — which drops
       # the whole of .next and produces an artifact that looks fine, deploys
       # fine, and then cannot start. See actions/upload-artifact#602.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: standalone-${{ github.sha }}
           path: deploy
