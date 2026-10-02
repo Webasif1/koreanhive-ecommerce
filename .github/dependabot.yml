@@ -16,6 +16,11 @@ updates:
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
+    # Major versions (ESLint 10, TypeScript 7, ...) change behaviour and need a
+    # deliberate upgrade, not an automatic PR.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
