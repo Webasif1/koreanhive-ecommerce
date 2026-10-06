@@ -69,16 +69,15 @@ export default function RootLayout({
             path — worth ~100-300ms on a Bangladeshi mobile connection. */}
         <link rel="preconnect" href="https://ik.imagekit.io" crossOrigin="" />
         <link rel="dns-prefetch" href="https://ik.imagekit.io" />
-        {/* Create the dataLayer before GTM loads so early pushes aren't lost */}
-        <Script id="gtm-datalayer" strategy="beforeInteractive">
-          {`window.dataLayer = window.dataLayer || [];`}
-        </Script>
         {/* Google Tag Manager */}
-        {/* lazyOnload: GTM (and the GA4 + Meta tags inside it) waits for the
-            page to finish loading instead of competing with hydration on a
-            phone. Nothing is lost — every event is queued in the dataLayer
-            above, and GTM replays the queue when it starts. */}
-        <Script id="gtm" strategy="lazyOnload">
+        {/* beforeInteractive, i.e. Google's own "as high in <head> as
+            possible". It was lazyOnload, which waits for every image plus
+            idle time: on a phone that is seconds, and anyone who tapped a
+            link or left before then never got a PageView — ad clicks that
+            never became landing-page views in GA4 or Meta. The snippet only
+            inserts an async script, so it blocks neither parsing nor
+            hydration. It also creates the dataLayer, so early pushes queue. */}
+        <Script id="gtm" strategy="beforeInteractive">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
 j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
