@@ -24,6 +24,7 @@ import {
   getProductBySlug,
   getRelatedProducts,
   getSitemapEntries,
+  getUnitsSold,
 } from "@/server/queries/catalog";
 import { getProductReviews } from "@/server/queries/reviews";
 
@@ -35,6 +36,9 @@ type ProductPageProps = {
 // the wishlist heart and the delivery bar hydrate on the client — so it stays
 // static and repeat views never touch the database.
 export const revalidate = 3600;
+
+/** At or under this many units, the page says how many are left. */
+const LOW_STOCK_AT = 10;
 
 /** Prerender every product at build time. These are the most-visited pages
  *  in the shop, and the catalogue is small enough that building all of them
@@ -95,7 +99,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   if (!product) notFound();
 
-  const [related, zones, productReviews] = await Promise.all([
+  const [related, zones, productReviews, unitsSold] = await Promise.all([
     getRelatedProducts({
       productId: product.id,
       categoryId: product.categoryId,
@@ -105,6 +109,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     }),
     getDeliveryZones(),
     getProductReviews(product.id),
+    getUnitsSold(product.id),
   ]);
 
   const variantPrices = product.variants.map((v) => v.price ?? product.price);
@@ -120,6 +125,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const inStock = product.variants.length
     ? product.variants.some((v) => v.stock > 0)
     : product.stock > 0;
+
+  // the real count, so the urgency badge only appears when it is true. It is
+  // as fresh as the page (revalidated hourly), so it is a nudge, not a ledger.
+  const totalStock = product.variants.length
+    ? product.variants.reduce((sum, v) => sum + Math.max(0, v.stock), 0)
+    : product.stock;
+  const lowStock = inStock && totalStock <= LOW_STOCK_AT;
 
   const off = discountPercent(product.price, product.comparePrice);
   const insideDhaka = zones.find((z) => z.slug === "inside-dhaka") ?? zones[0];
@@ -276,48 +288,76 @@ export default async function ProductPage({ params }: ProductPageProps) {
             </Link>
           )}
 
-          <h1 className="mt-3 font-display text-[26px] leading-tight sm:text-[30px] tracking-[-0.01em] md:text-[38px]">
+          <h1 className="mt-2 font-display text-[26px] leading-tight sm:text-[30px] tracking-[-0.01em] md:text-[34px]">
             {product.name}
           </h1>
 
-          {product.shortDescription && (
-            <p className="mt-3.5 max-w-[520px] text-[15.5px] leading-relaxed text-muted-foreground">
-              {product.shortDescription}
-            </p>
-          )}
-
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            {/* stars only once a delivered customer has rated it — and the
-                divider with them, or an unrated product opens on a stray "|" */}
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px]">
+            {/* Each figure shows only once it is real: stars once a delivered
+                customer has rated it, "sold" once orders back it. The dividers
+                go with them, so an unrated, unsold product opens on no stray
+                "|" — just the wishlist button. */}
             {product.ratingCount > 0 && (
-              <>
-                <StarRating value={product.ratingAvg} count={product.ratingCount} />
-                <span className="text-border" aria-hidden>
-                  |
+              <a href="#reviews" className="flex items-center gap-2 hover:underline">
+                <StarRating
+                  value={product.ratingAvg}
+                  showCount={false}
+                  className="[&>span:first-child]:text-[15px]"
+                />
+                <span className="font-semibold">{product.ratingAvg.toFixed(1)}</span>
+                <span className="text-mulberry-hover">
+                  ({product.ratingCount}{" "}
+                  {product.ratingCount === 1 ? "review" : "reviews"})
                 </span>
-              </>
+              </a>
             )}
-            <span
-              className={
-                inStock
-                  ? "text-[13px] font-bold text-success"
-                  : "text-[13px] font-bold text-muted-foreground"
-              }
-            >
-              {inStock ? "In stock · ships today" : "Back in stock soon"}
-            </span>
-            <span className="ml-auto">
-              <WishlistButton
-                productId={product.id}
-                productName={product.name}
-                variant="inline"
-              />
+            {product.ratingCount > 0 && unitsSold > 0 && (
+              <span className="text-border" aria-hidden>
+                |
+              </span>
+            )}
+            {unitsSold > 0 && (
+              <span className="text-muted-foreground">
+                {unitsSold.toLocaleString("en-US")} sold
+              </span>
+            )}
+            <WishlistButton
+              productId={product.id}
+              productName={product.name}
+              variant="inline"
+            />
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {!inStock ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-hairline px-3 py-1 text-[12px] font-semibold text-muted-foreground">
+                Back in stock soon
+              </span>
+            ) : lowStock ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-sale/30 bg-sale-bg px-3 py-1 text-[12px] font-semibold text-sale">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="size-3.5">
+                  <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" />
+                </svg>
+                Only {totalStock} left in stock
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-success/30 bg-success-bg px-3 py-1 text-[12px] font-semibold text-success">
+                In stock · ships today
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-success/30 bg-success-bg px-3 py-1 text-[12px] font-semibold text-success">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="size-3.5">
+                <path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3Zm-1.2 14.2-3.5-3.5 1.4-1.4 2.1 2.1 4.9-4.9 1.4 1.4-6.3 6.3Z" />
+              </svg>
+              Authenticity guaranteed
             </span>
           </div>
 
           <div className="mt-5">
             <ProductActions
               productId={product.id}
+              productName={product.name}
+              productUrl={absoluteUrl(`/product/${product.slug}`)}
               variants={product.variants.map((v) => ({
                 id: v.id,
                 name: v.name,
@@ -331,24 +371,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
               trackItem={trackItem}
             />
           </div>
-
-          {/* Reviews for this product only. Absent until one is approved — an
-          empty "Reviews (0)" heading on every page in a 279-product catalogue
-          advertises that nobody has bought anything. */}
-      {productReviews.reviews.length > 0 && (
-        <section className="mt-10 lg:mt-16 grid gap-8 lg:grid-cols-[300px_1fr]">
-          <ReviewSummaryPanel
-            summary={productReviews.summary}
-            heading="What buyers say"
-            className="h-fit border border-border bg-card p-6"
-          />
-          <ul className="grid gap-4 sm:grid-cols-2">
-            {productReviews.reviews.slice(0, 6).map((review) => (
-              <ReviewCard key={review.id} review={review} />
-            ))}
-          </ul>
-        </section>
-      )}
 
           {routineCard && <div className="mt-4 lg:hidden">{routineCard}</div>}
         </div>
@@ -365,6 +387,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
           <h2 className="mt-3.5 font-display text-2xl leading-snug md:text-[32px]">
             What it actually does
           </h2>
+          {/* The summary used to sit under the title; the top of the page is
+              now for buying, so it leads the description here instead. */}
+          {product.shortDescription &&
+            product.description &&
+            product.shortDescription !== product.description && (
+              <p className="mt-4 text-[15.5px] font-medium leading-relaxed text-foreground">
+                {product.shortDescription}
+              </p>
+            )}
           <p className="mt-4 whitespace-pre-line text-[15px] leading-relaxed text-muted-foreground">
             {product.description ??
               product.shortDescription ??
@@ -418,6 +449,28 @@ export default async function ProductPage({ params }: ProductPageProps) {
           </p>
         </div>
       </section>
+
+      {/* Reviews for this product only. Absent until one is approved — an
+          empty "Reviews (0)" heading on every page in a 279-product catalogue
+          advertises that nobody has bought anything. The rating link at the
+          top of the page jumps here. */}
+      {productReviews.reviews.length > 0 && (
+        <section
+          id="reviews"
+          className="mt-10 grid scroll-mt-37.5 gap-8 lg:mt-16 lg:grid-cols-[300px_1fr]"
+        >
+          <ReviewSummaryPanel
+            summary={productReviews.summary}
+            heading="What buyers say"
+            className="h-fit border border-border bg-card p-6"
+          />
+          <ul className="grid gap-4 sm:grid-cols-2">
+            {productReviews.reviews.slice(0, 6).map((review) => (
+              <ReviewCard key={review.id} review={review} />
+            ))}
+          </ul>
+        </section>
+      )}
 
       {related.length > 0 && (
         <section className="mt-10 lg:mt-16">

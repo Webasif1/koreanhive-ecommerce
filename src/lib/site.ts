@@ -11,6 +11,8 @@ export const siteConfig = {
       process.env.NEXT_PUBLIC_FACEBOOK_URL || "https://www.facebook.com/koreanhive",
     instagram:
       process.env.NEXT_PUBLIC_INSTAGRAM_URL || "https://www.instagram.com/koreanhive/",
+    // the Facebook page's Messenger inbox
+    messenger: process.env.NEXT_PUBLIC_MESSENGER_URL || "https://m.me/koreanhive",
   },
   /**
    * Support channels, read from the environment so nothing is published that
