@@ -992,6 +992,31 @@ export const getBestSellers = unstable_cache(bestSellers, ["best-sellers"], {
 });
 
 /**
+ * Units of one product actually sold, counted the same way as bestSellers:
+ * cancelled, returned and trashed orders are not sales. The product page shows
+ * it as "N sold", so it has to be a figure the order history supports.
+ */
+export async function getUnitsSold(productId: string): Promise<number> {
+  if (!Types.ObjectId.isValid(productId)) return 0;
+  await connectDb();
+
+  const [row] = await Order.aggregate<{ units: number }>([
+    {
+      $match: {
+        status: { $nin: ["CANCELLED", "RETURNED"] },
+        deletedAt: null,
+        "items.productId": new Types.ObjectId(productId),
+      },
+    },
+    { $unwind: "$items" },
+    { $match: { "items.productId": new Types.ObjectId(productId) } },
+    { $group: { _id: null, units: { $sum: "$items.quantity" } } },
+  ]);
+
+  return row?.units ?? 0;
+}
+
+/**
  * /shop reads ?sort=, which makes the route dynamic — it cannot be
  * prerendered. Caching the query itself means those requests still avoid a
  * round trip to Atlas in Singapore, which is the part that actually hurts.
